@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3 — Remember SSH passwords
+
+- Add an opt-in **Remember password on this Windows account** preference in saved connections and SSH password sign-in prompts.
+- Encrypt remembered login passwords with Windows account protection in a separate bounded credential file. Keep plaintext passwords out of profiles, ordinary settings/backups, renderer state and diagnostics.
+- Reuse remembered passwords after app restart while preserving host verification. Save only passwords accepted during a successful verified sign-in; never save private-key passphrases or interactive one-time responses.
+- Add **Forget password** without disconnecting active sessions. Remove stored credentials when the server, port, username or authentication method changes, remembering is disabled, the profile is deleted, or remembered authentication is rejected.
+- Guard canceled prompts, stale sign-in results, concurrent Forget/profile edits, unavailable encryption and failed storage writes. Add adversarial regressions and packaged Windows restart/readback acceptance.
+
 ## 1.0.2 — Documentation, Help and resource limits
 
 - Open the Wiki manual, connection guide, troubleshooting, repository, issues and releases from **Help and about**, using validated fixed browser destinations.

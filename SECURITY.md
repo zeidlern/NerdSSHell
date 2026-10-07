@@ -14,6 +14,8 @@ The desktop renderer is sandboxed, with context isolation and no Node integratio
 
 Passwords and key passphrases remain in memory for an active connection and intentional reconnection. Disconnect releases application-held references. JavaScript, paging, crash dumps and the SSH library do not guarantee secure erasure. Key selection stores the path, rather than key contents. Prefer an SSH agent or a passphrase-protected key.
 
+Remembering an SSH login password is explicit and off by default. Successful host-verified authentication permits persistence through Electron safeStorage with Windows DPAPI, in a separate encrypted credential file rather than plaintext settings. Unsupported/unavailable encryption fails closed without plaintext fallback. Credential identity binds the saved profile, server, port, username and password authentication method. Rejected saved authentication, endpoint/authentication changes, profile deletion and explicit Forget remove the saved credential. Forget also disables remembering and leaves an active connection intact. Private-key passphrases and keyboard-interactive answers are not persisted. Windows account protection does not prevent other software running as the same user from decrypting saved passwords; same-user malware and OS compromise remain outside the protection boundary.
+
 OpenSSH known_hosts is read without modification. User-approved fingerprints are pinned locally. Changed or revoked keys are blocked; cancellation and verification errors stop trust retries. Verify key changes independently rather than suppressing a trust failure.
 
 ## Sessions, commands and transfers
@@ -32,7 +34,7 @@ Listings, transfers and outstanding channel opens have separate limits and timeo
 
 Settings and optional archives use Electron's per-user data directory; see [data location and compatibility](docs/IDENTITY-COMPATIBILITY.md). Windows roaming/profile policies may copy that data. Protection depends on actual Windows ACLs and disk protection. Same-user malware and a compromised OS are outside the application's protection boundary.
 
-Recording is off by default and size-limited. Output can contain echoed secrets. Archives, exports, notes and backups are plaintext; encryption is not implemented. Turning recording off or removing a profile does not erase old archives. Unsaved Scratchpad notes remain in memory. There is no archive-deletion control in the UI.
+Recording is off by default and size-limited. Output can contain echoed secrets. Archives, exports and notes are plaintext; saved-password encryption does not encrypt these files. Backups can retain plaintext data and encrypted credentials. Turning recording off or removing a profile does not erase old archives. Forget cannot erase backup copies or guarantee physical disk erasure. Unsaved Scratchpad notes remain in memory. There is no archive-deletion control in the UI.
 
 Copy-on-selection is enabled by default. Windows clipboard history/synchronization can retain copied data; the app does not control those OS features. Output-sharing previews require review and do not automatically redact secrets.
 

@@ -28,7 +28,7 @@ NerdSSHell 1.0.2 in dark mode, using disposable demo connections and sample term
 
 | Feature | What it helps you do |
 | --- | --- |
-| Saved SSH connections | Keep server settings and approved host fingerprints together |
+| Saved SSH connections | Keep server settings and approved host fingerprints together; optionally remember passwords with Windows account protection |
 | Persistent sessions with tmux | Close the client and reconnect to remote work later |
 | Standard SSH | Open an ordinary remote shell without requiring tmux |
 | Windows consoles | Use PowerShell and Command Prompt beside SSH; optionally launch a new Administrator console |

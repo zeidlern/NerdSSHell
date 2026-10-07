@@ -26,3 +26,4 @@ known_hosts*
 .npmrc
 settings.json.backup
 settings.json.tmp
+remembered-passwords.json*

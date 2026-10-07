@@ -56,6 +56,8 @@ Fresh installations use `%APPDATA%\nerdsshell`; upgrades retain an existing `%AP
 
 `settings.json` contains profiles, trust pins, appearance, workspace layout and saved Actions/Favorites. Normal saving retains `settings.json.backup`. That single backup is not a substitute for your own complete, versioned private backup.
 
+Opt-in remembered SSH login passwords use the separate `remembered-passwords.json` credential file, encrypted for your Windows account. They are not plaintext fields in `settings.json`. Use **Forget password** in a connection's controls to remove its saved password without disconnecting it. See [connections and authentication](Connections-and-Trust.md) and [security and privacy](Security-and-Privacy.md) for the scope and limits of Windows account protection. A backup of the data directory can retain encrypted credentials after you forget them in the app.
+
 Close the app normally before copying its whole data directory. Keep backups outside the repository and protect them as personal configuration. Do not upload settings, archives, diagnostic dumps or backups to GitHub, Discord or an AI service. If Windows uses a roaming/synchronized profile, organizational backup/sync policies may copy those files elsewhere.
 
 A malformed settings file is preserved and causes an explicit error rather than being silently replaced. Retain the original and investigate/restore a known-good compatible backup; deleting it blindly can discard connections and trust pins.

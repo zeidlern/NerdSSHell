@@ -19,7 +19,7 @@ The toolbar's **? / Help and about** opens the Wiki manual, connection guide, tr
 
 | Feature | What it provides | Important limit |
 | --- | --- | --- |
-| Saved connections | Server, username, key-file path, preferences and local trust pins | Passwords and key passphrases are not saved to settings |
+| Saved connections | Server, username, key-file path, preferences, local trust pins and optional remembered login passwords | Passwords use separate Windows-encrypted storage; key passphrases and interactive answers are not saved |
 | Persistent sessions | Reattach to server-side tmux work after closing the client | Reboot, session termination and server policy can stop work |
 | Standard SSH | An ordinary SSH terminal without requiring tmux | No reattachment after channel closure |
 | Local shells | PowerShell and Command Prompt in the same workspace | Local sessions do not survive application exit |

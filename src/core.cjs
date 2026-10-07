@@ -39,6 +39,9 @@ function profile(value) {
   if (!['persistent', 'standard'].includes(sessionMode)) throw new Error('Invalid session mode.');
   const auth = value.auth || 'agent';
   if (!['agent', 'key', 'password'].includes(auth)) throw new Error('Unsupported sign-in method.');
+  const remember = value.rememberPassword ?? false;
+  if (typeof remember !== 'boolean') throw new Error('Remember password must be on or off.');
+  const rememberPassword = auth === 'password' && remember;
   const uuid = value.id || randomUUID();
   if (!/^[a-zA-Z0-9_-]{1,80}$/.test(uuid)) throw new Error('Invalid connection ID.');
   const socket = text(value.socket || '', 'session socket', 64);
@@ -47,9 +50,9 @@ function profile(value) {
   if (!['all', 'restore', 'none'].includes(startup)) throw new Error('Invalid startup policy.');
   const keyPath = text(value.keyPath || '', 'private key path');
   if (auth === 'key' && !keyPath) throw new Error('Choose a private key file.');
-  // Deliberate allowlist: passwords, arbitrary SSH options and renderer-supplied fields are never persisted.
+  // Deliberate allowlist: plaintext passwords, arbitrary SSH options and renderer-supplied fields are never persisted.
   return { id: uuid, sessionMode, name: text(value.name || host, 'connection name', 80), host, username,
-    port: integer(Number(value.port ?? 22), 1, 65535, 'port'), auth, keyPath, socket,
+    port: integer(Number(value.port ?? 22), 1, 65535, 'port'), auth, rememberPassword, keyPath, socket,
     autoConnect: value.autoConnect !== false, startup, record: value.record === true,
     scrollback: integer(Number(value.scrollback ?? 100000), 1000, 500000, 'scrollback'),
     archiveMB: integer(Number(value.archiveMB ?? 256), 16, 4096, 'archive size'),

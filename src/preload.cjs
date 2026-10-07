@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const invoke = name => (...args) => ipcRenderer.invoke('nerdsshell:' + name, ...args);
 const api = {};
 api.publicLink = invoke('publicLink');
+api.forgetPassword = invoke('forgetPassword');
 for (const name of ['state', 'savePreferences', 'sessionAttention', 'activeSession', 'paneActionRun', 'saveProfile', 'saveAppearance', 'deleteProfile', 'connect', 'disconnect', 'discover', 'open', 'close', 'input', 'resize', 'create', 'rename', 'end', 'snapshot', 'workspace', 'promptReply', 'ack', 'chooseKey', 'copy', 'paste', 'fullscreen', 'history', 'export', 'cancelTransfer', 'dataFolder', 'listFiles', 'cancelFileList', 'downloadFile', 'workbenchContext', 'workbenchPreferences', 'localOpen', 'workbenchActions', 'workbenchDetect', 'workbenchTemplate', 'workbenchReview', 'workbenchCancelReview', 'workbenchRun', 'inputLock', 'workbenchDiagnostics', 'localAdminOpen', 'scratchpadDirty', 'scratchpadRead', 'scratchpadSave', 'actionConfiguration', 'actionConfigurationSave', 'actionNewId', 'actionTemplates', 'actionPreview', 'paneActions', 'localFilesList', 'localFilesChoose', 'localFilesUpload', 'localFilesDownload']) api[name] = invoke(name);
 api.chooseUpload = key => ipcRenderer.invoke('nerdsshell:upload', key, null);
 api.dropUpload = (key, files) => ipcRenderer.invoke('nerdsshell:upload', key, files.map(file => webUtils.getPathForFile(file)));

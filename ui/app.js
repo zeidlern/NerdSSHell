@@ -9,7 +9,7 @@ let notifications = { enabled: true, audio: true, desktop: true, visual: true };
 let sessionDefaults = { scrollback: 100000, archiveMB: 256, record: false, startup: 'all', autoConnect: true };
 let preferenceSection = 'copy', preferenceGeneration = 0, preferenceSaving = false, preferenceLoaded = false, attentionActiveKey = '';
 let order = [], savedOrder = [], slots = [], savedSlots = [], active = '', desiredActive = '', layout = 1, twoPaneOrientation = 'side-by-side', splitX = 50, splitY = 50;
-let saveTimer, noticeTimer, promptId, entryResolve, historyKey, selectedProfile;
+let saveTimer, noticeTimer, promptId, promptProfileId, entryResolve, historyKey, selectedProfile;
 let maxOpenViews = 64, pendingViewSlots = 0;
 function requireViewCapacity(key) {
   if (!views.has(key) && views.size + pendingViewSlots >= maxOpenViews) throw new Error(`NerdSSHell supports ${maxOpenViews} open terminal views. Close a view before opening another; persistent remote work keeps running.`);
@@ -183,6 +183,10 @@ function renderConnections() {
       actions.append(button('+ New', () => newSession(p.id), 'small'), button('Refresh', () => api.discover(p.id), 'small'), button('Disconnect', () => api.disconnect(p.id), 'small'));
     } else if (state.state === 'connecting') actions.append(button('Cancel', () => api.disconnect(p.id), 'small'));
     else actions.append(button('Connect', () => { selectedProfile = p.id; return connectProfile(p.id); }, 'small'), button('Remove', async () => { if (await api.deleteProfile(p.id)) { profiles.delete(p.id); renderConnections(); } }, 'small'));
+    if (p.auth === 'password') actions.append(button('Forget password', async () => {
+      const result = await api.forgetPassword(p.id);
+      if (profiles.get(p.id) === p) { profiles.set(p.id, result); renderConnections(); }
+    }, 'small', 'Remove the remembered password without disconnecting this session'));
     box.append(actions);
     for (const pane of panes.values()) if (pane.profileId === p.id && !pane.local) box.append(sessionRow(pane));
     root.append(box);
@@ -433,7 +437,12 @@ function editConnection(p = {}) {
   const form = $('connectionForm'); form.reset(); $('connectionError').textContent = '';
   if (!p.id) for (const [key, value] of Object.entries(sessionDefaults)) if (form.elements[key]) { if (form.elements[key].type === 'checkbox') form.elements[key].checked = value; else form.elements[key].value = value; }
   for (const [key, value] of Object.entries(p)) if (form.elements[key]) { if (form.elements[key].type === 'checkbox') form.elements[key].checked = value; else form.elements[key].value = value; }
-  $('connectionTitle').textContent = p.id ? 'Edit connection' : 'Save a connection'; $('keyField').hidden = form.elements.auth.value !== 'key'; updateSessionMode(); $('connectionDialog').showModal(); form.elements.name.focus();
+  $('connectionTitle').textContent = p.id ? 'Edit connection' : 'Save a connection'; updateAuthenticationFields(); updateSessionMode(); $('connectionDialog').showModal(); form.elements.name.focus();
+}
+function updateAuthenticationFields() {
+  const form = $('connectionForm'), password = form.elements.auth.value === 'password';
+  $('keyField').hidden = form.elements.auth.value !== 'key'; $('rememberPasswordField').hidden = !password;
+  if (form.elements.rememberPassword) { form.elements.rememberPassword.disabled = !password; if (!password) form.elements.rememberPassword.checked = false; }
 }
 function appearanceFields() {
   const form = $('preferencesForm');
@@ -528,10 +537,31 @@ async function savePreferences() {
   finally { blockPreferences(false); }
 }
 window.NerdSSHellPreferences = { open: section => run(openPreferences(section)) };
+function showCredentialPrompt(event) {
+  promptId = event.id; promptProfileId = event.profileId || null;
+  $('promptTitle').textContent = event.title; $('promptMessage').textContent = event.message;
+  $('promptValue').type = event.secret ? 'password' : 'text'; $('promptValue').value = '';
+  const remember = event.secret === true && event.rememberPasswordAvailable === true;
+  $('promptRememberField').hidden = !remember; $('promptRemember').checked = remember && event.rememberPassword === true;
+  $('promptDialog').showModal(); $('promptValue').focus();
+}
+function clearCredentialPrompt() {
+  promptId = null; promptProfileId = null; $('promptValue').value = ''; $('promptRemember').checked = false; $('promptRememberField').hidden = true; $('promptDialog').close();
+}
+function replyCredentialPrompt(cancelled = false) {
+  const id = promptId, value = cancelled ? null : $('promptValue').value;
+  const remember = !cancelled && !$('promptRememberField').hidden && $('promptRemember').checked === true;
+  clearCredentialPrompt();
+  if (id) run(cancelled ? api.promptReply(id, null) : api.promptReply(id, value, remember));
+}
 function isAppShortcut(e) { return e.key === 'F11' || e.ctrlKey && (e.key === 'Tab' || e.altKey && ['1', '2', '3', '4'].includes(e.key) || e.shiftKey && ['T', 't', 'W', 'w', 'P', 'p'].includes(e.key)); }
 api.onEvent(event => {
-  if (event.type === 'prompt') { promptId = event.id; $('promptTitle').textContent = event.title; $('promptMessage').textContent = event.message; $('promptValue').type = event.secret ? 'password' : 'text'; $('promptValue').value = ''; $('promptDialog').showModal(); $('promptValue').focus(); }
-  else if (event.type === 'promptCancelled') { if (promptId === event.id) { promptId = null; $('promptValue').value = ''; $('promptDialog').close(); } }
+  if (event.type === 'prompt') showCredentialPrompt(event);
+  else if (event.type === 'promptCancelled') { if (promptId === event.id) clearCredentialPrompt(); }
+  else if (event.type === 'profile') {
+    if (profiles.has(event.profile.id)) { profiles.set(event.profile.id, event.profile); renderConnections(); }
+    if (promptId && promptProfileId === event.profile.id && event.profile.rememberPassword !== true) $('promptRemember').checked = false;
+  }
   else if (event.type === 'status') {
     if (newSessionTarget === event.profileId && event.state !== 'connected') finishNewSession(false);
     statuses.set(event.profileId, event);
@@ -603,19 +633,19 @@ api.onEvent(event => {
 });
 $('connectionForm').addEventListener('submit', e => {
   e.preventDefault(); run((async () => {
-    const form = e.target, p = Object.fromEntries(new FormData(form)); p.autoConnect = form.elements.autoConnect.checked; p.record = form.elements.record.checked;
+    const form = e.target, p = Object.fromEntries(new FormData(form)); p.autoConnect = form.elements.autoConnect.checked; p.record = form.elements.record.checked; p.rememberPassword = p.auth === 'password' && form.elements.rememberPassword.checked;
     try { const result = await api.saveProfile(p); profiles.set(result.id, result); selectedProfile = result.id; $('connectionDialog').close(); renderConnections(); await connectProfile(result.id); }
     catch (error) { $('connectionError').textContent = error.message; message(error.message); }
   })());
 });
 function updateSessionMode() { $('startupField').hidden = false; $('sessionModeHint').textContent = 'Choose persistence in New session. Connecting never starts a new persistent job.'; }
-$('connectionForm').elements.auth.addEventListener('change', e => { $('keyField').hidden = e.target.value !== 'key'; });
+$('connectionForm').elements.auth.addEventListener('change', updateAuthenticationFields);
 $('chooseKey').addEventListener('click', () => run((async () => { const file = await api.chooseKey(); if (file) $('connectionForm').elements.keyPath.value = file; })()));
 $('addConnection').onclick = $('welcomeConnect').onclick = () => editConnection();
 $('cancelConnection').onclick = () => $('connectionDialog').close();
-$('promptForm').onsubmit = e => { e.preventDefault(); const id = promptId; promptId = null; const value = $('promptValue').value; $('promptValue').value = ''; $('promptDialog').close(); if (id) run(api.promptReply(id, value)); };
-$('cancelPrompt').onclick = () => { const id = promptId; promptId = null; $('promptValue').value = ''; $('promptDialog').close(); if (id) run(api.promptReply(id, null)); };
-$('promptDialog').addEventListener('cancel', () => { const id = promptId; promptId = null; $('promptValue').value = ''; if (id) run(api.promptReply(id, null)); });
+$('promptForm').onsubmit = e => { e.preventDefault(); replyCredentialPrompt(); };
+$('cancelPrompt').onclick = () => replyCredentialPrompt(true);
+$('promptDialog').addEventListener('cancel', () => replyCredentialPrompt(true));
 $('newSessionForm').onsubmit = e => { e.preventDefault(); finishNewSession(true); };
 $('cancelNewSession').onclick = () => finishNewSession(false);
 $('newSessionDialog').addEventListener('cancel', e => { e.preventDefault(); finishNewSession(false); });

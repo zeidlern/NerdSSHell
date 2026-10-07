@@ -3,6 +3,14 @@ const { PSREADLINE_ASSERTION_COMMANDS } = require('./PSReadLine-Assertion.cjs');
 const { consoleText } = require('../src/console-text.cjs');
 let promptObservation = 0;
 
+// CDP sends expressions directly to V8, without an HTML parser. Escape HTML
+// delimiters and line separators as well, so these literals remain safe if an
+// expression is ever displayed in an HTML script context during diagnostics.
+function scriptLiteral(value) {
+  return JSON.stringify(value).replace(/[<>\b\f\n\r\t\0\u2028\u2029]/g,
+    character => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
 /** Observe the owned shell's rendered prompt; do not issue commands, synthesize
  * cursor replies or retry input. A result can arrive before PSReadLine returns
  * to its input loop. Require fresh native prompt output after that result too.
@@ -10,10 +18,10 @@ let promptObservation = 0;
 async function waitForPowerShellPrompt({ evaluate, wait, key, after = '' }) {
   const match = typeof key === 'string' && /^(local:(?:powershell|pwsh))\/standard-([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/.exec(key);
   if (!match || typeof after !== 'string' || after.length > 1024) throw new Error('Prompt observation requires an owned ordinary PowerShell key and bounded marker.');
-  const k = JSON.stringify(key), shell = JSON.stringify(match[1]), token = JSON.stringify(match[2]);
-  const marker = JSON.stringify(Buffer.from(after, 'utf8').toString('latin1'));
+  const k = scriptLiteral(key), shell = scriptLiteral(match[1]), token = scriptLiteral(match[2]);
+  const marker = scriptLiteral(Buffer.from(after, 'utf8').toString('latin1'));
   const current = `v&&views.get(${k})===v&&v.generation===generation&&v.ready&&!v.locked&&v.pane.key===${k}&&v.pane.local&&!v.pane.administrator&&v.pane.profileId===${shell}&&v.pane.shellId===${shell}&&v.pane.sessionToken===${token}`;
-  const observation = JSON.stringify('powershell-prompt-' + ++promptObservation);
+  const observation = scriptLiteral('powershell-prompt-' + ++promptObservation);
   // Capture the actual view and snapshot generation once, rather than accepting
   // a replacement view that happens to have the same string key on a later poll.
   try {
@@ -195,4 +203,4 @@ async function localPowerShellSmoke({ evaluate, wait, check, screenshot }) {
   result.powerShell7 = result.tested.includes('local:pwsh') ? 'Passed' : 'Not installed in the runner; not tested.';
   return result;
 }
-module.exports = { localPowerShellSmoke, waitForPowerShellPrompt };
+module.exports = { localPowerShellSmoke, waitForPowerShellPrompt, scriptLiteral };

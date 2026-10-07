@@ -1,6 +1,6 @@
 'use strict';
 const test = require('node:test'), assert = require('node:assert/strict'), vm = require('node:vm');
-const { waitForPowerShellPrompt } = require('../scripts/Packaged-LocalPowerShell-Smoke.cjs');
+const { waitForPowerShellPrompt, scriptLiteral } = require('../scripts/Packaged-LocalPowerShell-Smoke.cjs');
 const token = '11111111-2222-4333-8444-555555555555', key = 'local:powershell/standard-' + token;
 const prompt = 'PS C:\\Users\\fixture> ';
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -90,4 +90,14 @@ test('PowerShell changed renderer chain is drained on a new observation rather t
   const h = fixture(), render = deferred(); h.view.render = render.promise;
   const pending = h.observe(); await tick(); h.view.render = Promise.resolve(); render.resolve();
   await pending; assert.deepEqual(h.observations, [false, true]); assert.equal(h.inputs, 0);
+});
+
+test('debugger literals preserve controls and Unicode without exposing HTML delimiters or injecting statements', async () => {
+  for (const value of ['</script><script>injected=true</script>', '\";injected=true;//', "'\\\n\r\t\b\f\0\u2028\u2029é漢字😀"]) {
+    const literal = scriptLiteral(value), context = vm.createContext({ injected: false });
+    assert.doesNotMatch(literal, /[<>\u2028\u2029]/);
+    assert.equal(vm.runInContext(literal, context), value); assert.equal(context.injected, false);
+    const h = fixture(); h.view.smokeOutput = Buffer.from(value + '\r\n' + prompt, 'utf8').toString('latin1');
+    await h.observe(value); assert.deepEqual(h.observations, [true]); assert.equal(h.context.injected, undefined); assert.equal(h.inputs, 0);
+  }
 });

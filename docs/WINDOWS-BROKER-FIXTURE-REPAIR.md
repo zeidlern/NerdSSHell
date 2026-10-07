@@ -27,7 +27,7 @@ AppLocker and Code Integrity warning/error reads found no corresponding denial;
 PowerShell script-block logging recorded the diagnostic launches. No security
 policy, exclusion, profile or existing-directory ACL was changed.
 
-The baseline [Windows CI run 37150751029](https://github.com/zeidlern/NerdSSHell/actions/runs/37150751029)
+The baseline [Windows CI run 37150751029](https://github.com/zeidlern/NerdSSHell-Historical/actions/runs/37150751029)
 used Node 22.23.3, but its provider-observation logs explicitly report the
 elevated BA/SYSTEM-only Program Files branch for CMD, PS5 and PS7. Thus CI did not
 exercise the workstation's unelevated fixture Temp ancestors. Changing Node was

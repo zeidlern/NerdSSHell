@@ -10,13 +10,13 @@
 
 A Windows workspace for SSH, persistent remote sessions, local PowerShell and Command Prompt. Keep connections, tabs, split panes, file transfers and notes together instead of juggling separate windows.
 
-**Current source version: 1.0.0; release publication pending.** A source version is not a published or signed installer. Read the [publication audit](docs/PUBLICATION-AUDIT-2026-10-06.md) and [release gates](docs/PUBLIC-RELEASE.md) before public distribution. No independent security certification or full-history privacy clearance is claimed.
+**Public source version: 1.0.0; Windows release publication pending.** This independent repository contains reviewed clean history. The previous development repository remains private. A public source version is not a published or signed installer. Read the [clean migration checkpoint](docs/CLEAN-PUBLIC-MIGRATION-2026-10-06.md) and [release gates](docs/PUBLIC-RELEASE.md) before binary distribution. No independent security certification is claimed.
 
 ## Start here
 
-**[Complete user manual](docs/wiki/Home.md)** · **[Install locally](docs/wiki/Installation.md)** · **[Install with Codex](docs/wiki/Install-with-Codex.md)**
+**[Live Wiki manual](https://github.com/zeidlern/NerdSSHell/wiki)** · **[Repository copy](docs/wiki/Home.md)** · **[Install locally](docs/wiki/Installation.md)** · **[Install with Codex](docs/wiki/Install-with-Codex.md)**
 
-The manual describes the implemented interface and includes connection setup, trust verification, session lifecycle, SFTP, commands, notes, preferences, shortcuts, troubleshooting, upgrades, backups and removal. It is readable directly in this repository. GitHub's separate Wiki requires the [Wiki publication step](docs/wiki/Publishing-the-Wiki.md); committing the pages here does not automatically populate that tab.
+The manual describes the implemented interface and includes connection setup, trust verification, session lifecycle, SFTP, commands, notes, preferences, shortcuts, troubleshooting, upgrades, backups and removal. The reviewed 14 chapters, sidebar and footer are maintained in `docs/wiki/` and published separately to the Wiki with editing restricted to collaborators. Keep future changes synchronized using the [Wiki publication step](docs/wiki/Publishing-the-Wiki.md). The [clean migration checkpoint](docs/CLEAN-PUBLIC-MIGRATION-2026-10-06.md) records this repository's controls; older dated setup and acceptance records identify their private historical provenance.
 
 For a published installer, use only the project's [Releases](https://github.com/zeidlern/NerdSSHell/releases) page and verify the exact checksum and signing status. If no release exists, do not substitute an unofficial download. General users should wait for a signed, reviewed release rather than disable Windows security to run a candidate.
 

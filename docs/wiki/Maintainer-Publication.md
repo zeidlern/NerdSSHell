@@ -4,6 +4,8 @@
 
 This is a staged checklist for a personal-account repository. Complete it in order; do not click **Public** merely to remove a GitHub warning. Read the dated publication audit in `docs/PUBLICATION-AUDIT-2026-10-06.md` first. Repository settings must be verified in GitHub; committing this page does not configure them.
 
+**Current migration:** the owner created an independent public `zeidlern/NerdSSHell` repository and retained `NerdSSHell-Historical` privately. Only the reviewed clean baseline and controlled documentation are imported. The old personal metadata, PRs, logs and recovery material are not part of the public migration; a Support purge of that separate private repository is not a prerequisite. Check `docs/CLEAN-PUBLIC-MIGRATION-2026-10-06.md` for current configuration and fresh validation. Signing and genuine Windows acceptance still apply before trusted binary distribution.
+
 ## What public does and does not mean
 
 Public means visitors can read and copy/fork the visible repository. A fork is their copy, not permission to edit your official `main`. They cannot push into your repository unless an account or app has been granted write access. Source-license terms govern permitted reuse; GitHub permissions govern who can change your repository. Neither branch protection nor a license makes a vulnerable executable safe.
@@ -16,7 +18,7 @@ Official reference: https://docs.github.com/en/account-and-profile/reference/per
 
 Review all reachable branches/tags, commit authors/committers/messages, old file versions, PR descriptions/comments/attachments, workflow logs and download artifacts. Deleting a file on `main`, deleting merged branches, or hiding a current screenshot does not erase its earlier versions. GitHub explicitly warns that Actions history/logs become public when repository visibility changes.
 
-The current audit found personal email in commit metadata. Decide whether to retain reviewed history knowingly or authorize a carefully backed-up history cleanup. Do not force-push, recreate history or delete evidence automatically. A history rewrite changes SHAs and can require collaborator recloning and new validation; remote PR references/caches/attachments need separate consideration. Revoke any real exposed credential before removing it.
+The earlier audit found personal email in the old repository's commit metadata. That development repository is now private and separate from this public repository. For any future incident in the public repository, decide whether to retain reviewed history knowingly or authorize a carefully backed-up cleanup. Do not force-push, recreate history or delete evidence automatically. A history rewrite changes SHAs and can require collaborator recloning and new validation; remote PR references/caches/attachments need separate consideration. Revoke any real exposed credential before removing it.
 
 For future commits, open your **account Settings > Emails**, enable **Keep my email addresses private** and **Block command line pushes that expose my email**, and copy the exact GitHub-provided noreply address into local Git configuration. Do not assume these settings retroactively change old commits. Secure the account with a passkey or strong two-factor authentication and retain recovery codes privately.
 

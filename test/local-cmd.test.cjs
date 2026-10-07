@@ -339,8 +339,8 @@ if (process.platform === 'win32') for (const administrator of [false, true]) tes
   const r = new LocalRemote(local, { home: administrator ? os.homedir() : folder,
     spawn: (...args) => observe(require('node-pty').spawn(...args)),
     elevatedSpawn: async id => observe(await spawnElevatedPty(id, { execute: (executable, args, options) => {
-      const script = Buffer.from(args[4], 'base64').toString('utf16le'); assert.match(script, /\[BetterSSH\.ElevatedConsole\]::Broker\(/);
-      const changed = [...args]; changed[4] = Buffer.from(script.replace('[BetterSSH.ElevatedConsole]::Broker(', '[BetterSSH.ElevatedConsole]::BrokerFixture('), 'utf16le').toString('base64');
+      const script = Buffer.from(args[4], 'base64').toString('utf16le'); assert.match(script, /\[NerdSSHell\.ElevatedConsole\]::Broker\(/);
+      const changed = [...args]; changed[4] = Buffer.from(script.replace('[NerdSSHell.ElevatedConsole]::Broker(', '[NerdSSHell.ElevatedConsole]::BrokerFixture('), 'utf16le').toString('base64');
       const child = spawn(executable, changed, { ...options, env: nativeFixture.environment(options.env) }), owned = { child, closed: false, stderr: '', frames: require('../scripts/lib/native-broker-fixture.cjs').observeFixtureFrames(child) }; brokers.push(owned);
       child.once('close', code => { owned.closed = true; owned.exitCode = code; });
       child.stderr.on('data', bytes => { owned.stderr = (owned.stderr + bytes.toString()).slice(-2048); }); return child;

@@ -52,7 +52,7 @@ Startup defaults connect automatically and open all currently running sessions. 
 
 ## Find and back up your data
 
-In the standard installed Windows build, open `%APPDATA%\betterssh` in Explorer and verify that it contains the existing `settings.json`. The legacy folder name is intentional. The backend exposes the actual path and a data-folder operation, but the current UI does not wire a visible Data folder button. Do not delete a directory because its old name looks wrong, and do not create an empty replacement if the expected settings are missing. A development test profile or redirected Windows roaming profile can use a different effective path; confirm the actual environment before a backup or restore.
+Fresh 1.0.1 installations use `%APPDATA%\nerdsshell`; upgrades retain an existing `%APPDATA%\betterssh` legacy folder. Confirm the actual `settings.json`. Startup does not move, merge or delete data; if both folders exist it selects legacy data and leaves the other untouched. The backend exposes the actual path, but the UI has no Data folder button. Explicit `--user-data-dir`, source test profiles and redirected roaming profiles may use another location. Verify it before backup/restore.
 
 `settings.json` contains profiles, trust pins, appearance, workspace layout and saved Actions/Favorites. Normal saving retains `settings.json.backup`. That single backup is not a substitute for your own complete, versioned private backup.
 

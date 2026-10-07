@@ -5,9 +5,9 @@ const path = require('node:path');
 if (process.platform !== 'win32') throw new Error('Signed NerdSSHell installers are built on Windows only.');
 const link = process.env.WIN_CSC_LINK || process.env.CSC_LINK;
 const password = process.env.WIN_CSC_KEY_PASSWORD || process.env.CSC_KEY_PASSWORD;
-const thumbprint = process.env.NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT || process.env.BETTERSSH_EXPECTED_SIGNER_THUMBPRINT;
+const thumbprint = process.env.NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT;
 if (!link || !password || !/^[a-f0-9]{40}$/i.test(thumbprint || '')) {
-  throw new Error('Signing requires WIN_CSC_LINK/CSC_LINK, WIN_CSC_KEY_PASSWORD/CSC_KEY_PASSWORD, and NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT (legacy BETTERSSH_EXPECTED_SIGNER_THUMBPRINT is also accepted). No build was started.');
+  throw new Error('Signing requires WIN_CSC_LINK/CSC_LINK, WIN_CSC_KEY_PASSWORD/CSC_KEY_PASSWORD, and NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT. No build was started.');
 }
 const root = path.join(__dirname, '..');
 const { version, build: { productName } } = require(path.join(root, 'package.json'));

@@ -63,7 +63,7 @@ if ($LASTEXITCODE -ne 0) { throw 'License notice verification failed.' }
 
 `-BuildOnly` stops before installation. The helper prints the exact versioned installer location and SHA-256. It does **not** run every packaged UI acceptance fixture, create a settings backup, enable signing or prove that the application is secure. It uses `npm ci --omit=optional`; replacing this with unrestricted `npm install` changes the supported dependency graph.
 
-Inspect the generated artifact, then run that exact installer interactively. Alternatively, the helper without `-BuildOnly` rebuilds, verifies and installs silently for the current user; `-NoLaunch` prevents its automatic launch. It refuses to install while a NerdSSHell/BetterSSH process is running. For first-time users, building first and running the installer interactively makes the steps easier to review.
+Inspect the generated artifact, then run that exact installer interactively. Alternatively, the helper without `-BuildOnly` rebuilds, verifies and installs silently for the current user; `-NoLaunch` prevents automatic launch. It refuses to install while the current application or a legacy executable runs. For first-time users, build first and run the installer interactively to review the steps.
 
 If PowerShell policy blocks the helper, do not use `-ExecutionPolicy Bypass` or disable policy. Use the manual commands below only where your machine's policy permits development, or consult its administrator:
 
@@ -86,9 +86,9 @@ From an already prepared checkout, `npm.cmd start` launches the development app.
 
 ## Upgrade and rollback
 
-Before an upgrade, locate the actual application-data folder, close the application and copy that entire folder to a private backup location. The standard installed Windows build uses `%APPDATA%\betterssh`; open that path in Explorer and confirm the existing `settings.json`. There is currently no visible Data folder button, even though the backend exposes that operation. Do not create/delete directories or assume a different path just from the NerdSSHell display name. Protect backups: settings include server identities, usernames and trust pins, and archives can contain terminal output. The installer helper does not create this backup for you.
+Before an upgrade, locate the actual data folder, close the application and copy the entire folder privately. Version 1.0.1 uses `%APPDATA%\nerdsshell` for fresh installations and retains an existing `%APPDATA%\betterssh` legacy folder for upgrades; confirm which contains `settings.json`. Startup does not copy, merge or delete either folder. The UI has no visible Data folder button. Do not create/delete directories based only on the display name. Backups contain private profiles, trust pins and possibly terminal output. The installer helper does not create this backup.
 
-After upgrading, check About, saved connections, trust behavior, Favorites and a disposable persistence test. The legacy `betterssh` package/data namespace and `cc.zeidler.betterssh` application ID are intentionally preserved. An old folder name is not a failed rebrand.
+After upgrading, check About, saved connections, trust behavior, Favorites and disposable persistence. Package/app ID use current NerdSSHell identity; the original installer GUID and existing data directory preserve upgrades. If both default folders exist, startup selects legacy data and leaves the current folder untouched. Review that state deliberately; do not merge or delete either copy blindly.
 
 For rollback, stop and retain both the old backup and current data. Install only an earlier verified artifact, and do not assume newer settings can be read by older builds. Restore a compatible backup only deliberately while the app is closed. Rollback does not restore a terminated remote process.
 

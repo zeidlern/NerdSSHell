@@ -166,7 +166,7 @@ function commandWarnings(code, shell) {
 function taskCommand(code) {
   code = scriptText(code);
   // Run in a fresh task, never send script bytes to a pre-existing interactive pane.
-  return `/bin/sh -c ${q(`(\n${code}\n)\nbetterssh_task_status=$?\nprintf '\\n[NerdSSHell] Command exited with status %s. This console remains open.\\n' "$betterssh_task_status"\nexec /bin/sh -i`)}`;
+  return `/bin/sh -c ${q(`(\n${code}\n)\nnerdsshell_task_status=$?\nprintf '\\n[NerdSSHell] Command exited with status %s. This console remains open.\\n' "$nerdsshell_task_status"\nexec /bin/sh -i`)}`;
 }
 class ReviewTickets {
   constructor({ now = Date.now } = {}) { this.items = new Map(); this.now = now; }

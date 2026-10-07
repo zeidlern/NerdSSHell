@@ -137,7 +137,7 @@ async function upload(remote, files, { confirmOverwrite, progress, signal, timeo
       signal?.throwIfAborted();
       const stat = await fsp.lstat(local); if (!stat.isFile()) throw new Error('Only regular files can be uploaded.');
       const name = path.basename(local); if (/[\x00-\x1f\x7f-\x9f]/.test(name)) throw new Error('Filenames containing control characters cannot be uploaded.');
-      const target = path.posix.join(dir, name); const temp = path.posix.join(dir, `.betterssh-${randomUUID()}.part`);
+      const target = path.posix.join(dir, name); const temp = path.posix.join(dir, `.nerdsshell-${randomUUID()}.part`);
       let existing;
       try { existing = await request('lstat', target); } catch (error) { if (error.code !== 2) throw error; }
       if (existing?.isSymbolicLink?.()) throw new Error('The destination is a symbolic link. Upload to a different filename.');

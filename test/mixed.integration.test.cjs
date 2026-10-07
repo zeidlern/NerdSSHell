@@ -5,7 +5,7 @@ const { randomUUID } = require('node:crypto');
 const { Client } = require('ssh2');
 const { MixedRemote } = require('../src/mixed-remote.cjs');
 const { shellQuote: q } = require('../src/core.cjs');
-const enabled = !!process.env.BETTERSSH_TEST_KEY;
+const enabled = !!process.env.NERDSSHELL_TEST_KEY;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function until(predicate, message, timeout = 12000) {
   const deadline = Date.now() + timeout;
@@ -13,15 +13,15 @@ async function until(predicate, message, timeout = 12000) {
   throw new Error(message);
 }
 function setup(t, suffix) {
-  const host = process.env.BETTERSSH_TEST_HOST || '127.0.0.1';
+  const host = process.env.NERDSSHELL_TEST_HOST || '127.0.0.1';
   assert.equal(host, '127.0.0.1', 'Mixed integration tests may only use the disposable loopback SSH fixture.');
   assert.equal(process.platform, 'linux', 'The integration fixture must be disposable Linux OpenSSH.');
-  const socket = `betterssh-mixed-${process.pid}-${randomUUID().slice(0, 8)}-${suffix}`;
-  assert.match(socket, /^betterssh-mixed-\d+-[a-f0-9]{8}-[a-z]+$/);
+  const socket = `nerdsshell-mixed-${process.pid}-${randomUUID().slice(0, 8)}-${suffix}`;
+  assert.match(socket, /^nerdsshell-mixed-\d+-[a-f0-9]{8}-[a-z]+$/);
   const root = `/tmp/${socket}`, paths = new Set(), remotes = new Set(); let clients = 0;
-  const settings = { id: `mixed-${suffix}`, name: 'Disposable mixed fixture', host, port: Number(process.env.BETTERSSH_TEST_PORT || 22222),
-    username: process.env.BETTERSSH_TEST_USER || os.userInfo().username, auth: 'key', keyPath: process.env.BETTERSSH_TEST_KEY, socket, sessionMode: 'persistent', scrollback: 1000 };
-  const publicKey = fs.readFileSync(process.env.BETTERSSH_TEST_HOST_KEY + '.pub', 'utf8').trim().split(/\s+/);
+  const settings = { id: `mixed-${suffix}`, name: 'Disposable mixed fixture', host, port: Number(process.env.NERDSSHELL_TEST_PORT || 22222),
+    username: process.env.NERDSSHELL_TEST_USER || os.userInfo().username, auth: 'key', keyPath: process.env.NERDSSHELL_TEST_KEY, socket, sessionMode: 'persistent', scrollback: 1000 };
+  const publicKey = fs.readFileSync(process.env.NERDSSHELL_TEST_HOST_KEY + '.pub', 'utf8').trim().split(/\s+/);
   const knownHosts = `[${host}]:${settings.port} ${publicKey[0]} ${publicKey[1]}\n`;
   function remote() {
     const r = new MixedRemote(settings, { knownHosts, clientFactory: () => { clients++; return new Client(); },

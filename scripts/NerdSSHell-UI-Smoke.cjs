@@ -30,7 +30,7 @@ function bridge(initialState) {
     sessionPanes.set(pane.key, pane); shells.set(profile.id, profile); return { profile, pane };
   }
   window.__fixture = { calls, state, inject, emit, cancelClose: false, failSave: false };
-  window.betterssh = {
+  window.nerdsshell = {
     state: async () => structuredClone(state), onEvent: fn => handlers.push(fn), workspace: async () => {},
     connect: async id => { const panes = [...sessionPanes.values()].filter(p => p.profileId === id); emit({ type: 'status', profileId: id, state: 'connected', detail: 'Connected' }); emit({ type: 'panes', profileId: id, panes }); emit({ type: 'connected', profileId: id, panes }); },
     open: async key => { const p = sessionPanes.get(key); const prompt = p.local ? p.shellFamily === 'cmd' ? 'C:\\Fixture>' : 'PS C:\\Fixture>' : 'tester@server:~$'; emit({ type: 'snapshot', key, data: btoa(p.sessionName + '\r\n' + prompt + ' '), cols: 90, rows: 25, cursorX: prompt.length + 1, cursorY: 1, alternate: false, modes: [0, 0, 0, 0, 0, 0, 1] }); },
@@ -160,13 +160,13 @@ async function main() {
     await page.evaluate(async key => {
       const actions = Array.from({ length: 32 }, (_, index) => ({ id: 'synthetic.favorite.' + index, title: 'Favorite command ' + (index + 1), enabled: true }));
       __fixture.favoriteFixture = { key, actions, favorites: actions.map(action => action.id) };
-      await BetterSSHPanes.refresh(views.get(key));
+      await NerdSSHellPanes.refresh(views.get(key));
     }, firstKey);
     check('All 32 favorites fit a horizontally scrollable row at 900 by 600', await first.locator('.pane-favorites').evaluate(row => { const pane = row.closest('.terminal-pane').getBoundingClientRect(), box = row.getBoundingClientRect(); return row.children.length === 32 && box.width > 50 && box.right <= pane.right + 1 && row.scrollWidth > row.clientWidth && getComputedStyle(row).overflowX === 'auto'; }) && await first.getByRole('button', { name: 'Configure Favorites…', exact: true }).isVisible());
     await first.locator('.pane-favorite-button').last().focus();
     check('Keyboard focus reveals the last Favorite without overflowing its pane', await first.locator('.pane-favorites').evaluate(row => { const box = row.getBoundingClientRect(), last = row.lastElementChild.getBoundingClientRect(); return row.scrollLeft > 0 && last.left >= box.left - 1 && last.right <= box.right + 1; }));
     await page.screenshot({ path: path.join(output, 'workspace-favorites-32-900.png') });
-    await page.evaluate(async key => { delete __fixture.favoriteFixture; await BetterSSHPanes.refresh(views.get(key)); }, firstKey);
+    await page.evaluate(async key => { delete __fixture.favoriteFixture; await NerdSSHellPanes.refresh(views.get(key)); }, firstKey);
     await page.locator('#sidebarToggle').click(); await page.locator('#preferences').click(); await wait(() => !document.querySelector('#savePreferences').disabled);
     await page.locator('#preferenceTab-system').click(); await page.locator('#themeLight').click();
     await page.screenshot({ path: path.join(output, 'preferences-900-light.png') });

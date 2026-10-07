@@ -21,7 +21,7 @@
       if (!selected) throw new Error(`No supported ${family === 'cmd' ? 'Command Prompt' : 'PowerShell'} installation was found.`);
       const result = administrator ? await api.localAdminOpen(selected.id) : await api.localOpen(selected.id);
       if (result?.cancelled) message('Administrator launch cancelled. No session was opened.');
-      else if (result) await window.BetterSSHWorkbench.acceptResult(result);
+      else if (result) await window.NerdSSHellWorkbench.acceptResult(result);
     } finally { launcher.disabled = false; }
   }
   $('localPowerShell').onclick = () => run(launchLocal('localPowerShell', 'localAdmin', 'powershell'));

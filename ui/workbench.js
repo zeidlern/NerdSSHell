@@ -1,4 +1,4 @@
-/* global api, $, profiles, panes, views, statuses, active, openPane, render, element, button, message, run, BetterSSHCommandReview */
+/* global api, $, profiles, panes, views, statuses, active, openPane, render, element, button, message, run, NerdSSHellCommandReview */
 'use strict';
 (function () {
   const dialog = $('workbenchDialog'), target = $('wbTarget'), code = $('wbCode'), search = $('wbSearch');
@@ -88,8 +88,8 @@
       choose.disabled = busy || !a.enabled; choose.dataset.unavailable = String(!a.enabled);
       choose.append(element('small', '', a.enabled ? `${a.group} · ${a.risk === 'info' ? 'inspect' : a.risk === 'disruptive' ? 'interrupts work' : 'changes state'}` : `Unavailable: ${a.reason}`));
       const pin = button(favorites.includes(a.id) ? '★' : '☆', () => {
-        if (busy || !window.BetterSSHPanes) return;
-        invalidate(); dialog.close(); window.BetterSSHPanes.configure('favorites');
+        if (busy || !window.NerdSSHellPanes) return;
+        invalidate(); dialog.close(); window.NerdSSHellPanes.configure('favorites');
       }, 'wb-pin', 'Configure favorites for each operating system');
       pin.disabled = busy; pin.setAttribute('aria-label', `Configure favorites: ${a.title}`); pin.setAttribute('aria-pressed', String(favorites.includes(a.id)));
       row.append(choose, pin); root.append(row);
@@ -159,9 +159,9 @@
       let text;
       if (includeOutput) {
         if (!v) throw new Error('Open a terminal first.');
-        const excerpt = BetterSSHCommandReview.outputExcerpt(v.terminal);
-        const endpoint = BetterSSHCommandReview.visibleText(v.pane.local ? 'LOCAL · This PC' : `REMOTE · ${profile?.name || ''} · ${profile?.username || ''}@${profile?.host || ''}`);
-        text = `Captured: ${new Date().toISOString()}\nTarget: ${endpoint}\nSession: ${BetterSSHCommandReview.visibleText(v.pane.sessionName || '')}\nScreen excerpt: ${excerpt.rows} rows / ${excerpt.bytes} UTF-8 bytes from the ${excerpt.buffer} buffer. ${excerpt.omittedRows} older rows omitted.${excerpt.startsMidLine ? ' Begins mid-wrapped line.' : ''}\nNot a complete transcript or a command boundary. Soft wraps joined; control characters shown as U+ labels. Secrets are NOT automatically redacted.\n\n${excerpt.text}`;
+        const excerpt = NerdSSHellCommandReview.outputExcerpt(v.terminal);
+        const endpoint = NerdSSHellCommandReview.visibleText(v.pane.local ? 'LOCAL · This PC' : `REMOTE · ${profile?.name || ''} · ${profile?.username || ''}@${profile?.host || ''}`);
+        text = `Captured: ${new Date().toISOString()}\nTarget: ${endpoint}\nSession: ${NerdSSHellCommandReview.visibleText(v.pane.sessionName || '')}\nScreen excerpt: ${excerpt.rows} rows / ${excerpt.bytes} UTF-8 bytes from the ${excerpt.buffer} buffer. ${excerpt.omittedRows} older rows omitted.${excerpt.startsMidLine ? ' Begins mid-wrapped line.' : ''}\nNot a complete transcript or a command boundary. Soft wraps joined; control characters shown as U+ labels. Secrets are NOT automatically redacted.\n\n${excerpt.text}`;
       } else text = JSON.stringify(await api.workbenchDiagnostics(), null, 2);
       if (generation !== shareSerial || !preview.open) return;
       if (new TextEncoder().encode(text).length > 524288) throw new Error('Diagnostic preview exceeds 512 KiB. No text was copied.');
@@ -176,7 +176,7 @@
   code.oninput = () => { template = null; invalidate(); }; search.oninput = renderActions;
   $('wbArgument').oninput = () => { /* Existing template retains its reviewed argument; selecting another action uses the new field. */ };
   $('wbImport').onclick = () => { try {
-    const blocks = BetterSSHCommandReview.extractBlocks($('wbChat').value); $('wbBlocks').replaceChildren();
+    const blocks = NerdSSHellCommandReview.extractBlocks($('wbChat').value); $('wbBlocks').replaceChildren();
     const blank = element('option', '', 'Choose one block to stage'); blank.value = ''; $('wbBlocks').append(blank);
     blocks.forEach((b, i) => { const option = element('option', '', `${i + 1}. ${b.language} · ${b.code.split('\n').length} lines`); option.value = String(i); $('wbBlocks').append(option); });
     $('wbBlocks').onchange = () => { const i = $('wbBlocks').value; if (i !== '') { code.value = blocks[Number(i)].code; template = null; invalidate(); } };
@@ -208,6 +208,6 @@
     if (event.type === 'input-lock') { const v = views.get(event.key); if (v) { v.locked = event.locked; updateLock(v); } }
     if (event.type === 'status' && event.state !== 'connected') for (const v of views.values()) if (v.pane.profileId === event.profileId) { v.locked = false; updateLock(v); }
   });
-  window.BetterSSHWorkbench = { open, acceptResult, onView };
+  window.NerdSSHellWorkbench = { open, acceptResult, onView };
   for (const v of views.values()) onView(v);
 })();

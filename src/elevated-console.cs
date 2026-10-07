@@ -13,7 +13,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading;
 
-namespace BetterSSH {
+namespace NerdSSHell {
   public static class ElevatedConsole {
     const int MaxData = 65536;
     const int MaxError = 1024;
@@ -54,7 +54,7 @@ namespace BetterSSH {
         byte[] nonce = new byte[32];
         using (RandomNumberGenerator rng = RandomNumberGenerator.Create()) rng.GetBytes(nonce);
         string nonceHex = Hex(nonce);
-        string name = "BetterSSH-elevated-" + Guid.NewGuid().ToString("N");
+        string name = "NerdSSHell-elevated-" + Guid.NewGuid().ToString("N");
         using (NamedPipeServerStream pipe = PrivatePipe(name)) {
           ParentInput parentInput = StartParentInput(pipe);
           Process high;
@@ -99,7 +99,7 @@ namespace BetterSSH {
 
     static void RunHelper(string pipeName, string nonceHex, int brokerPid, string nativeDirectory, string shellId, bool fixture) {
       if (!fixture && !IsElevated()) throw new InvalidOperationException("Administrator token required");
-      if (brokerPid <= 0 || pipeName == null || !pipeName.StartsWith("BetterSSH-elevated-", StringComparison.Ordinal) || pipeName.Length != 51)
+      if (brokerPid <= 0 || pipeName == null || !pipeName.StartsWith("NerdSSHell-elevated-", StringComparison.Ordinal) || pipeName.Length != 52)
         throw new ArgumentException("Invalid broker identity");
       byte[] nonce = ParseHex(nonceHex);
       if (nonce.Length != 32) throw new ArgumentException("Invalid handshake");
@@ -313,7 +313,7 @@ namespace BetterSSH {
         "$h=[BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($b)).Replace('-','').ToLowerInvariant();" +
         "if($h -ne " + Quote(digest.ToLowerInvariant()) + "){exit 2};" +
         "Add-Type -TypeDefinition ([Text.Encoding]::UTF8.GetString($b)) -Language CSharp;" +
-        "[BetterSSH.ElevatedConsole]::" + method + "(" + Quote(pipe) + "," + Quote(nonce) + "," + parentPid + "," + Quote(nativeDirectory) + "," + Quote(shell) + ");";
+        "[NerdSSHell.ElevatedConsole]::" + method + "(" + Quote(pipe) + "," + Quote(nonce) + "," + parentPid + "," + Quote(nativeDirectory) + "," + Quote(shell) + ");";
       string encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
       if (encoded.Length > 24000) throw new IOException("Administrator bootstrap too long");
       ProcessStartInfo start = new ProcessStartInfo();
@@ -691,13 +691,13 @@ namespace BetterSSH {
           // Fixed, process-local PSReadLine colors; no profile, history file,
           // user command or script path is evaluated during launch.
           const string syntax = @"& {
-            $bettersshModule = [IO.Path]::Combine($PSHOME, 'Modules', 'PSReadLine', 'PSReadLine.psd1')
-            if (![IO.File]::Exists($bettersshModule) -and $PSVersionTable.PSVersion.Major -le 5) {
+            $nerdsshellModule = [IO.Path]::Combine($PSHOME, 'Modules', 'PSReadLine', 'PSReadLine.psd1')
+            if (![IO.File]::Exists($nerdsshellModule) -and $PSVersionTable.PSVersion.Major -le 5) {
               $root = [IO.Path]::Combine([Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles), 'WindowsPowerShell', 'Modules', 'PSReadLine')
               if ([IO.Directory]::Exists($root)) {
                 if (([IO.File]::GetAttributes($root) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit 2 }
-                $bettersshModule = [IO.Path]::Combine($root, 'PSReadLine.psd1')
-                if (![IO.File]::Exists($bettersshModule)) {
+                $nerdsshellModule = [IO.Path]::Combine($root, 'PSReadLine.psd1')
+                if (![IO.File]::Exists($nerdsshellModule)) {
                   $best = [version]'0.0'; $seen = 0
                   foreach ($dir in [IO.Directory]::EnumerateDirectories($root)) {
                     $seen++; if ($seen -gt 32) { exit 2 }
@@ -706,25 +706,25 @@ namespace BetterSSH {
                     $candidate = [IO.Path]::Combine($dir, 'PSReadLine.psd1')
                     if (([IO.File]::GetAttributes($dir) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
                     if ([IO.File]::Exists($candidate) -and [version]$name -gt $best) {
-                      $best = [version]$name; $bettersshModule = $candidate
+                      $best = [version]$name; $nerdsshellModule = $candidate
                     }
                   }
                 }
               }
             }
-            if (![IO.File]::Exists($bettersshModule)) { $bettersshModule = $null }
-            if ($bettersshModule -and ([IO.File]::GetAttributes($bettersshModule) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit 2 }
+            if (![IO.File]::Exists($nerdsshellModule)) { $nerdsshellModule = $null }
+            if ($nerdsshellModule -and ([IO.File]::GetAttributes($nerdsshellModule) -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit 2 }
             $loaded = @(Microsoft.PowerShell.Core\Get-Module PSReadLine)
-            if ($loaded.Count -gt 1 -or ($loaded.Count -eq 1 -and !$bettersshModule)) { exit 2 }
+            if ($loaded.Count -gt 1 -or ($loaded.Count -eq 1 -and !$nerdsshellModule)) { exit 2 }
             if ($loaded.Count -eq 1) {
-              $folder = [IO.Path]::GetDirectoryName($bettersshModule)
+              $folder = [IO.Path]::GetDirectoryName($nerdsshellModule)
               $binaryModule = [IO.Path]::Combine($folder, 'PSReadLine.psm1')
               $actual = [IO.Path]::GetFullPath($loaded[0].Path)
-              if (![string]::Equals($actual, $bettersshModule, [StringComparison]::OrdinalIgnoreCase) -and
+              if (![string]::Equals($actual, $nerdsshellModule, [StringComparison]::OrdinalIgnoreCase) -and
                   ![string]::Equals($actual, $binaryModule, [StringComparison]::OrdinalIgnoreCase)) { exit 2 }
             }
-            if ($bettersshModule) {
-              try { Microsoft.PowerShell.Core\Import-Module -Name $bettersshModule -Force -ErrorAction Stop } catch { exit 2 }
+            if ($nerdsshellModule) {
+              try { Microsoft.PowerShell.Core\Import-Module -Name $nerdsshellModule -Force -ErrorAction Stop } catch { exit 2 }
               try {
                 PSReadLine\Set-PSReadLineOption -HistorySaveStyle SaveNothing -ErrorAction Stop
                 if ((PSReadLine\Get-PSReadLineOption).HistorySaveStyle -ne 'SaveNothing') { exit 2 }

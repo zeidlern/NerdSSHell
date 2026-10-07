@@ -5,7 +5,7 @@ async function actionsSharingSmoke({evaluate,wait,check,screenshot}) {
   const findRow=title=>`[...$('wbActionList').children].find(r=>r.querySelector('.wb-action')?.textContent.startsWith(${JSON.stringify(title)}))`;
   try {
     await evaluate(`api.actionConfigurationSave({...${JSON.stringify(saved)},favoritesByOS:{...${JSON.stringify(saved.favoritesByOS)},Windows:[]}})`);
-    await evaluate(`BetterSSHWorkbench.open({target:'local:powershell'}); true`);
+    await evaluate(`NerdSSHellWorkbench.open({target:'local:powershell'}); true`);
     await wait(`$('workbenchDialog').open && $('wbTarget').value==='local:powershell' && $('wbPlatform').textContent.includes('Windows') && $('wbActionList').querySelectorAll('.wb-action').length===18`, 'Local action catalog did not load.');
     await evaluate(`$('wbSearch').value='task manager cpu'; $('wbSearch').dispatchEvent(new Event('input',{bubbles:true})); true`);
     check('Quick Actions finds Windows terminology without running anything',await evaluate(`$('wbActionList').querySelectorAll('.wb-action').length===1 && $('wbActionList').textContent.includes('Running processes') && views.size===4 && $('wbRun').disabled`));
@@ -20,13 +20,13 @@ async function actionsSharingSmoke({evaluate,wait,check,screenshot}) {
     await evaluate(`$('savePreferences').click(); true`);
     await wait(`!$('preferencesDialog').open&&api.actionConfiguration().then(c=>c.favoritesByOS.Windows.length===4)`, 'Explicit favorite save did not complete.');
     check('Favorites persist per OS with more than the former three-action limit',await evaluate(`api.actionConfiguration().then(c=>c.favoritesByOS.Windows.join(',')==='system.info,system.disk,system.memory,system.processes')`));
-    await evaluate(`BetterSSHWorkbench.open({target:'local:powershell'}); true`);
+    await evaluate(`NerdSSHellWorkbench.open({target:'local:powershell'}); true`);
     await wait(`$('workbenchDialog').open&&$('wbPlatform').textContent.includes('Windows')&&$('wbActionList').querySelectorAll('.wb-action').length===18`, 'Workbench did not reopen after favorite configuration.');
     await evaluate(`${findRow('Disk space')}.querySelector('.wb-action').click(); true`);
     await wait(`$('wbCode').value.includes('FreeGiB')`,'Disk action was not staged.');
     check('Picking a recipe stages its exact PowerShell with readable units, not execution',await evaluate(`$('wbRun').disabled && views.size===4 && $('wbTargetSummary').textContent.includes('LOCAL')`));
     await screenshot('workbench-quick-actions');
-    const reopen = await evaluate(`(async()=>{const id=views.get(__smokeKeys[0]).pane.profileId;let oldClose;const closed=new Promise(resolve=>$('workbenchDialog').addEventListener('close',()=>{oldClose={open:$('workbenchDialog').open,target:$('wbTarget').value};resolve();},{once:true}));$('wbClose').click();const opening=BetterSSHWorkbench.open({target:id});await closed;await opening;return {oldClose,open:$('workbenchDialog').open,target:$('wbTarget').value,expected:id};})()`);
+    const reopen = await evaluate(`(async()=>{const id=views.get(__smokeKeys[0]).pane.profileId;let oldClose;const closed=new Promise(resolve=>$('workbenchDialog').addEventListener('close',()=>{oldClose={open:$('workbenchDialog').open,target:$('wbTarget').value};resolve();},{once:true}));$('wbClose').click();const opening=NerdSSHellWorkbench.open({target:id});await closed;await opening;return {oldClose,open:$('workbenchDialog').open,target:$('wbTarget').value,expected:id};})()`);
     check('Queued native dialog close preserves an immediate reopen for the new destination', reopen.open && reopen.target===reopen.expected && !!reopen.oldClose);
     try {
       await wait(`$('workbenchDialog').open && $('wbTarget').value===views.get(__smokeKeys[0]).pane.profileId && $('wbPlatform').textContent.includes('not inspected')`,'Remote catalog was not uninspected.');

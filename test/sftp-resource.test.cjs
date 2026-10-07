@@ -77,7 +77,7 @@ test('transport closure rejects pending callers and late channels never become u
 });
 
 test('download rejects a persistent final symlink replacement after opening even with matching metadata', async t => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'betterssh-sftp-resource-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'nerdsshell-sftp-resource-'));
   t.after(async () => {
     assert.ok(path.resolve(directory).startsWith(path.resolve(os.tmpdir()) + path.sep));
     await fs.rm(directory, { recursive: true, force: true });

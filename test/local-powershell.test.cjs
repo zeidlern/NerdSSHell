@@ -19,7 +19,7 @@ class Pty {
   kill() { this.kills++; }
 }
 function fixture(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-local-phase2-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-local-phase2-'));
   const handlers = {}, connections = new Map(), spawns = [], terminals = [], events = [], dialogs = [];
   let shells = [shell], dialogResult = { canceled: true }, saves = 0;
   const store = { data: {}, save() { saves++; } };
@@ -200,11 +200,13 @@ test('local consoles refuse SFTP and never become saved remote profiles', async 
   assert.equal(result.profile.local, true); assert.equal(h.saves(), 0);
 });
 
-function mainHarness() {
+function mainHarness(t) {
   const vm = require('node:vm'), { createRequire } = require('node:module');
   const handlers = new Map(), messages = [], app = new EventEmitter(); let response = 1, quits = 0;
-  Object.assign(app, { requestSingleInstanceLock: () => true, whenReady: () => new Promise(() => {}), quit() { quits++; }, getPath: () => os.tmpdir(), getVersion: () => 'fixture' });
-  const frame = { url: 'betterssh://app/ui/index.html' }, webContents = { mainFrame: frame, send() {} }, window = { webContents, isDestroyed: () => false };
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-main-local-'));
+  t.after(() => fs.rmSync(data, { recursive: true, force: true }));
+  Object.assign(app, { isPackaged: true, commandLine: { getSwitchValue: () => data }, setPath() {}, requestSingleInstanceLock: () => true, whenReady: () => new Promise(() => {}), quit() { quits++; }, getPath: () => data, getVersion: () => 'fixture' });
+  const frame = { url: 'nerdsshell://app/ui/index.html' }, webContents = { mainFrame: frame, send() {} }, window = { webContents, isDestroyed: () => false };
   const electron = { app, BrowserWindow() {}, ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
     protocol: { registerSchemesAsPrivileged() {} }, dialog: { showMessageBox: async (_w, options) => { messages.push(options); return { response }; } }, clipboard: {}, Menu: {}, shell: {}, net: {} };
   const filename = path.resolve(__dirname, '../src/main.cjs'), req = createRequire(filename), module = { exports: {} };
@@ -214,10 +216,10 @@ function mainHarness() {
   });
   module.exports.setup({ data: { profiles: [], pins: {} }, save() {} }, window);
   return { main: module.exports, messages, app, respond(v) { response = v; }, quits: () => quits,
-    invoke: (name, ...args) => handlers.get('betterssh:' + name)({ sender: webContents, senderFrame: frame }, ...args) };
+    invoke: (name, ...args) => handlers.get('nerdsshell:' + name)({ sender: webContents, senderFrame: frame }, ...args) };
 }
 test('actual main IPC asks before closing a live LOCAL console; Cancel preserves it', async t => {
-  const h = fixture(t), result = await open(h), main = mainHarness(), runtime = h.connections.get(shell.id);
+  const h = fixture(t), result = await open(h), main = mainHarness(t), runtime = h.connections.get(shell.id);
   main.main.connections.set(shell.id, runtime);
   assert.equal(await main.invoke('close', result.pane.key), false);
   assert.equal(runtime.remote.activeShellCount(), 1); assert.equal(h.terminals[0].kills, 0);
@@ -226,7 +228,7 @@ test('actual main IPC asks before closing a live LOCAL console; Cancel preserves
   assert.equal(h.terminals[0].kills, 1); assert.equal(runtime.remote.activeShellCount(), 0);
 });
 test('actual main quit and disconnect confirmation include local consoles', async t => {
-  const h = fixture(t); await open(h); const main = mainHarness(), runtime = h.connections.get(shell.id);
+  const h = fixture(t); await open(h); const main = mainHarness(t), runtime = h.connections.get(shell.id);
   main.main.connections.set(shell.id, runtime);
   assert.equal(await main.invoke('disconnect', shell.id), false); assert.equal(h.terminals[0].kills, 0);
   main.app.emit('before-quit', { preventDefault() {} }); await tick();

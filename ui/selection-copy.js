@@ -43,5 +43,5 @@
   }
   const api = Object.freeze({ attach });
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else globalThis.BetterSSHSelectionCopy = api;
+  else globalThis.NerdSSHellSelectionCopy = api;
 })();

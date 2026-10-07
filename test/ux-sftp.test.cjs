@@ -13,7 +13,7 @@ const deferred = () => { let resolve; const promise = new Promise(done => { reso
 async function fixture(t) {
   // The real panel returns canonical paths. Windows temp roots can be case
   // aliases or junctions; use that same identity rather than a lexical alias.
-  const home = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'betterssh-ux-files-'))); t.after(() => fs.rm(home, { recursive: true, force: true }));
+  const home = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'nerdsshell-ux-files-'))); t.after(() => fs.rm(home, { recursive: true, force: true }));
   await fs.mkdir(path.join(home, 'sub')); await fs.writeFile(path.join(home, 'marker.txt'), 'synthetic fixture');
   const remote = { profile: { id: 'host', host: 'fixture.invalid', username: 'synthetic' } }, views = new Map([['host/a', {}], ['host/b', {}]]);
   let online = true;
@@ -36,7 +36,7 @@ test('local grants allow navigation inside one chosen root and reject arbitrary 
   await assert.rejects(h.files.capture('host/a', 'a', path.join(h.home, 'marker.txt')), /Select/);
 });
 test('native folder grant is scoped to its pane rather than other same-host panes', async t => {
-  const h = await fixture(t), chosen = await fs.mkdtemp(path.join(os.tmpdir(), 'betterssh-chosen-')); t.after(() => fs.rm(chosen, { recursive: true, force: true }));
+  const h = await fixture(t), chosen = await fs.mkdtemp(path.join(os.tmpdir(), 'nerdsshell-chosen-')); t.after(() => fs.rm(chosen, { recursive: true, force: true }));
   assert.equal((await h.files.list('host/a', 'a', '~', chosen)).directory, await fs.realpath(chosen));
   await h.files.list('host/b', 'b', '~'); await assert.rejects(h.files.list('host/b', 'b', chosen), /outside/);
   assert.throws(() => h.files.record('host/b', 'a'), /another session/);
@@ -161,7 +161,7 @@ test('copy arrows stream exact Unicode/binary bytes and keep exclusive publicati
   await i.handlers.get('localFilesDownload')('host/a', 'a', '/remote/report.txt'); assert.deepEqual(await fs.readFile(path.join(h.home, 'report.txt')), content);
   await assert.rejects(i.handlers.get('localFilesDownload')('host/a', 'a', '/remote/report.txt'), /No file was overwritten/);
   assert.deepEqual(await fs.readFile(path.join(h.home, 'report.txt')), content); assert.equal(i.transfers.size, 0);
-  assert.equal((await fs.readdir(h.home)).some(name => name.startsWith('.betterssh-download-')), false);
+  assert.equal((await fs.readdir(h.home)).some(name => name.startsWith('.nerdsshell-download-')), false);
 });
 test('local arrow upload cancellation at the existing remote-file prompt preserves its old bytes', async t => {
   const h = await fixture(t); await h.files.list('host/a', 'a', '~'); h.files.rememberRemote('host/a', 'a', remoteListing());

@@ -6,17 +6,17 @@ const { StandardRemote } = require('../src/standard-remote.cjs');
 const { listDirectory, download } = require('../src/sftp-browser.cjs');
 const { upload } = require('../src/transfer.cjs');
 
-test('real OpenSSH: standard PTY and its SFTP sidecar browse, download, upload without tmux', { skip: !process.env.BETTERSSH_TEST_KEY, timeout: 60000 }, async t => {
-  const host = process.env.BETTERSSH_TEST_HOST || '127.0.0.1';
+test('real OpenSSH: standard PTY and its SFTP sidecar browse, download, upload without tmux', { skip: !process.env.NERDSSHELL_TEST_KEY, timeout: 60000 }, async t => {
+  const host = process.env.NERDSSHELL_TEST_HOST || '127.0.0.1';
   if (host !== '127.0.0.1') throw new Error('This test only supports the disposable loopback fixture.');
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-sftp-ci-'));
-  const local = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-download-ci-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-sftp-ci-'));
+  const local = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-download-ci-'));
   const source = path.join(directory, "file 'quotes'.txt"); fs.writeFileSync(source, 'SFTP round trip 😀\n');
   fs.mkdirSync(path.join(directory, 'folder')); fs.symlinkSync(source, path.join(directory, 'link'));
-  const port = Number(process.env.BETTERSSH_TEST_PORT || 22222);
-  const pub = fs.readFileSync(process.env.BETTERSSH_TEST_HOST_KEY + '.pub', 'utf8').trim().split(/\s+/);
+  const port = Number(process.env.NERDSSHELL_TEST_PORT || 22222);
+  const pub = fs.readFileSync(process.env.NERDSSHELL_TEST_HOST_KEY + '.pub', 'utf8').trim().split(/\s+/);
   const remote = new StandardRemote({ id: 'standard-ci', name: 'Disposable standard SSH', host, port,
-    username: process.env.BETTERSSH_TEST_USER || os.userInfo().username, auth: 'key', keyPath: process.env.BETTERSSH_TEST_KEY },
+    username: process.env.NERDSSHELL_TEST_USER || os.userInfo().username, auth: 'key', keyPath: process.env.NERDSSHELL_TEST_KEY },
     { knownHosts: `[${host}]:${port} ${pub[0]} ${pub[1]}\n`, ask: async () => { throw new Error('Test must not prompt or install software.'); } });
   t.after(() => { remote.disconnect(); fs.rmSync(directory, { recursive: true, force: true }); fs.rmSync(local, { recursive: true, force: true }); });
   remote.exec = () => { throw new Error('Standard mode must not execute tmux or other helper commands.'); };

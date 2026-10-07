@@ -56,7 +56,7 @@ function endpoint(id, keyBytes, marker) {
     sessionName: marker, paneId: '%1', windowId: '@1', windowPanes: 1, dead: false };
   remote.ensureSupport = async () => {};
   remote.discover = async () => { remote.panes = [pane]; return [pane]; };
-  remote.checked = async command => command.includes('show-options') ? token : '';
+  remote.checked = async command => command.includes('display-message -p -t') ? token : '';
   return { remote, client, pane };
 }
 
@@ -211,7 +211,7 @@ test('a late SSH ready event cannot reconnect an explicitly disconnected Remote'
 test('rename refuses a changed remote session identity', async () => {
   const { remote, pane } = endpoint('hostA', 'key-A', 'ALPHA');
   remote.panes = [pane]; let command;
-  remote.checked = async value => { command = value; return 'BETTERSSH_IDENTITY_CHANGED'; };
+  remote.checked = async value => { command = value; return 'NERDSSHELL_IDENTITY_CHANGED'; };
   await assert.rejects(remote.rename(pane.key, 'New name'), /identity changed.*not renamed/i);
   assert.match(command, /if-shell -F/);
   assert.match(command, new RegExp(token));
@@ -225,7 +225,7 @@ test('reused tmux session ID never reuses the previous token control channel', a
   const old = remote.controls.get(pane.sessionId);
   const replacement = { ...pane, sessionToken: replacementToken, key: paneKey(pane.profileId, replacementToken, pane.paneId), sessionName: 'REPLACEMENT' };
   remote.panes = [replacement];
-  remote.checked = async command => command.includes('show-options') ? replacementToken : '';
+  remote.checked = async command => command.includes('display-message -p -t') ? replacementToken : '';
   const output = []; remote.on('output', (key, bytes) => output.push([key, bytes.toString()]));
   await remote.open(replacement.key);
   const current = remote.controls.get(pane.sessionId);
@@ -248,7 +248,7 @@ test('an old in-flight attachment cannot claim a reused session ID', async t => 
   remote.views.set(pane.key, { pane, active: true, initialized: false });
   remote.views.set(replacement.key, { pane: replacement, active: true, initialized: false });
   const oldIdentity = deferred(); let reads = 0;
-  remote.checked = command => command.includes('show-options')
+  remote.checked = command => command.includes('display-message -p -t')
     ? (++reads === 1 ? oldIdentity.promise : Promise.resolve(replacementToken)) : Promise.resolve('');
   const old = remote.control(pane);
   const newer = remote.control(replacement);
@@ -266,7 +266,7 @@ test('post-attach token mismatch closes the channel before exposing it', async t
   remote.connected = true; remote.client = client;
   remote.views.set(pane.key, { pane, active: true, initialized: false });
   let reads = 0;
-  remote.checked = async command => command.includes('show-options') ? (++reads === 1 ? token : replacementToken) : '';
+  remote.checked = async command => command.includes('display-message -p -t') ? (++reads === 1 ? token : replacementToken) : '';
   await assert.rejects(remote.control(pane), /identity changed during attachment/i);
   assert.equal(client.streams.length, 1);
   assert.equal(remote.controls.has(pane.sessionId), false);
@@ -280,7 +280,7 @@ test('two opens for the same token share an unverified attachment without closin
   remote.views.set(pane.key, { pane, active: true, initialized: false });
   const reachedPostcheck = deferred(), finishPostcheck = deferred(); let reads = 0;
   remote.checked = async command => {
-    if (!command.includes('show-options')) return '';
+    if (!command.includes('display-message -p -t')) return '';
     if (++reads === 1) return token;
     reachedPostcheck.resolve(); return finishPostcheck.promise;
   };

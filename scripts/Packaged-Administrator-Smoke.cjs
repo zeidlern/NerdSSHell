@@ -19,7 +19,7 @@ async function administratorSmoke({ evaluate, wait, check, screenshot }) {
       window.__smokeAdministrator={done:false,cancelled:false,key:null,error:null};
       Promise.resolve().then(()=>api.localAdminOpen(${JSON.stringify(shell)})).then(async result=>{
         if(result?.cancelled){__smokeAdministrator.cancelled=true;}
-        else if(result?.pane){await BetterSSHWorkbench.acceptResult(result);__smokeAdministrator.key=result.pane.key;}
+        else if(result?.pane){await NerdSSHellWorkbench.acceptResult(result);__smokeAdministrator.key=result.pane.key;}
         else throw Error('Administrator launch returned no result');
       }).catch(error=>{__smokeAdministrator.error=String(error.message||error);}).finally(()=>{__smokeAdministrator.done=true;});
       return true;

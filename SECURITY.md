@@ -34,6 +34,6 @@ Listings, transfers and outstanding channel opens have independent limits and ti
 
 ## Distribution and remaining limits
 
-The v1.0.0 Windows installer is unsigned unless a specific release artifact is explicitly identified as Authenticode-signed. Hashes do not authenticate a publisher. Electron fuse/ASAR hardening and automated dependency/secret checks are part of the release process, but no test suite proves the software is vulnerability-free. There is no unattended auto-update mechanism. Supported CI/build installs omit optional npm dependencies; the release-gating audit matches that installed build graph, while the security workflow also reports full-lock advisories for omitted optional dependencies.
+Windows installer candidates are unsigned unless a specific release artifact is explicitly identified as Authenticode-signed. Hashes do not authenticate a publisher. Electron fuse/ASAR hardening and automated dependency/secret checks are part of the release process, but no test suite proves the software is vulnerability-free. There is no unattended auto-update mechanism. Supported CI/build installs omit optional npm dependencies; the release-gating audit matches that installed build graph, while the security workflow also reports full-lock advisories for omitted optional dependencies.
 
 Review [SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md) and [PUBLIC-RELEASE.md](docs/PUBLIC-RELEASE.md). No code review or passing test suite establishes that software is free of vulnerabilities.

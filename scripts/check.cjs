@@ -6,8 +6,8 @@ for (const folder of ['src', 'ui', 'scripts', 'test']) for (const name of fs.rea
 const metadata = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
 if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(metadata.version) || lock.version !== metadata.version || lock.packages[''].version !== metadata.version) throw new Error('Package and lockfile versions must be synchronized semantic versions.');
-const { PRODUCT_NAME, APP_ID, LEGACY_PACKAGE_NAME } = require('../src/branding.cjs');
-if (metadata.name !== LEGACY_PACKAGE_NAME || metadata.build.appId !== APP_ID || metadata.build.productName !== PRODUCT_NAME) throw new Error('Visible branding or stable compatibility identity is inconsistent.');
+const { PRODUCT_NAME, APP_ID, PACKAGE_NAME, INSTALLER_GUID } = require('../src/branding.cjs');
+if (metadata.name !== PACKAGE_NAME || lock.name !== PACKAGE_NAME || lock.packages[''].name !== PACKAGE_NAME || metadata.build.appId !== APP_ID || metadata.build.productName !== PRODUCT_NAME || metadata.build.nsis.guid !== INSTALLER_GUID) throw new Error('Product/package identity or compatible installer identity is inconsistent.');
 require('./Verify-Branding.cjs').verifySourceBranding();
 const html = fs.readFileSync('ui/index.html', 'utf8');
 for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) if (!match[1].includes('node_modules') && !fs.existsSync(path.join('ui', match[1]))) throw new Error('Missing UI resource: ' + match[1]);

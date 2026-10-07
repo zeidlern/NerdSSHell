@@ -2,9 +2,19 @@
 
 ## Mission
 
-Evolve BetterSSH into **NerdSSHell**, with the tagline **Built for Windows nerds with Linux problems**. Implement centralized two-pane Preferences, same-session Actions and Favorites, normal/elevated local PowerShell and Command Prompt as first-class sessions, navigation refinements, independent waiting-for-input alerts, and production light/dark branding. Preserve saved data and working SSH/tmux/SFTP/input behavior. Save tested sections to GitHub with sequential patch versions.
+Develop **NerdSSHell**, with the tagline **Built for Windows nerds with Linux problems**. Implement centralized two-pane Preferences, same-session Actions and Favorites, normal/elevated local PowerShell and Command Prompt as first-class sessions, navigation refinements, independent waiting-for-input alerts, and production light/dark branding. Preserve saved data and working SSH/tmux/SFTP/input behavior. Save tested sections to GitHub with sequential patch versions.
 
-**Current release candidate: 1.0.0.** The candidate includes the completed 0.1.12 Scratchpad word-wrap checkpoint, Electron 44.5.1, repository/public-facing cleanup and the chosen source-available use terms. Earlier integration and acceptance evidence retains its original versions.
+**Current release candidate: 1.0.1.** The candidate includes the completed 0.1.12 Scratchpad word-wrap checkpoint, Electron 44.5.1, repository/public-facing cleanup and the chosen source-available use terms. Earlier integration and acceptance evidence retains its original versions.
+
+### Current identity and compatible upgrades — 1.0.1
+
+- Owner approved app ID `app.nerdsshell.desktop` with compatibility and current BetterSSH naming cleanup. Package/version advance to `nerdsshell@1.0.1`; current UI protocol/IPC, globals, temporary/test names, PowerShell variables and native C# broker use NerdSSHell. Four deliberate compatibility references remain in runtime/install detection: old data folder, old remote marker, old executable and old installation directory. Historical evidence remains dated.
+- Explicit NSIS GUID `48ee049e-c2f6-57b2-ab6e-7f5df516dcc0` matches the independently derived original. `src/application-identity.cjs` retains legacy data for upgrades, current data for fresh users and explicit isolated CLI profiles; it rejects unsafe/unreadable candidates. Selection happens before the lock. No real profile/settings/archive is moved, copied or deleted.
+- Persistent discovery reads current and legacy markers, preserves existing UUID/keys without rewriting marked sessions, publishes the same token for new/downlevel clients under guarded metadata assignment, and rejects conflicts/stale transports/downgrade on attach and End. No job creation is added to discovery/reconnect.
+- Source check and **753/753 Windows regressions** passed, zero failures/skips, including 14 new session-identity cases, 11 storage/installer cases, actual startup ordering/isolation and retired-origin/IPC rejection. Native focused checks and exact-ASAR no-UAC CMD/PS5/PS7 guard/provider/editing/cleanup acceptance passed. Exact packaged renderer/IPC/loopback SSH/SFTP/local-console acceptance passed **162 checks**. Local Node 24.19.0 x64, Windows; new GitHub Node 22/Linux/real-tmux validation is required on this branch.
+- NSIS build and current identity/version/branding/native hashes/fuses/ASAR integrity/containment and ten exact packaged dependency notices passed. Versioned full/runtime SPDX inventories were regenerated. Candidate installer SHA-256: `1c3b3495f201519705e615dd13634b909fae56091e1e5297a44b5e49da6b8ae6`. This is an unsigned build-only candidate, not a local user installation.
+- Initial public CodeQL actually ran; 43 baseline test/harness findings were statically triaged individually as not actionable product claims, with no suppression/dismissal. Both actual matrix checks are required on main. [Triage scope](CODEQL-TRIAGE-2026-10-06.md), [identity compatibility](IDENTITY-COMPATIBILITY.md).
+- Working branch: `codex/nerdsshell-identity`. Next step: new-repository CI/real tmux and public CodeQL review, protected PR merge, Wiki/current candidate update. The existing 1.0.0 tag and draft bytes remain unchanged. Publisher signing and genuine clean-user/UAC/native/physical notification acceptance remain separate.
 
 ### Clean public repository migration — October 6, 2026 Chicago
 

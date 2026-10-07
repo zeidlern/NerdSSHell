@@ -43,7 +43,7 @@ test('packaged verification rejects a missing or changed icon frame', () => {
   assert.throws(() => verifyResourceBranding(fixture().filter(entry => entry.type !== 14), ico, expected), /icon resource is missing/);
 });
 
-test('packaged verification rejects stale BetterSSH identity or release versions', () => {
-  assert.throws(() => verifyResourceBranding(fixture(), ico, { ...expected, productName: 'BetterSSH' }), /product name differs/);
+test('packaged verification rejects a different product identity or release version', () => {
+  assert.throws(() => verifyResourceBranding(fixture(), ico, { ...expected, productName: 'Retired application' }), /product name differs/);
   assert.throws(() => verifyResourceBranding(fixture(), ico, { ...expected, version: '0.1.1' }), /file version differs/);
 });

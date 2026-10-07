@@ -27,7 +27,7 @@ if (asarAt >= 0) {
   const asar = require('@electron/asar');
   const archive = path.resolve(args[asarAt + 1]);
   const archived = asar.extractFile(archive, 'src/elevated-console.cs');
-  tempDir = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-admin-smoke-')));
+  tempDir = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-admin-smoke-')));
   source = path.join(tempDir, 'elevated-console.cs');
   fs.writeFileSync(source, archived, { flag: 'wx', mode: 0o600 });
   bridgeModule = path.join(tempDir, 'elevated-pty.cjs');
@@ -91,8 +91,8 @@ class Bridge {
   constructor(shell, { helperSource = source, helperDigest = digest, onOutput = () => {}, renderTerminal = true } = {}) {
     this.shell = shell;
     const production = bootstrap(helperSource, helperDigest, shell, nativeDirectory);
-    assert.ok(production.includes('[BetterSSH.ElevatedConsole]::Broker('), 'packaged bridge bootstrap');
-    const script = elevated ? production : production.replace('[BetterSSH.ElevatedConsole]::Broker(', '[BetterSSH.ElevatedConsole]::BrokerFixture(');
+    assert.ok(production.includes('[NerdSSHell.ElevatedConsole]::Broker('), 'packaged bridge bootstrap');
+    const script = elevated ? production : production.replace('[NerdSSHell.ElevatedConsole]::Broker(', '[NerdSSHell.ElevatedConsole]::BrokerFixture(');
     this.child = spawn(windowsPowerShell, ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')],
       { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, env: nativeFixture ? nativeFixture.environment(windowsPowerShellEnvironment()) : windowsPowerShellEnvironment() });
     this.child.stdin.on('error', () => {}); // EOF/close races are asserted through process exit.
@@ -355,7 +355,7 @@ function guardDiagnosticSource(original) {
               try {
                 $details = [Text.StringBuilder]::new()
                 $pairs = @(
-                  @('selectedModule', [string]$bettersshModule, 512),
+                  @('selectedModule', [string]$nerdsshellModule, 512),
                   @('PSModulePath', [string]$env:PSModulePath, 1024),
                   @('error', [string]$failure.Exception.Message, 512),
                   @('PSVersion', [string]$PSVersionTable.PSVersion, 32),
@@ -390,7 +390,7 @@ async function probePowerShellGuards(shell) {
   try {
     const diagnostic = guardDiagnosticSource(bytes.toString('utf8'));
     assert.ok(diagnostic.bytes.length > 0 && diagnostic.bytes.length <= 131072, 'diagnostic helper source size');
-    directory = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-guard-smoke-')));
+    directory = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-guard-smoke-')));
     const helperSource = path.join(directory, 'elevated-console.cs');
     fs.writeFileSync(helperSource, diagnostic.bytes, { flag: 'wx', mode: 0o600 });
     const helperDigest = createHash('sha256').update(diagnostic.bytes).digest('hex');

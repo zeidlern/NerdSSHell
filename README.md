@@ -10,7 +10,7 @@
 
 A Windows workspace for SSH, persistent remote sessions, local PowerShell and Command Prompt. Keep connections, tabs, split panes, file transfers and notes together instead of juggling separate windows.
 
-**Public source version: 1.0.0; Windows release publication pending.** This independent repository contains reviewed clean history. The previous development repository remains private. A public source version is not a published or signed installer. Read the [clean migration checkpoint](docs/CLEAN-PUBLIC-MIGRATION-2026-10-06.md) and [release gates](docs/PUBLIC-RELEASE.md) before binary distribution. No independent security certification is claimed.
+**Public source version: 1.0.1; Windows release publication pending.** This independent repository contains reviewed clean history. The previous development repository remains private. A public source version is not a published or signed installer. Read the [clean migration checkpoint](docs/CLEAN-PUBLIC-MIGRATION-2026-10-06.md) and [release gates](docs/PUBLIC-RELEASE.md) before binary distribution. No independent security certification is claimed.
 
 ## Start here
 
@@ -61,7 +61,9 @@ The helper uses `npm ci --omit=optional`, tests and verifies the versioned insta
 
 ## Compatibility and limits
 
-NerdSSHell is the renamed BetterSSH project. Legacy package/app/data/IPC/tmux identifiers, including `cc.zeidler.betterssh`, intentionally remain stable for upgrade compatibility. Do not globally replace them or delete the legacy settings directory. Existing profiles, trust pins and preferences should be preserved through a backed-up upgrade.
+The package, Windows app ID, UI/resource protocol, IPC and native bridge now use NerdSSHell identity. The original installer GUID is explicitly pinned so upgrades retain installation registration and directory. Existing profiles, trust pins, preferences and archives stay in their existing data folder; startup does not move, merge or delete data.
+
+Fresh installations use `%APPDATA%\nerdsshell`. Upgrades retain `%APPDATA%\betterssh` when that legacy folder exists. Explicit `--user-data-dir` profiles remain isolated. Existing persistent sessions retain their stable tokens and saved keys; the remote legacy marker remains a compatibility alias for older clients. Current UI and new upload defaults use NerdSSHell. See [identity compatibility](docs/IDENTITY-COMPATIBILITY.md).
 
 This version does not provide a tested ARM64/mobile/macOS/Linux desktop build, full OpenSSH configuration parity, ProxyJump, SSH tunneling UI, recursive/resumable folder transfer, cloud sync or unattended automatic updates. Prompt detection can miss unfamiliar programs. See the [known limits](docs/wiki/Troubleshooting.md) and [architecture](docs/ARCHITECTURE.md).
 

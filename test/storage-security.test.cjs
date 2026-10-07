@@ -9,7 +9,7 @@ const { Archive, publishExport } = require('../src/storage.cjs');
 const { Control } = require('../src/control.cjs');
 
 function fixture(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-archive-security-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-archive-security-'));
   const archive = new Archive(root, 'synthetic', 16, 128);
   t.after(async () => { try { await archive.close(); } catch {} fs.rmSync(root, { recursive: true, force: true }); });
   return archive;
@@ -84,7 +84,7 @@ test('fragmented protocol input accumulates bounded line pieces without repeated
 });
 
 test('export publication never overwrites a file created after the Save dialog', t => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-export-security-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-export-security-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const source = path.join(dir, 'pending.tmp'), destination = path.join(dir, 'chosen.txt');
   fs.writeFileSync(source, 'new export');

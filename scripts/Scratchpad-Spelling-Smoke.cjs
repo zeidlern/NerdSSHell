@@ -32,7 +32,7 @@ fs.mkdirSync(output, { recursive: true });
 for (const name of ['report.json', 'failure.txt']) fs.rmSync(path.join(output, name), { force: true });
 app.setPath('userData', directory);
 app.commandLine.appendSwitch('log-net-log', path.join(output, 'net-log.json'));
-protocol.registerSchemesAsPrivileged([{ scheme: 'betterssh', privileges: { standard: true, secure: true } }]);
+protocol.registerSchemesAsPrivileged([{ scheme: 'nerdsshell', privileges: { standard: true, secure: true } }]);
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const checks = [], external = [], dictionaries = [];
 const note = 'mispellling notes \nWrite-Output "safe preview"\n';
@@ -87,11 +87,11 @@ async function main() {
   const scratchpad = html.match(/<aside id="scratchpad"[\s\S]*?<\/aside>/)[0].replace(' hidden ', ' ');
   const fixtureHTML = `<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'none'"><link rel="stylesheet" href="ui/style.css"><link rel="stylesheet" href="ui/desktop-ux.css"><main><button id="scratchpadToggle" type="button">Scratchpad</button>${scratchpad}<textarea id="other" spellcheck="false"></textarea></main><script src="fixture.js"></script><script src="ui/scratchpad.js"></script>`;
   const bootstrap = `const $=id=>document.getElementById(id),api={scratchpadDirty:async()=>{},scratchpadRead:async()=>null,scratchpadSave:async()=>null,copy:async()=>{}},views=new Map(),fit=()=>{},run=()=>{},message=()=>{};`;
-  protocol.handle('betterssh', request => {
-    const routes = { [UI_URL]: [fixtureHTML, 'text/html'], 'betterssh://app/ui/fixture.js': [bootstrap, 'text/javascript'],
-      'betterssh://app/ui/ui/style.css': [fs.readFileSync(path.join(root, 'ui', 'style.css')), 'text/css'],
-      'betterssh://app/ui/ui/desktop-ux.css': [fs.readFileSync(path.join(root, 'ui', 'desktop-ux.css')), 'text/css'],
-      'betterssh://app/ui/ui/scratchpad.js': [fs.readFileSync(path.join(root, 'ui', 'scratchpad.js')), 'text/javascript'] };
+  protocol.handle('nerdsshell', request => {
+    const routes = { [UI_URL]: [fixtureHTML, 'text/html'], 'nerdsshell://app/ui/fixture.js': [bootstrap, 'text/javascript'],
+      'nerdsshell://app/ui/ui/style.css': [fs.readFileSync(path.join(root, 'ui', 'style.css')), 'text/css'],
+      'nerdsshell://app/ui/ui/desktop-ux.css': [fs.readFileSync(path.join(root, 'ui', 'desktop-ux.css')), 'text/css'],
+      'nerdsshell://app/ui/ui/scratchpad.js': [fs.readFileSync(path.join(root, 'ui', 'scratchpad.js')), 'text/javascript'] };
     const resource = routes[request.url]; return new Response(resource ? resource[0] : 'Not found', { status: resource ? 200 : 404, headers: { 'Content-Type': resource ? resource[1] : 'text/plain' } });
   });
   currentSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));

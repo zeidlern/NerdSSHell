@@ -1,7 +1,7 @@
 'use strict';
 /** Extends the existing isolated packaged-app harness; never points at a user's server/profile. */
 async function workbenchSmoke({ evaluate, wait, check, screenshot }) {
-  await evaluate(`BetterSSHWorkbench.open(); true`);
+  await evaluate(`NerdSSHellWorkbench.open(); true`);
   await wait(`$('workbenchDialog').open && !!$('wbTarget').options.length`, 'Workbench did not open.');
   check('Workbench keeps action execution unavailable until review', await evaluate(`$('wbRun').disabled && !$('wbCode').value`));
   await evaluate(`$('wbCode').value='printf harmless'; $('wbCode').dispatchEvent(new Event('input',{bubbles:true})); $('wbReview').click(); true`);
@@ -26,7 +26,7 @@ async function workbenchSmoke({ evaluate, wait, check, screenshot }) {
   await wait(`!views.get(${k}).ready`, 'Disposable PowerShell did not end.');
   await evaluate(`closeView(${k})`);
   check('Exiting the local console leaves all four remote consoles running', await evaluate(`views.size===4 && __smokeKeys.every(k=>views.get(k).ready)`));
-  await evaluate(`BetterSSHWorkbench.open(); true`);await wait(`$('workbenchDialog').open`, 'Workbench did not reopen.');
+  await evaluate(`NerdSSHellWorkbench.open(); true`);await wait(`$('workbenchDialog').open`, 'Workbench did not reopen.');
   await screenshot('workbench-command-review');await evaluate(`$('wbClose').click(); true`);
   await require('./Packaged-CommandReview-Smoke.cjs').commandReviewSmoke({ evaluate, wait, check });
   await require('./Packaged-Actions-Sharing-Smoke.cjs').actionsSharingSmoke({ evaluate, wait, check, screenshot });

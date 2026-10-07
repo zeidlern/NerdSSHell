@@ -1,7 +1,7 @@
 'use strict';
 /** Phase 3 extension: only synthetic text and pre-existing disposable SSH fixture views. */
 async function commandReviewSmoke({ evaluate, wait, check }) {
-  await evaluate(`BetterSSHWorkbench.open({target:views.get(__smokeKeys[0]).pane.profileId}); true`);
+  await evaluate(`NerdSSHellWorkbench.open({target:views.get(__smokeKeys[0]).pane.profileId}); true`);
   await wait(`$('workbenchDialog').open && $('wbTarget').value===views.get(__smokeKeys[0]).pane.profileId`, 'Command review fixture did not open.');
   const chat = 'Instructions\n```sh\nprintf synthetic_phase3_one\n```\nNext block\n```powershell\nWrite-Output synthetic_phase3_two\n```';
   await evaluate(`$('wbChat').value=${JSON.stringify(chat)}; $('wbImport').click(); $('wbBlocks').value='0'; $('wbBlocks').dispatchEvent(new Event('change',{bubbles:true})); true`);

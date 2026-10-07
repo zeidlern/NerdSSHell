@@ -8,16 +8,16 @@ const { shellQuote: q } = require('../src/core.cjs');
 
 // The existing CI fixture owns the loopback server and key. Never use a real host.
 test('real SSH: concurrent long paste and Enter preserve shell command boundaries', {
-  skip: !process.env.BETTERSSH_TEST_KEY, timeout: 90000
+  skip: !process.env.NERDSSHELL_TEST_KEY, timeout: 90000
 }, async t => {
-  const host = process.env.BETTERSSH_TEST_HOST || '127.0.0.1';
+  const host = process.env.NERDSSHELL_TEST_HOST || '127.0.0.1';
   assert.equal(host, '127.0.0.1', 'Only the disposable loopback fixture is permitted');
-  const socket = `betterssh-ci-input-order-${process.pid}`, proof = `/tmp/${socket}-proof`;
-  const port = Number(process.env.BETTERSSH_TEST_PORT || 22222);
-  const pub = fs.readFileSync(process.env.BETTERSSH_TEST_HOST_KEY + '.pub', 'utf8').trim().split(/\s+/);
+  const socket = `nerdsshell-ci-input-order-${process.pid}`, proof = `/tmp/${socket}-proof`;
+  const port = Number(process.env.NERDSSHELL_TEST_PORT || 22222);
+  const pub = fs.readFileSync(process.env.NERDSSHELL_TEST_HOST_KEY + '.pub', 'utf8').trim().split(/\s+/);
   const r = new Remote({ id: 'ci-input-order', name: 'CI input ordering', host, port,
-    username: process.env.BETTERSSH_TEST_USER || os.userInfo().username,
-    auth: 'key', keyPath: process.env.BETTERSSH_TEST_KEY, socket }, {
+    username: process.env.NERDSSHELL_TEST_USER || os.userInfo().username,
+    auth: 'key', keyPath: process.env.NERDSSHELL_TEST_KEY, socket }, {
     knownHosts: `[${host}]:${port} ${pub[0]} ${pub[1]}\n`, pins: {},
     ask: async () => { throw new Error('The isolated test must not prompt or install software'); },
     trust: async () => { throw new Error('Unexpected untrusted test host'); }

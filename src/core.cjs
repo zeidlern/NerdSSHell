@@ -52,7 +52,7 @@ function profile(value) {
     autoConnect: value.autoConnect !== false, startup, record: value.record === true,
     scrollback: integer(Number(value.scrollback ?? 100000), 1000, 500000, 'scrollback'),
     archiveMB: integer(Number(value.archiveMB ?? 256), 16, 4096, 'archive size'),
-    uploadDirectory: text(value.uploadDirectory || '~/BetterSSH-Uploads', 'upload directory') };
+    uploadDirectory: text(value.uploadDirectory || '~/NerdSSHell-Uploads', 'upload directory') };
 }
 function tmuxPrefix(p) { return 'tmux' + (p.socket ? ` -L ${shellQuote(p.socket)}` : ''); }
 function unescapeOctal(input) {
@@ -67,7 +67,20 @@ function unescapeOctal(input) {
   return dst.subarray(0, w);
 }
 function unescapeFormat(s) { return s.replace(/\\(.)/g, '$1'); }
-const PANE_FORMAT = '#{session_id}\t#{q:session_name}\t#{window_id}\t#{window_index}\t#{q:window_name}\t#{pane_id}\t#{pane_index}\t#{pane_width}\t#{pane_height}\t#{pane_dead}\t#{@betterssh-id}\t#{window_panes}\t#{q:pane_current_command}';
+const SESSION_IDENTITY_OPTION = '@nerdsshell-id';
+// Existing remote work keeps its original stable token throughout migration.
+const LEGACY_SESSION_IDENTITY_OPTION = '@betterssh-id';
+const SESSION_IDENTITY_FORMAT = `#{${SESSION_IDENTITY_OPTION}}|#{${LEGACY_SESSION_IDENTITY_OPTION}}`;
+function parseSessionIdentity(value) {
+  const pair = value.split('|');
+  if (pair.length > 2) throw new Error('Invalid session identity.');
+  // Old 13-column records used only the legacy token in this column.
+  const [current, legacy] = pair.length === 1 ? ['', pair[0]] : pair;
+  for (const token of [current, legacy]) if (token && !/^[a-f0-9-]{36}$/.test(token)) throw new Error('Invalid session identity.');
+  if (current && legacy && current !== legacy) throw new Error('Conflicting remote session identities. No session was changed.');
+  return { sessionToken: current || legacy, sessionIdentityOption: current ? SESSION_IDENTITY_OPTION : legacy ? LEGACY_SESSION_IDENTITY_OPTION : null };
+}
+const PANE_FORMAT = '#{session_id}\t#{q:session_name}\t#{window_id}\t#{window_index}\t#{q:window_name}\t#{pane_id}\t#{pane_index}\t#{pane_width}\t#{pane_height}\t#{pane_dead}\t' + SESSION_IDENTITY_FORMAT + '\t#{window_panes}\t#{q:pane_current_command}';
 function parsePanes(data) {
   const result = [];
   for (const line of data.replace(/\n+$/, '').split('\n')) {
@@ -77,7 +90,7 @@ function parsePanes(data) {
     result.push({ sessionId: id(a[0], '$'), sessionName: unescapeFormat(a[1]), windowId: id(a[2], '@'),
       windowIndex: Number(a[3]), windowName: unescapeFormat(a[4]), paneId: id(a[5], '%'), paneIndex: Number(a[6]),
       ...geometry(Number(a[7]), Number(a[8])),
-      dead: a[9] === '1', sessionToken: a[10], windowPanes: Number(a[11]), command: unescapeFormat(a[12]) });
+      dead: a[9] === '1', ...parseSessionIdentity(a[10]), windowPanes: Number(a[11]), command: unescapeFormat(a[12]) });
   }
   return result;
 }
@@ -125,4 +138,5 @@ function knownHostStatus(contents, host, port, key) {
   return trusted ? 'trusted' : matched ? 'changed' : 'unknown';
 }
 module.exports = { text, integer, geometry, pasteText, id, shellQuote, sessionName, profile, tmuxPrefix, unescapeOctal,
-  PANE_FORMAT, parsePanes, paneKey, restoreOrder, fingerprint, knownHostStatus };
+  PANE_FORMAT, parsePanes, paneKey, restoreOrder, fingerprint, knownHostStatus,
+  SESSION_IDENTITY_OPTION, LEGACY_SESSION_IDENTITY_OPTION, SESSION_IDENTITY_FORMAT, parseSessionIdentity };

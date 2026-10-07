@@ -40,12 +40,12 @@ function installDesktopTools({ handle, app, dialog, getWindow, confirm, adminLau
     adminBusy = true;
     try { return await adminLaunch(id); } finally { adminBusy = false; }
   });
-  handle('scratchpadDirty', dirty => { if (typeof dirty !== 'boolean') throw new Error('Invalid scratchpad state.'); app.bettersshScratchpadDirty = dirty; app.bettersshScratchpadRevision = (app.bettersshScratchpadRevision || 0) + 1; });
+  handle('scratchpadDirty', dirty => { if (typeof dirty !== 'boolean') throw new Error('Invalid scratchpad state.'); app.nerdsshellScratchpadDirty = dirty; app.nerdsshellScratchpadRevision = (app.nerdsshellScratchpadRevision || 0) + 1; });
   handle('scratchpadRead', async () => {
     if (noteBusy) throw new Error('Finish the current scratchpad file dialog first.');
     noteBusy = true;
     try {
-      if (app.bettersshScratchpadDirty && !await confirm('Replace scratchpad?', 'Discard unsaved scratchpad edits and open another file?', 'Cancel to keep editing or Save As first.')) return null;
+      if (app.nerdsshellScratchpadDirty && !await confirm('Replace scratchpad?', 'Discard unsaved scratchpad edits and open another file?', 'Cancel to keep editing or Save As first.')) return null;
       const result = await dialog.showOpenDialog(getWindow(), { title: 'Open text in scratchpad', properties: ['openFile'], filters: [{ name: 'Text and code', extensions: ['txt', 'md', 'ps1', 'sh', 'py', 'json', 'yaml', 'yml', 'log'] }, { name: 'All files', extensions: ['*'] }] });
       if (result.canceled) return null;
       if (!Array.isArray(result.filePaths) || result.filePaths.length !== 1 || !path.isAbsolute(result.filePaths[0])) throw new Error('Choose one text file.');

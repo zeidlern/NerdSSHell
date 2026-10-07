@@ -5,6 +5,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { UI_URL, assetPath } = require('./app-protocol.cjs');
 const { PRODUCT_NAME, APP_ID, WINDOW_ICON } = require('./branding.cjs');
+const { selectUserDataDirectory } = require('./application-identity.cjs');
 const { randomUUID } = require('node:crypto');
 const { OutputBuffer } = require('./output-buffer.cjs');
 const { StateStore, Archive, publishExport } = require('./storage.cjs');
@@ -27,12 +28,12 @@ let window, store, quitting = false, quitPending = false, promptChain = Promise.
 const connections = new Map(), archives = new Map(), prompts = new Map(), transfers = new Map(), fileListings = new FileListings();
 const output = new OutputBuffer({ emit: (type, data) => { emit(type, data); if (type === 'output') standardBackpressure(data.key); }, recover: key => forKey(key).remote.snapshot(key) });
 const uiURL = UI_URL;
-protocol.registerSchemesAsPrivileged([{ scheme: 'betterssh', privileges: { standard: true, secure: true } }]);
+protocol.registerSchemesAsPrivileged([{ scheme: 'nerdsshell', privileges: { standard: true, secure: true } }]);
 function emit(type, data = {}) {
   workbench?.observe(type, data);
   if (['snapshot', 'detached', 'ended', 'standard-ended'].includes(type)) sessionCommands?.forget(data.key);
   if (['detached', 'ended', 'standard-ended'].includes(type)) sessionNotifications?.forget(data.key);
-  if (type === 'status' && ['connecting', 'disconnected'].includes(data.state)) sessionNotifications?.clearProfile(data.profileId); if (window && !window.isDestroyed()) window.webContents.send('betterssh:event', { type, ...data }); }
+  if (type === 'status' && ['connecting', 'disconnected'].includes(data.state)) sessionNotifications?.clearProfile(data.profileId); if (window && !window.isDestroyed()) window.webContents.send('nerdsshell:event', { type, ...data }); }
 function confirm(title, message, detail = '') { return dialog.showMessageBox(window, { type: 'question', title, message, detail, buttons: ['Cancel', 'Continue'], defaultId: 0, cancelId: 0, noLink: true }).then(x => x.response === 1); }
 function ask(options) {
   const { valid = () => true, ...publicOptions } = options;
@@ -154,7 +155,7 @@ async function connect(id, secrets) {
     for (const pane of remote.panes) discardOutput(pane.key);
     publishStatus(r, 'disconnected', error.message);
     // Auth/trust failures require an explicit user action; network loss uses bounded backoff.
-    if (p.sessionMode === 'standard' || error.code === 'BETTERSSH_HOST_VERIFICATION' || error.level === 'client-authentication') { r.wanted = false; r.secrets = {}; remote.disconnect(); return; }
+    if (p.sessionMode === 'standard' || error.code === 'NERDSSHELL_HOST_VERIFICATION' || error.level === 'client-authentication') { r.wanted = false; r.secrets = {}; remote.disconnect(); return; }
     const delay = Math.min(30000, 1000 * 2 ** Math.min(r.attempts++, 5));
     clearTimeout(r.timer); r.timer = setTimeout(() => connect(id).catch(() => {}), delay);
   });
@@ -167,14 +168,14 @@ async function connect(id, secrets) {
   } catch (e) {
     if (!active()) { remote.disconnect(); return []; }
     remote.disconnect(); publishStatus(r, 'disconnected', e.message);
-    if (p.sessionMode === 'standard' || e.code === 'BETTERSSH_HOST_VERIFICATION' || /auth|identity|key|cancel|support|passphrase|agent|permission|known_hosts/i.test(e.message)) { r.wanted = false; r.secrets = {}; }
+    if (p.sessionMode === 'standard' || e.code === 'NERDSSHELL_HOST_VERIFICATION' || /auth|identity|key|cancel|support|passphrase|agent|permission|known_hosts/i.test(e.message)) { r.wanted = false; r.secrets = {}; }
     else if (r.wanted && !quitting) { const delay = Math.min(30000, 1000 * 2 ** Math.min(r.attempts++, 5)); r.timer = setTimeout(() => connect(id).catch(() => {}), delay); }
     throw e;
   } finally { r.busy = false; }
 }
 function disconnect(id) { workbench?.disconnect(id); sessionCommands?.disconnect(id); sessionNotifications?.clearProfile(id); cancelRemoteFiles(id); const r = connections.get(id); if (!r) return; r.promptToken = randomUUID(); for (const [prompt, done] of prompts) if (done.profileId === id) { emit('promptCancelled', { id: prompt }); done(null); } r.wanted = false; clearTimeout(r.timer); for (const key of output.keys()) if (key.startsWith(`${id}/`)) discardOutput(key); r.remote?.disconnect(); r.secrets = {}; publishStatus(r, 'disconnected', r.profile.sessionMode === 'standard' ? 'Disconnected. Standard shells are not restorable; connect to start a new shell.' : 'Disconnected. Persistent work was left running; Standard shells are not restorable.'); }
 function handle(name, fn) {
-  ipcMain.handle(`betterssh:${name}`, async (event, ...args) => {
+  ipcMain.handle(`nerdsshell:${name}`, async (event, ...args) => {
     if (event.sender !== window?.webContents || event.senderFrame !== window.webContents.mainFrame || event.senderFrame.url !== uiURL) throw new Error('Untrusted request.');
     return fn(...args);
   });
@@ -242,15 +243,24 @@ function registerIPC() {
   workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key) });
   sessionCommands = installSessionCommands({ handle, connections, forKey, assertInput: key => workbench.assertInput(key), resolveAction: (key, id, argument) => workbench.resolvePaneAction(key, id, argument) });
 }
-if (!app.isPackaged && process.env.BETTERSSH_TEST_DATA) app.setPath('userData', process.env.BETTERSSH_TEST_DATA);
+// Resolve storage before the single-instance lock so upgrades share the same
+// owned profile/lock. Explicit CLI profiles keep acceptance and custom profiles
+// isolated; packaged builds never honor the source-only test environment.
+const storageChoice = selectUserDataDirectory({
+  appDataDirectory: app.getPath('appData'), isPackaged: app.isPackaged,
+  testDataDirectory: process.env.NERDSSHELL_TEST_DATA,
+  userDataOverride: app.commandLine?.getSwitchValue?.('user-data-dir')
+});
+fs.mkdirSync(storageChoice.directory, { recursive: true, mode: 0o700 });
+app.setPath('userData', storageChoice.directory);
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (window?.isMinimized()) window.restore(); window?.focus(); });
   app.whenReady().then(() => {
-    // Keep the existing app ID/package namespace and userData directory; only
-    // visible identity changes. This also matches the installed shortcut AUMID.
+    // Current AUMID matches the new shortcuts; the pinned installer GUID and
+    // explicit storage selection retain upgrades and existing user data.
     if (process.platform === 'win32') app.setAppUserModelId?.(APP_ID);
-    protocol.handle('betterssh', async request => {
+    protocol.handle('nerdsshell', async request => {
       if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });
       const asset = assetPath(request.url, request.initiatorOrigin, path.join(__dirname, '..'));
       if (!asset) return new Response('Not found', { status: 404 });
@@ -268,7 +278,7 @@ else {
         if (!view?.active || !view.initialized || pane.dead || r.remote.closing) return null;
         return { identity: view, label: `${r.profile.name} · ${pane.sessionName}` };
       }, onActivate: key => emit('attention-activate', { key }), onAudio: data => emit('attention-audio', data) });
-    window.on('close', event => { if (!quitting && (standardCount() || app.bettersshScratchpadDirty)) { event.preventDefault(); app.quit(); } });
+    window.on('close', event => { if (!quitting && (standardCount() || app.nerdsshellScratchpadDirty)) { event.preventDefault(); app.quit(); } });
     Menu.setApplicationMenu(null);
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     window.webContents.on('will-navigate', e => e.preventDefault());
@@ -282,10 +292,10 @@ else {
     if (quitting) return;
     event.preventDefault(); if (quitPending) return; quitPending = true;
     Promise.resolve().then(async () => {
-      const scratchRevision = app.bettersshScratchpadRevision || 0;
-      if (app.bettersshScratchpadDirty && !await confirm('Discard unsaved scratchpad?', 'Quit without saving your scratchpad?', 'Cancel to keep editing or use Save As. Notes are not stored automatically.')) return;
+      const scratchRevision = app.nerdsshellScratchpadRevision || 0;
+      if (app.nerdsshellScratchpadDirty && !await confirm('Discard unsaved scratchpad?', 'Quit without saving your scratchpad?', 'Cancel to keep editing or use Save As. Notes are not stored automatically.')) return;
       const approved = await approveDisconnect(); if (!approved) return; approved();
-      if (app.bettersshScratchpadDirty && (app.bettersshScratchpadRevision || 0) !== scratchRevision) throw new Error('Scratchpad changed during confirmation. Save it or review quitting again.');
+      if (app.nerdsshellScratchpadDirty && (app.nerdsshellScratchpadRevision || 0) !== scratchRevision) throw new Error('Scratchpad changed during confirmation. Save it or review quitting again.');
       quitting = true; sessionNotifications?.dispose();
       for (const id of connections.keys()) disconnect(id);
       for (const done of prompts.values()) done(null);

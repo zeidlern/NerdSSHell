@@ -44,7 +44,7 @@ jobs:
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-          NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT: ${{ vars.NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT || vars.BETTERSSH_EXPECTED_SIGNER_THUMBPRINT }}
+          NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT: ${{ vars.NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT }}
         run: npm run dist:signed
       - name: Verify packaged resources and write hashes
         shell: pwsh

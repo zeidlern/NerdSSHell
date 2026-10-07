@@ -51,10 +51,10 @@ async function uxDesktopSmoke({ evaluate, wait, check, screenshot }) {
   await evaluate(`$('closeHelp').click(); true`);
   await evaluate(`layout=4;active=__smokeKeys[3];slots=[...__smokeKeys];render();true`);
   const originals = await evaluate(`[...order]`);
-  await evaluate(`(()=>{const data=new DataTransfer();data.setData('application/x-betterssh-pane',__smokeKeys[3]);views.get(__smokeKeys[0]).wrapper.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data}));return true;})()`);
+  await evaluate(`(()=>{const data=new DataTransfer();data.setData('application/x-nerdsshell-pane',__smokeKeys[3]);views.get(__smokeKeys[0]).wrapper.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data}));return true;})()`);
   await wait(`slots[0]===__smokeKeys[3]&&document.activeElement.closest('.terminal-pane')?.dataset.paneKey===__smokeKeys[3]`, 'Packaged quadrant drop did not move and focus the source terminal.');
   check('Packaged drag swaps occupied quadrants without replacing a live transport', await evaluate(`slots[3]===__smokeKeys[0]&&__smokeKeys.every(k=>views.get(k).ready)`));
-  await evaluate(`slots=[__smokeKeys[0],null,__smokeKeys[1],null];active=__smokeKeys[1];render();(()=>{const data=new DataTransfer();data.setData('application/x-betterssh-pane',__smokeKeys[0]);document.querySelectorAll('.empty-slot')[1].dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data}));})();true`);
+  await evaluate(`slots=[__smokeKeys[0],null,__smokeKeys[1],null];active=__smokeKeys[1];render();(()=>{const data=new DataTransfer();data.setData('application/x-nerdsshell-pane',__smokeKeys[0]);document.querySelectorAll('.empty-slot')[1].dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data}));})();true`);
   await wait(`slots[3]===__smokeKeys[0]&&document.activeElement.closest('.terminal-pane')?.dataset.paneKey===__smokeKeys[0]`, 'Packaged drop into an empty quadrant did not settle.');
   check('Packaged empty-slot placement keeps the other positions and persists validated slots', await evaluate(`(async()=>{remember();await new Promise(r=>setTimeout(r,350));const saved=await api.state();return slots[0]===null&&slots[2]===__smokeKeys[1]&&JSON.stringify(saved.workspace.slots)===JSON.stringify(slots);})()`));
   await evaluate(`order=${JSON.stringify(originals)};slots=[...__smokeKeys];active=__smokeKeys[0];render();remember();true`);

@@ -179,7 +179,7 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
       if (!['local:powershell', 'local:pwsh', 'local:cmd'].includes(id)) throw new Error('Choose a local shell installation.');
       const o = owner(id + '-admin');
       try { return await launch(o, o.shell.name); }
-      catch (error) { if (error.code === 'BETTERSSH_UAC_CANCELLED') return { cancelled: true }; throw error; }
+      catch (error) { if (error.code === 'NERDSSHELL_UAC_CANCELLED') return { cancelled: true }; throw error; }
     },
     assertInput(key) { const lock = locks.get(key); if (!lock) return; const r = forKey(key); if (r.remote === lock.remote && r.remote.views.get(key) === lock.view) throw new Error('Input is locked for this pane. Unlock it deliberately to type or paste.'); locks.delete(key); },
     forget(key) { locks.delete(key); },

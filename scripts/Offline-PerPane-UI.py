@@ -1,5 +1,5 @@
 """Offline DOM/Chromium regression. Uses real UI/xterm assets and synthetic IPC only.
-Usage: python scripts/Offline-PerPane-UI.py /path/to/BetterSSH /path/to/evidence
+Usage: python scripts/Offline-PerPane-UI.py /path/to/NerdSSHell /path/to/evidence
 Requires Playwright and Chromium. Never connects to a real SSH server or writes real files.
 """
 import json, pathlib, shutil, sys, re, os
@@ -14,7 +14,7 @@ const panes=['alpha/project-a','alpha/project-b','alpha/logs','beta/shell'].map(
 const handlers=[];const handler=event=>handlers.forEach(cb=>cb(event));window.__pendingList=null;window.__pendingTransfer=null;
 function result(dir){const d=dir==='~'?'/home/tester':dir;return {directory:d,parent:d==='/'?'/':d.substring(0,d.lastIndexOf('/'))||'/',entries:[{name:'projects',path:d+'/projects',kind:'directory',size:0,modified:1700000000},{name:'report.txt',path:d+'/report.txt',kind:'file',size:1400,modified:1700000000},{name:'application.log',path:d+'/application.log',kind:'file',size:120000,modified:1700000000},{name:'<b>literal-text',path:d+'/<b>literal-text',kind:'file',size:50,modified:1700000000},{name:'.hidden',path:d+'/.hidden',kind:'file',size:20,modified:1700000000}],truncated:false,skipped:0};}
 function localResult(key,dir){const d=dir==='~'?'C:\\SyntheticFixture\\'+key.replace('/','-'):dir;return {directory:d,parent:d,entries:[{name:'local-report.txt',path:d+'\\local-report.txt',kind:'file',size:1400,modified:1700000000},{name:'<b>literal-local',path:d+'\\literal-local',kind:'file',size:50,modified:1700000000}],truncated:false};}
-window.betterssh={
+window.nerdsshell={
 state:async()=>({profiles,workspace:{order:[],active:'',layout:4,twoPaneOrientation:'side-by-side',splitX:50,splitY:50},version:'0.1.0'}),onEvent:cb=>{handlers.push(cb);window.__emit=handler;},
 connect:async id=>{const list=panes.filter(p=>p.profileId===id);handler({type:'status',profileId:id,state:'connected',detail:'Connected'});handler({type:'panes',profileId:id,panes:list});handler({type:'connected',profileId:id,panes:list});},
 open:async key=>{window.__actions.push(['open',key]);const pane=panes.find(p=>p.key===key),p=profiles.find(p=>p.id===pane.profileId);handler({type:'snapshot',key,data:btoa('tester@'+p.host+':~$\r\n'+pane.sessionName+' — synthetic fixture'.replace(' — ',' / ')+'\r\n$ '),cols:90,rows:28,cursorX:2,cursorY:2,alternate:false,modes:[0,0,0,0,0,0,1]});},
@@ -33,7 +33,7 @@ filePaths:files=>files.map(f=>f.name),cancelTransfer:async id=>window.__actions.
 };
 '''
 with sync_playwright() as p:
-    browser=p.chromium.launch(headless=True,chromium_sandbox=True,executable_path=os.environ.get('BETTERSSH_UI_BROWSER') or shutil.which('chromium') or shutil.which('google-chrome'))
+    browser=p.chromium.launch(headless=True,chromium_sandbox=True,executable_path=os.environ.get('NERDSSHELL_UI_BROWSER') or shutil.which('chromium') or shutil.which('google-chrome'))
     page=browser.new_page(viewport={'width':1920,'height':1080});errors=[];external=[]
     def choose_layout(choice):
         page.locator('[data-layout-choice="'+choice+'"]').click()
@@ -145,7 +145,7 @@ with sync_playwright() as p:
     page.evaluate("window.__emit({type:'status',profileId:'alpha',state:'connected',detail:'Synthetic reconnect'})")
     page.wait_for_timeout(40)
     assert not any(a[0]=='list' for a in page.evaluate('window.__actions')[start:]), 'listing started before view reattachment'
-    page.evaluate("window.betterssh.connect('alpha')");page.wait_for_timeout(150)
+    page.evaluate("window.nerdsshell.connect('alpha')");page.wait_for_timeout(150)
     actions=page.evaluate('window.__actions')[start:]
     for key in keys[:3]:
         first_open=next((i for i,a in enumerate(actions) if a[0]=='open' and a[1]==key), None)

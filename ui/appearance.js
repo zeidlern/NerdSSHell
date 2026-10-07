@@ -48,5 +48,5 @@
     red: 'Errors', brightGreen: 'Success messages', brightYellow: 'Warnings' });
   const settings = Object.freeze({ baseColors, colorKeys, presets, presetPalette, appearance, paletteLabels, exampleRoles });
   if (typeof module === 'object' && module.exports) module.exports = settings;
-  else globalThis.BetterSSHAppearance = settings;
+  else globalThis.NerdSSHellAppearance = settings;
 })();

@@ -26,13 +26,13 @@ const ASSETS = new Set([
   '/node_modules/@xterm/addon-fit/lib/addon-fit.js',
   '/node_modules/@xterm/addon-search/lib/addon-search.js'
 ]);
-const ORIGIN = 'betterssh://app';
+const ORIGIN = 'nerdsshell://app';
 const UI_URL = `${ORIGIN}/ui/index.html`;
 
 function assetPath(requestURL, initiatorOrigin, root) {
   let url;
   try { url = new URL(requestURL); } catch { return null; }
-  if (url.protocol !== 'betterssh:' || url.host !== 'app' || url.username || url.password || url.search || url.hash || !ASSETS.has(url.pathname)) return null;
+  if (url.protocol !== 'nerdsshell:' || url.host !== 'app' || url.username || url.password || url.search || url.hash || !ASSETS.has(url.pathname)) return null;
   if (initiatorOrigin !== undefined && initiatorOrigin !== ORIGIN) return null;
   return path.join(root, ...url.pathname.slice(1).split('/'));
 }

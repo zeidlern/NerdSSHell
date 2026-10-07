@@ -36,8 +36,8 @@ test('spelling is local and unavailable dictionaries stay on the blocked applica
     setSpellCheckerEnabled: enabled => calls.push(['enabled', enabled])
   };
   configureScratchpadSpelling(session);
-  assert.deepEqual(calls, [['url', 'betterssh://app/spellcheck-dictionaries/'], ['languages', ['en-US']], ['enabled', true]]);
-  assert.equal(assetPath('betterssh://app/spellcheck-dictionaries/en-us-10-1.bdic', 'betterssh://app', __dirname), null);
+  assert.deepEqual(calls, [['url', 'nerdsshell://app/spellcheck-dictionaries/'], ['languages', ['en-US']], ['enabled', true]]);
+  assert.equal(assetPath('nerdsshell://app/spellcheck-dictionaries/en-us-10-1.bdic', 'nerdsshell://app', __dirname), null);
 });
 
 test('native suggestions correct only the same scratchpad selection and can be used once', async () => {

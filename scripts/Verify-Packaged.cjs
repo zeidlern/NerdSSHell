@@ -7,6 +7,7 @@ const { getCurrentFuseWire, FuseV1Options } = require('@electron/fuses');
 const asar = require('@electron/asar');
 const { NtExecutable, NtExecutableResource } = require('resedit');
 const { verifyNativePty, NATIVE_HASHES } = require('../src/local-remote.cjs');
+const { APP_ID, PACKAGE_NAME, INSTALLER_GUID } = require('../src/branding.cjs');
 
 async function verify(directory) {
   const exe = path.join(directory, require('../package.json').build.productName + '.exe');
@@ -15,8 +16,10 @@ async function verify(directory) {
   const archive = path.join(resources, 'app.asar');
   const sourceMetadata = require('../package.json');
   const packagedMetadata = JSON.parse(asar.extractFile(archive, 'package.json').toString('utf8'));
-  assert.equal(packagedMetadata.name, 'betterssh', 'Packaged compatibility namespace changed');
-  assert.equal(packagedMetadata.productName || packagedMetadata.name, 'betterssh', 'Electron default data-directory name changed');
+  assert.equal(packagedMetadata.name, PACKAGE_NAME, 'Packaged product namespace differs from source');
+  assert.equal(sourceMetadata.build.appId, APP_ID, 'Windows application identity differs from runtime');
+  assert.equal(sourceMetadata.build.nsis.guid, INSTALLER_GUID, 'Original installer upgrade identity must remain pinned');
+  assert.equal(asar.extractFile(archive, 'src/application-identity.cjs').toString('utf8'), fs.readFileSync(path.join(__dirname, '..', 'src/application-identity.cjs'), 'utf8'), 'Packaged data compatibility selector differs from reviewed source');
   assert.equal(packagedMetadata.version, sourceMetadata.version, 'Packaged application version differs from source');
   const packagedPtyMetadata = JSON.parse(asar.extractFile(archive, path.join('node_modules', 'node-pty', 'package.json')).toString('utf8'));
   assert.equal(packagedPtyMetadata.version, sourceMetadata.dependencies['node-pty'], 'Packaged terminal provider must match the exact version supported by the owned-transport adapter');

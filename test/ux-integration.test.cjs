@@ -9,15 +9,15 @@ const { profile } = require('../src/core.cjs');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; }
 async function mainFixture(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-ux-integrated-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-ux-integrated-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const handlers = new Map(), messages = [], notices = [], app = new EventEmitter(); let responder = () => ({ response: 1 }), attempts = 0, exits = 0, window;
-  Object.assign(app, { isPackaged: true, requestSingleInstanceLock: () => true, whenReady: () => Promise.resolve(),
+  Object.assign(app, { isPackaged: true, setPath() {}, commandLine: { getSwitchValue: () => root }, requestSingleInstanceLock: () => true, whenReady: () => Promise.resolve(),
     getPath: () => root, getVersion: () => 'fixture', exit() { throw new Error('Unexpected app.exit'); },
     quit() { attempts++; const e = { prevented: false, preventDefault() { this.prevented = true; } }; app.emit('before-quit', e); if (!e.prevented) { exits++; if (window) window.destroyed = true; } } });
   class FakeWindow extends EventEmitter {
     constructor() { super(); window = this; this.destroyed = false;
-      this.webContents = new EventEmitter(); this.webContents.mainFrame = { url: 'betterssh://app/ui/index.html' };
+      this.webContents = new EventEmitter(); this.webContents.mainFrame = { url: 'nerdsshell://app/ui/index.html' };
       this.webContents.send = (_channel, event) => notices.push(event);
       this.webContents.setWindowOpenHandler = () => {};
       this.webContents.session = { setPermissionRequestHandler() {}, setPermissionCheckHandler() {} };
@@ -40,7 +40,7 @@ async function mainFixture(t) {
   await tick();
   return { root, app, messages, notices, main: module.exports, get window() { return window; }, attempts: () => attempts, exits: () => exits,
     respond(fn) { responder = typeof fn === 'function' ? fn : () => ({ response: fn }); },
-    invoke: (name, ...args) => handlers.get('betterssh:' + name)({ sender: window.webContents, senderFrame: window.webContents.mainFrame }, ...args),
+    invoke: (name, ...args) => handlers.get('nerdsshell:' + name)({ sender: window.webContents, senderFrame: window.webContents.mainFrame }, ...args),
     close() { const event = { prevented: false, preventDefault() { this.prevented = true; } }; window.emit('close', event); if (!event.prevented) { window.destroyed = true; app.emit('window-all-closed'); } return event; }
   };
 }
@@ -55,7 +55,7 @@ function runtime(id = 'fixture', shells = 1) {
 test('actual window close keeps renderer and unsaved notes alive when native Cancel is chosen', async t => {
   const h = await mainFixture(t); await h.invoke('scratchpadDirty', true);
   const e = h.close(); assert.equal(e.prevented, true); assert.equal(h.window.destroyed, false);
-  await tick(); assert.equal(h.exits(), 0); assert.equal(h.app.bettersshScratchpadDirty, true);
+  await tick(); assert.equal(h.exits(), 0); assert.equal(h.app.nerdsshellScratchpadDirty, true);
   assert.equal(h.messages[0].title, 'Discard unsaved scratchpad?');
   assert.deepEqual([...h.messages[0].buttons], ['Continue', 'Cancel']); assert.equal(h.messages[0].defaultId, 1);
   h.respond(0); h.close(); await tick(); await tick(); assert.equal(h.exits(), 1);
@@ -145,7 +145,7 @@ test('saved per-OS actions reload without changing profiles, pins, custom palett
   assert.equal(fs.readFileSync(store.file, 'utf8'), bytes);
 });
 test('old settings migrate legacy favorites while retaining all prior user state', t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-legacy-actions-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-legacy-actions-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const original = new StateStore(root); original.putProfile({ id: 'fixture', host: 'fixture.example', username: 'tester', autoConnect: false });
   original.data.pins = { fixture: 'synthetic' }; original.data.workbench.favorites = ['system.disk']; delete original.data.actionConfiguration; original.save();

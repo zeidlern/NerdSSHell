@@ -1,6 +1,6 @@
 # Version 1.0.2 validation
 
-Validated October 7, 2026 against [code revision 0680e92](https://github.com/zeidlern/NerdSSHell/commit/0680e922b6183e356ab36d3b3930d05b7feb8369). Local checks ran on Windows x64 with Node.js 24.19.0; GitHub CI used Node.js 22 on Linux and Windows. These results apply to the identified source and artifacts.
+Validated October 7, 2026 against [code revision 1f3e6a2](https://github.com/zeidlern/NerdSSHell/commit/1f3e6a256344556bc3dcc45567a8bede077640d1). Local checks ran on Windows x64 with Node.js 24.19.0; GitHub CI used Node.js 22 on Linux and Windows. These results apply to the identified source and artifacts.
 
 ## Results
 
@@ -13,7 +13,7 @@ Validated October 7, 2026 against [code revision 0680e92](https://github.com/zei
 | NSIS Windows x64 installer | Built successfully |
 | Package verification | Identity/version, fuses, ASAR metadata, native hashes, containment and notices passed |
 | Exact shipped source/UI comparison | All 74 files match the tested ASAR byte-for-byte |
-| Packaged UI, SSH/SFTP and console acceptance | 164 local checks and 174 CI checks passed |
+| Packaged UI, SSH/SFTP and console acceptance | 165 local checks and 175 CI checks passed |
 | Exact-ASAR native bridge without UAC | CMD, Windows PowerShell and PowerShell 7 provider/ownership/editing/cleanup checks passed |
 | Native Scratchpad spelling/word wrap | 16 checks passed; no external dictionary/request URLs |
 | Dependencies | Supported and complete lockfile audits: zero vulnerabilities; installed resolution passed |
@@ -24,7 +24,7 @@ Validated October 7, 2026 against [code revision 0680e92](https://github.com/zei
 
 The project uses JavaScript and does not configure a separate general-purpose linter or type checker. Those checks are **not configured**, rather than reported as passes. Syntax and workflow validation are separate checks.
 
-CI evidence: [build and Windows acceptance](https://github.com/zeidlern/NerdSSHell/actions/runs/37577669608), [dependency/secret checks](https://github.com/zeidlern/NerdSSHell/actions/runs/37577669574), [CodeQL](https://github.com/zeidlern/NerdSSHell/actions/runs/37577669611).
+CI evidence: [build and Windows acceptance](https://github.com/zeidlern/NerdSSHell/actions/runs/37581607682), [dependency/secret checks](https://github.com/zeidlern/NerdSSHell/actions/runs/37581607698), [CodeQL](https://github.com/zeidlern/NerdSSHell/actions/runs/37581607699).
 
 ## Security dispositions
 
@@ -44,8 +44,8 @@ Both the application executable and installer report **NotSigned**. Hashes ident
 
 | File | SHA-256 |
 | --- | --- |
-| NerdSSHell-1.0.2-x64-Setup.exe | `4da8a31c122eb138a40844688c138a7d13aac13548c0b3b7405206ca4c123932` |
-| app.asar | `886dc7ab9f7552758741a5b34d887cd17ce0d23406adf309f727aa352a72e864` |
+| NerdSSHell-1.0.2-x64-Setup.exe | `3e9465f605cf00dc9aa17a50315f2467bf171a2f965bb10e4f6db8baef7ab710` |
+| app.asar | `51f48213cbf040836c3d540f19cd6fe5169a9c9f0397e06fe77e1e41ca0fc1da` |
 
 ## Distribution acceptance
 

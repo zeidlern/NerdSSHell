@@ -18,6 +18,8 @@ test('renderer protocol serves the exact UI and bundled dependencies', () => {
 test('renderer protocol denies non-UI code, traversal and foreign initiators', () => {
   for (const url of [
     `${ORIGIN}/src/main.cjs`,
+    `${ORIGIN}/LICENSE`,
+    `${ORIGIN}/docs/THIRD-PARTY-NOTICES.md`,
     `${ORIGIN}/src/session-notifications.cjs`,
     `${ORIGIN}/assets/branding/nerdsshell/production/manifest.json`,
     `${ORIGIN}/ui/../src/main.cjs`,

@@ -38,12 +38,15 @@ const origin = http.createServer((_request, response) => {
 });
 let originPort;
 const proxy = http.createServer((request, response) => {
+  let target;
+  try { target = new URL(request.url); } catch { response.writeHead(400); response.end(); return; }
+  if (target.protocol !== 'http:' || target.hostname !== '127.0.0.1' || Number(target.port) !== originPort || target.username || target.password) {
+    response.writeHead(403); response.end(); return;
+  }
   proxyRequests++;
-  const target = new URL(request.url);
-  assert.equal(target.protocol, 'http:');
-  assert.equal(target.hostname, '127.0.0.1');
-  assert.equal(Number(target.port), originPort);
-  const forwarded = directRequest(target, { agent: directAgent }, upstream => {
+  // The destination comes only from our own listening fixture. Parsed client
+  // data contributes the path, never the protocol, host, port or credentials.
+  const forwarded = directRequest({ hostname: '127.0.0.1', port: originPort, path: target.pathname + target.search, agent: directAgent }, upstream => {
     response.writeHead(upstream.statusCode, upstream.headers);
     upstream.pipe(response);
   });
@@ -106,7 +109,16 @@ async function main() {
   await assert.rejects(download('tampered.bin', '0'.repeat(64)), /checksum/i);
   assert.equal(proxyRequests, 2, 'Checksum rejection must exercise the proxy download');
   assert.equal(originRequests, 3);
-  console.log('Verified optional build proxy bootstrap, loopback forwarding, cache reuse, NO_PROXY bypass and checksum rejection; roarr/sprintf-js absent.');
+  const rejectedRequest = url => new Promise((resolve, reject) => {
+    const request = directRequest({ hostname: '127.0.0.1', port: proxyPort, path: url, agent: directAgent }, response => {
+      response.resume(); response.once('end', () => resolve(response.statusCode));
+    });
+    request.once('error', reject); request.end();
+  });
+  for (const url of ['http://attacker.invalid/file', `http://127.0.0.1:${proxyPort}/loop`, `http://synthetic:fixture@127.0.0.1:${originPort}/file`]) assert.equal(await rejectedRequest(url), 403);
+  assert.equal(await rejectedRequest('not-an-absolute-url'), 400);
+  assert.equal(proxyRequests, 2); assert.equal(originRequests, 3, 'Rejected URLs never reach any forwarding destination');
+  console.log('Verified optional build proxy bootstrap, fixed loopback forwarding, cache reuse, NO_PROXY bypass, checksum and non-origin URL rejection; roarr/sprintf-js absent.');
 }
 
 const deadline = setTimeout(() => {

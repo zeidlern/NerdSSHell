@@ -64,6 +64,8 @@
       "src/**",
       "ui/**",
       "package.json",
+      "docs/THIRD-PARTY-NOTICES.md",
+      "LICENSE",
       "!node_modules/node-pty/{src,deps,third_party,build,scripts}/**/*",
       "!node_modules/node-pty/prebuilds/darwin-*/**/*",
       "!node_modules/node-pty/prebuilds/win32-arm64/**/*",

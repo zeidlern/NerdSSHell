@@ -8,6 +8,8 @@
 - Remove obsolete working notes from the documentation and retain current technical guides and release validation.
 - Remove the vulnerable optional build logging dependency by selecting compatible `global-agent` 4.1.3. Require audits of both supported and complete dependency graphs; test proxy forwarding, cache, exclusions and checksum rejection.
 - Require Node.js 22.12.0 or newer for source builds; synchronize package, application, installer and dependency inventory metadata.
+- Bound abandoned SSH transport cleanup after graceful disconnect; cleanup remains tied to the original socket and leaves persistent work running.
+- Bundle the project license and third-party notices in the application and verify their exact bytes during packaging.
 - See [validation](docs/LAUNCH-VALIDATION.md) for measured checks and distribution status.
 
 ## 1.0.1 — Compatible application identity

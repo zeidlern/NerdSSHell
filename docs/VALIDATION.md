@@ -17,7 +17,7 @@ Validated October 7, 2026 against [code revision 0680e92](https://github.com/zei
 | Exact-ASAR native bridge without UAC | CMD, Windows PowerShell and PowerShell 7 provider/ownership/editing/cleanup checks passed |
 | Native Scratchpad spelling/word wrap | 16 checks passed; no external dictionary/request URLs |
 | Dependencies | Supported and complete lockfile audits: zero vulnerabilities; installed resolution passed |
-| Documentation | 130 local targets in 38 Markdown files resolved |
+| Documentation | 131 local targets in 38 Markdown files resolved |
 | Workflows | actionlint 1.7.12 passed; required GitHub checks passed |
 | CodeQL | JavaScript/TypeScript and Actions analyses passed |
 | Secrets/privacy | Full reachable-history Gitleaks passed; no known credential exposure found |

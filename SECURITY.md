@@ -42,4 +42,4 @@ Use official [Releases](https://github.com/zeidlern/NerdSSHell/releases) and ins
 
 Supported builds use `npm ci --omit=optional`. Dependency validation distinguishes that installed graph from the complete lockfile; see [dependency maintenance](docs/DEPENDENCIES.md). Electron fuse and ASAR-integrity checks, native-provider verification, secret scanning and adversarial regressions are part of validation, but cannot prove absence of vulnerabilities.
 
-See [security architecture and regression coverage](docs/SECURITY-REVIEW.md), [release validation](docs/PUBLIC-RELEASE.md) and [current validation results](docs/LAUNCH-VALIDATION.md).
+See [security architecture and regression coverage](docs/SECURITY-REVIEW.md), [release validation](docs/PUBLIC-RELEASE.md) and [current validation results](docs/VALIDATION.md).

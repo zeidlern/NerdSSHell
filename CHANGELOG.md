@@ -10,7 +10,7 @@
 - Require Node.js 22.12.0 or newer for source builds; synchronize package, application, installer and dependency inventory metadata.
 - Bound abandoned SSH transport cleanup after graceful disconnect; cleanup remains tied to the original socket and leaves persistent work running.
 - Bundle the project license and third-party notices in the application and verify their exact bytes during packaging.
-- See [validation](docs/LAUNCH-VALIDATION.md) for measured checks and distribution status.
+- See [validation](docs/VALIDATION.md) for measured checks and distribution status.
 
 ## 1.0.1 — Compatible application identity
 

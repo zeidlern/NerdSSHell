@@ -1,6 +1,6 @@
 # Security architecture and regression coverage
 
-This document describes the security boundaries maintainers must preserve. Current measured results and unresolved findings belong in [validation results](LAUNCH-VALIDATION.md); checks listed here are coverage, rather than proof that a particular artifact passed.
+This document describes the security boundaries maintainers must preserve. Current measured results and unresolved findings belong in [validation results](VALIDATION.md); checks listed here are coverage, rather than proof that a particular artifact passed.
 
 ## Renderer and privileged operations
 

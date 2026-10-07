@@ -30,4 +30,4 @@ The old UI scheme and IPC channels are not accepted by the current main process.
 
 Native namespace, pipe/temporary prefixes, PowerShell variables and test environments use current naming. The owned provider hashes, nonce/parent/ACL checks, UAC behavior and protected PSReadLine loading remain intact.
 
-Compatibility regressions use isolated data and disposable sessions, rather than installed user data. See [testing](TESTING.md) and [validation results](LAUNCH-VALIDATION.md) for package/native and real tmux checks. Genuine UAC, alternate-account launches, clean-user install/upgrade and physical notification/shortcut behavior require their own Windows acceptance.
+Compatibility regressions use isolated data and disposable sessions, rather than installed user data. See [testing](TESTING.md) and [validation results](VALIDATION.md) for package/native and real tmux checks. Genuine UAC, alternate-account launches, clean-user install/upgrade and physical notification/shortcut behavior require their own Windows acceptance.

@@ -6,7 +6,7 @@ const path = require('node:path');
 const asar = require('@electron/asar');
 
 const root = path.resolve(__dirname, '..');
-const unpacked = path.join(root, 'dist', 'win-unpacked');
+const unpacked = path.resolve(process.argv[2] || path.join(root, 'dist', 'win-unpacked'));
 const archive = path.join(unpacked, 'resources', 'app.asar');
 const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
 // Git may check Markdown out as CRLF on Windows; preserve byte comparisons

@@ -34,7 +34,7 @@ Disconnect/Close on a persistent view is intended to leave remote work running. 
 
 ## Known audit boundary
 
-The supported build installs with `npm ci --omit=optional`. Its dependency audit excludes optional packages but still includes development/build tools. A separate full-lock audit reports omitted dependencies too. Maintainers verify the actual installed/packaged contents and document any residual findings in the [validation results](https://github.com/zeidlern/NerdSSHell/blob/main/docs/LAUNCH-VALIDATION.md).
+The supported build installs with `npm ci --omit=optional`. Its dependency audit excludes optional packages but still includes development/build tools. A separate full-lock audit reports omitted dependencies too. Maintainers verify the actual installed/packaged contents and document any residual findings in the [validation results](https://github.com/zeidlern/NerdSSHell/blob/main/docs/VALIDATION.md).
 
 CodeQL being **skipped** is not a clean analysis. Gitleaks detects supported secret patterns; it is not a comprehensive personal-information scanner. Branch protection protects repository changes, not users from a vulnerable executable.
 

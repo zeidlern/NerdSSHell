@@ -46,4 +46,4 @@ Incoming standard-shell output is paused/resumed around renderer acknowledgement
 
 ## Verification
 
-Use the per-pane, SFTP resource, lifecycle and transfer regressions plus disposable loopback integration. Exact-package tests exercise real preload/IPC and owned SSH/SFTP transports. Native dialogs, GUI-driven transfer bytes and clean-user installation require separate Windows acceptance. See [testing](TESTING.md), [security boundaries](SECURITY-REVIEW.md) and [validation results](LAUNCH-VALIDATION.md).
+Use the per-pane, SFTP resource, lifecycle and transfer regressions plus disposable loopback integration. Exact-package tests exercise real preload/IPC and owned SSH/SFTP transports. Native dialogs, GUI-driven transfer bytes and clean-user installation require separate Windows acceptance. See [testing](TESTING.md), [security boundaries](SECURITY-REVIEW.md) and [validation results](VALIDATION.md).

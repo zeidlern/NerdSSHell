@@ -39,4 +39,4 @@ A no-UAC administrator bridge fixture validates transport/provider ownership, ra
 
 See [dependency maintenance](DEPENDENCIES.md) for supported/full-lock audit policy, [security architecture](SECURITY-REVIEW.md) for adversarial coverage and [release process](PUBLIC-RELEASE.md) for distribution checks. Do not weaken a test, host verifier or scanner to obtain a pass.
 
-Record actual commands, pass/failure/skip counts, platform, source SHA, package version and artifact hashes. Keep diagnostics containing private paths, clipboard text or terminal data outside tracked source. [Validation results](LAUNCH-VALIDATION.md) records the current release's measured scope.
+Record actual commands, pass/failure/skip counts, platform, source SHA, package version and artifact hashes. Keep diagnostics containing private paths, clipboard text or terminal data outside tracked source. [Validation results](VALIDATION.md) records the current release's measured scope.

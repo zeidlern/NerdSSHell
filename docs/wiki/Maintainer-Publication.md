@@ -14,7 +14,7 @@ Maintain private vulnerability reporting, dependency alerts, code scanning and a
 
 ## Release validation and publication
 
-Follow the repository's [release process](https://github.com/zeidlern/NerdSSHell/blob/main/docs/PUBLIC-RELEASE.md), [testing guide](https://github.com/zeidlern/NerdSSHell/blob/main/docs/TESTING.md) and [validation results](https://github.com/zeidlern/NerdSSHell/blob/main/docs/LAUNCH-VALIDATION.md).
+Follow the repository's [release process](https://github.com/zeidlern/NerdSSHell/blob/main/docs/PUBLIC-RELEASE.md), [testing guide](https://github.com/zeidlern/NerdSSHell/blob/main/docs/TESTING.md) and [validation results](https://github.com/zeidlern/NerdSSHell/blob/main/docs/VALIDATION.md).
 
 Validate the exact reviewed source and Windows artifact, including dependencies, native resources, notices and applicable clean-user acceptance. Record actual failures, skips and manual limits. A no-UAC fixture cannot establish real consent behavior.
 

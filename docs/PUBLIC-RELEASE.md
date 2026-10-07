@@ -1,6 +1,6 @@
 # Release process
 
-The repository owner controls official source acceptance, version tags and releases. This checklist applies to each release and distinguishes source publication, downloadable Windows artifacts and publisher-signed Windows artifacts. Use [current validation results](LAUNCH-VALIDATION.md) for actual evidence.
+The repository owner controls official source acceptance, version tags and releases. This checklist applies to each release and distinguishes source publication, downloadable Windows artifacts and publisher-signed Windows artifacts. Use [current validation results](VALIDATION.md) for actual evidence.
 
 ## Source and repository
 

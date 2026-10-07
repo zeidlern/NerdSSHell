@@ -31,6 +31,8 @@ node .\scripts\Packaged-PerPane-Smoke.cjs
 
 Run acceptance scripts only in an approved disposable Windows test environment. They use temporary profiles, synthetic output and owned loopback sessions; inspect each fixture before running it. Package verification checks real executable/resource bytes, rather than configuration alone. The packaged UI fixture exercises actual preload/IPC, shells, SSH, SFTP and workbench behavior.
 
+The PowerShell acceptance fixture waits for a fresh native prompt after each completed command and for the corresponding renderer write to drain before submitting the next command. A result marker alone does not establish that the shell is ready for more input. Prompt observation binds the original view, generation and local shell identity; it never retries commands or synthesizes cursor replies. Commands deliberately left running for the Ctrl+C check require their result marker without waiting for completion. Command failures preserve bounded terminal/cursor diagnostics and a screenshot in the disposable acceptance evidence.
+
 Source builds and tests must not overwrite installed user data. An ordinary `npm start` can use the installed app's default data directory; use a new explicit absolute `--user-data-dir` or a fixture's isolated profile. Close apps normally, save notes and finish local/Standard work before installation or upgrade.
 
 A no-UAC administrator bridge fixture validates transport/provider ownership, rather than genuine Windows consent. CI cannot establish physical notification/audio behavior, native dialog interaction, alternate-account UAC, clean-user installation, IME/accessibility or every display setup. Record those manually against the exact source SHA, installer hash and Windows environment.

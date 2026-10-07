@@ -4,6 +4,7 @@
 
 - Open the Wiki manual, connection guide, troubleshooting, repository, issues and releases from **Help and about**, using validated fixed browser destinations.
 - Bound discovery to 1,024 panes per server and terminal views to 64 across the application. Preserve existing view identities and remote work; additional sessions remain available in the sidebar.
+- Keep a Standard connection's reserved first view available without a transient overflow warning.
 - Refresh the README, manual, support and contributor guides, bug/feature forms and pull-request template. Welcome focused contributions through the maintainer's review process.
 - Remove obsolete working notes from the documentation and retain current technical guides and release validation.
 - Remove the vulnerable optional build logging dependency by selecting compatible `global-agent` 4.1.3. Require audits of both supported and complete dependency graphs; test proxy forwarding, cache, exclusions and checksum rejection.

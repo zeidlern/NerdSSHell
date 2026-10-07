@@ -144,11 +144,16 @@ async function main() {
   check('Packaged Help rejects arbitrary URLs through the actual preload and main IPC', await evaluate(`(async()=>{try{await api.publicLink('https://attacker.invalid/');return false;}catch(e){return /Unknown help destination/.test(e.message);}})()`));
   await evaluate(`$('closeHelp').click(); true`);
   report.version = saved.version;
+  await evaluate('maxOpenViews=1; true');
   for (const id of ['fixture-a', 'fixture-b']) {
-    await evaluate(`window.__smokeConnect=api.connect(${JSON.stringify(id)}); true`);
+    await evaluate(`window.__smokeConnect=connectProfile(${JSON.stringify(id)}); true`);
     await wait('$(' + JSON.stringify('promptDialog') + ').open', 'Actual password prompt did not appear.');
     await evaluate(`$('promptValue').value='synthetic-loopback-only'; $('promptForm').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); true`);
     await evaluate('window.__smokeConnect');
+    if (id === 'fixture-a') {
+      check('Standard connect consumes its reserved last renderer slot without a stale overflow notice', await evaluate(`views.size===1&&!$('notice').textContent.includes('session(s) remain in the sidebar')`));
+      await evaluate('maxOpenViews=64; true');
+    }
   }
   await evaluate(`(async()=>{for(const name of ['Pane B','Pane C']){const pane=await api.create('fixture-a',name,false);panes.set(pane.key,pane);await openPane(pane.key,false);}window.__smokeKeys=[...order.filter(k=>k.startsWith('fixture-a/')), ...order.filter(k=>k.startsWith('fixture-b/'))];order=[...__smokeKeys];active=order[3];render();return true;})()`);
   await wait('views.size===4 && [...views.values()].every(v=>v.ready)', 'Four actual shell views did not attach.');

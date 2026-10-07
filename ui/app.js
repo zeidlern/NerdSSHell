@@ -553,7 +553,9 @@ api.onEvent(event => {
         if (!views.has(key) && views.size + pendingViewSlots >= maxOpenViews) { skipped++; continue; }
         await openPane(key, false);
       }
-      if (skipped) message(`${skipped} session(s) remain in the sidebar. Close a view to open another (limit ${maxOpenViews}); their remote work keeps running.`);
+      // Standard connect owns a pending renderer slot and attaches its returned
+      // shell immediately after IPC resolves. Its early event is not overflow.
+      if (skipped && !(p.sessionMode === 'standard' && pendingViewSlots > 0)) message(`${skipped} session(s) remain in the sidebar. Close a view to open another (limit ${maxOpenViews}); their remote work keeps running.`);
       if (desiredActive && order.includes(desiredActive)) { active = desiredActive; desiredActive = ''; slots = [...savedSlots]; }
       render();
     })());

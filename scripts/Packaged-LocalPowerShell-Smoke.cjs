@@ -1,5 +1,34 @@
 'use strict';
 const { PSREADLINE_ASSERTION_COMMANDS } = require('./PSReadLine-Assertion.cjs');
+const { consoleText } = require('../src/console-text.cjs');
+let promptObservation = 0;
+
+/** Observe the owned shell's rendered prompt; do not issue commands, synthesize
+ * cursor replies or retry input. A result can arrive before PSReadLine returns
+ * to its input loop. Require fresh native prompt output after that result too.
+ */
+async function waitForPowerShellPrompt({ evaluate, wait, key, after = '' }) {
+  const match = typeof key === 'string' && /^(local:(?:powershell|pwsh))\/standard-([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/.exec(key);
+  if (!match || typeof after !== 'string' || after.length > 1024) throw new Error('Prompt observation requires an owned ordinary PowerShell key and bounded marker.');
+  const k = JSON.stringify(key), shell = JSON.stringify(match[1]), token = JSON.stringify(match[2]);
+  const marker = JSON.stringify(Buffer.from(after, 'utf8').toString('latin1'));
+  const current = `v&&views.get(${k})===v&&v.generation===generation&&v.ready&&!v.locked&&v.pane.key===${k}&&v.pane.local&&!v.pane.administrator&&v.pane.profileId===${shell}&&v.pane.shellId===${shell}&&v.pane.sessionToken===${token}`;
+  const observation = JSON.stringify('powershell-prompt-' + ++promptObservation);
+  // Capture the actual view and snapshot generation once, rather than accepting
+  // a replacement view that happens to have the same string key on a later poll.
+  try {
+    await evaluate(`(()=>{const v=views.get(${k}),generation=v?.generation;if(!(${current}))throw Error('Owned PowerShell prompt target changed');
+      window.__smokePowerShellPrompts??=new Map();__smokePowerShellPrompts.set(${observation},{view:v,generation});return true;})()`);
+    await wait(`(async()=>{const state=window.__smokePowerShellPrompts?.get(${observation}),v=state?.view,generation=state?.generation;if(!(${current}))throw Error('Owned PowerShell prompt target changed');
+      const rendered=v.render;await rendered;if(!(${current}))throw Error('Owned PowerShell prompt target changed');
+      if(v.render!==rendered||v.fitQueued||v.wrapper.hidden)return false;
+      if(${marker}){const text=(${consoleText.toString()})(v.smokeOutput||''),at=text.lastIndexOf(${marker});if(at<0||!/(?:^|[\\r\\n])PS [^\\r\\n]*?> [ \\t]*$/.test(text.slice(at+${marker}.length)))return false;}
+      const b=v.terminal.buffer.active;return /^PS .*?>[ \\t]*$/.test(b.getLine(b.baseY+b.cursorY)?.translateToString(true)||'');
+    })()`, 'PowerShell did not return a fresh rendered prompt' + (after ? ' after ' + after : '') + '.');
+  } finally {
+    try { await evaluate(`(()=>{window.__smokePowerShellPrompts?.delete(${observation});if(window.__smokePowerShellPrompts?.size===0)delete window.__smokePowerShellPrompts;return true;})()`); } catch {}
+  }
+}
 
 // Serialized into the disposable renderer below. Observe the normal parser and
 // onData paths only: never inject a query, answer one, or consume a VT sequence.
@@ -47,7 +76,19 @@ async function localPowerShellSmoke({ evaluate, wait, check, screenshot }) {
     await evaluate(`(()=>{const v=views.get(${k});v.smokeOutput='';const stopCursorSync=(${observeCursorSynchronization.toString()})(v),stopOutput=api.onEvent(e=>{if(e.type==='output'&&e.key===${k})v.smokeOutput=(v.smokeOutput+atob(e.data)).slice(-16000);});v.smokeOff=()=>{stopOutput();stopCursorSync();};return true;})()`);
     const input = text => evaluate(`api.input(${k},${JSON.stringify(text)})`);
     const has = text => `__smokeTerminalText(views.get(${k})).includes(${JSON.stringify(text)})`;
-    const output = async (script, expected) => { await input(script + '\r'); await wait(has(expected), `${suffix}: missing ${expected}`); };
+    const output = async (script, expected, returnsPrompt = true) => {
+      try {
+        await waitForPowerShellPrompt({ evaluate, wait, key });
+        await evaluate(`views.get(${k}).smokeOutput=''; true`);
+        await input(script + '\r');
+        await wait(has(expected), `${suffix}: missing ${expected}`);
+        if (returnsPrompt) await waitForPowerShellPrompt({ evaluate, wait, key, after: expected });
+      } catch (error) {
+        console.error('PowerShell command failure:', suffix, JSON.stringify(await diagnostic().catch(e => ({ diagnosticError: e.message }))));
+        await screenshot('phase2-local-' + suffix.toLowerCase() + '-failure').catch(() => {});
+        throw error;
+      }
+    };
     const diagnostic = () => evaluate(`(()=>{const v=views.get(${k}),t=v.terminal,b=t.buffer.active,prompts=[];for(let y=0;y<b.length;y++){const text=b.getLine(y)?.translateToString(true)||'';if(/^PS /.test(text))prompts.push({y,text});}return {ready:v.ready,cols:t.cols,rows:t.rows,length:b.length,cursorX:b.cursorX,cursorY:b.cursorY,baseY:b.baseY,cursorRow:b.getLine(b.baseY+b.cursorY)?.translateToString(true),prompts:prompts.slice(-24),modes:t.modes,tail:__smokeTerminalText(v).split('\\n').slice(-24),raw:v.smokeOutput.slice(-12000),cursorSync:v.smokeCursorSync};})()`);
     await output(`Write-Output ('PS_PHASE2_READY_' + '${suffix}')`, 'PS_PHASE2_READY_' + suffix);
     check(`Phase 2 ${suffix}: local identity, nonpersistent label and no SFTP sidecar`, await evaluate(`(()=>{const v=views.get(${k}),p=v.pane,b=v.wrapper.querySelector('.wb-target-badge');return p.local&&p.sessionType==='local'&&p.shellFamily==='powershell'&&p.shellId===${JSON.stringify(target.id)}&&p.persistent===false&&!p.administrator&&!v.files&&v.wrapper.querySelector('.pane-location-badge').textContent==='LOCAL'&&b?.title.includes('PowerShell')&&b.title.includes('not persistent');})()`));
@@ -96,7 +137,7 @@ async function localPowerShellSmoke({ evaluate, wait, check, screenshot }) {
       await input('\r'); await wait(has(pasted), 'Local clipboard paste/Enter failed.');
       result.clipboard = 'Passed with synthetic text only on isolated CI or explicit local consent.';
     }
-    await output(`Write-Output ('PS_PHASE2_WAIT_' + '${suffix}'); Start-Sleep -Seconds 30; Write-Output ('PS_PHASE2_SLEEP_FINISHED_' + '${suffix}')`, 'PS_PHASE2_WAIT_' + suffix);
+    await output(`Write-Output ('PS_PHASE2_WAIT_' + '${suffix}'); Start-Sleep -Seconds 30; Write-Output ('PS_PHASE2_SLEEP_FINISHED_' + '${suffix}')`, 'PS_PHASE2_WAIT_' + suffix, false);
     try {
       // A screen row can retain an old prompt across ConPTY resize/redraw.
       // Require fresh shell output, then let cancellation finish rebuilding
@@ -154,4 +195,4 @@ async function localPowerShellSmoke({ evaluate, wait, check, screenshot }) {
   result.powerShell7 = result.tested.includes('local:pwsh') ? 'Passed' : 'Not installed in the runner; not tested.';
   return result;
 }
-module.exports = { localPowerShellSmoke };
+module.exports = { localPowerShellSmoke, waitForPowerShellPrompt };

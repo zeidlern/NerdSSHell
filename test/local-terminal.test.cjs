@@ -1,5 +1,6 @@
 'use strict';
 require('./packaged-local-geometry.test.cjs');
+require('./packaged-powershell-prompt.test.cjs');
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const { Terminal } = require('@xterm/xterm');

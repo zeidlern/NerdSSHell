@@ -1,4 +1,4 @@
-# Architecture and implementation notes
+# Architecture
 
 ## Responsibilities
 
@@ -10,9 +10,11 @@
 
 `src/file-listings.cjs` scopes request generation/cancellation to a terminal/browser instance. `src/sftp-browser.cjs` implements handle-based browsing and exclusive local download publication. `ui/files.js` owns each view's independent browser state and dock/splitter. Transfers capture immutable endpoint/path before native dialogs. The underlying channel reservation in `src/transfer.cjs` bounds outstanding opens and actual channels even after caller cancellation.
 
+`src/session-limits.cjs` caps live/pending terminals across the app at 64, including Standard/local shells before their renderer view opens. Reservations happen before asynchronous work and are released on completion or failure; reopening/reconnecting an existing identity consumes no extra slot. The renderer separately caps retained tabs at 64, including offline tabs, while the sidebar can list unopened sessions. Persistent discovery accepts at most 1,024 valid pane records before metadata/view reconciliation; excess results fail without truncation or server mutation. Reaching a limit does not terminate remote work.
+
 ## Persistence is server-side
 
-Persistent views are not processes. Closing a view destroys only its local terminal and, when no other view needs it, its SSH control channel. The existing session remains alive. Discovery and reconnect never invoke new-session or a user's launch command. A session receives a UUID in `@betterssh-id`; persisted view keys combine connection ID, session UUID and pane ID. UUIDs prevent a restarted server's reused numeric IDs from being mistaken for old work. Session termination checks the UUID atomically in the server-side conditional before killing.
+Persistent views are not processes. Closing a view destroys only its local terminal and, when no other view needs it, its SSH control channel. The existing session remains alive. Discovery and reconnect never invoke new-session or a user's launch command. A session uses a UUID in `@nerdsshell-id`, with the legacy `@betterssh-id` marker retained for compatibility. Persisted view keys combine connection ID, session UUID and pane ID. UUIDs prevent a restarted server's reused numeric IDs from being mistaken for old work. Session termination checks the UUID atomically in the server-side conditional before killing; conflicting markers fail closed. See [identity compatibility](IDENTITY-COMPATIBILITY.md).
 
 SSH connection recovery discards disconnected input. Keyboard input is encoded into hexadecimal `send-keys -H` data; it cannot become control protocol commands. Commands are serialized because response guards and asynchronous output share one stream. A command timeout invalidates the channel so a late reply cannot be attributed to a later command. Control output is decoded as bytes before UTF-8 rendering.
 
@@ -35,6 +37,6 @@ Primary documentation used for implementation:
 - https://www.electronjs.org/docs/latest/api/web-utils — obtaining paths for user-dropped native files.
 - https://xtermjs.org/docs/api/terminal/classes/terminal/ — terminal rendering/input/scrolling API.
 
-## Release gates
+## Validation
 
-The app needs actual Windows packaging and real Windows-to-Ubuntu acceptance before production claims. Check GitHub Actions, do not infer success from workflow configuration. Test the existing missions read-only first; use disposable sessions for input, restart and termination tests. See CODEX-HANDOFF.md.
+Source and disposable SSH tests cover protocol and lifecycle behavior. Native consoles, packaging, elevation and desktop interaction need Windows validation for the exact source and artifact. Use [TESTING.md](TESTING.md), preserve the [security boundaries](SECURITY-REVIEW.md), and follow the [release process](PUBLIC-RELEASE.md). Current results are recorded in [validation results](LAUNCH-VALIDATION.md).

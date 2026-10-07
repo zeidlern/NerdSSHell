@@ -12,13 +12,17 @@ settings.json*
 history/
 *.pem
 *.key
+*.ppk
 id_rsa*
 id_ed25519*
+id_ecdsa*
+id_dsa*
 # Local trust stores, signing material and connection backups must stay private.
 .ssh/
 known_hosts*
 *.pfx
 *.p12
 *.kdbx
+.npmrc
 settings.json.backup
 settings.json.tmp

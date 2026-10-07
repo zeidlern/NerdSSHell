@@ -139,6 +139,10 @@ async function main() {
   const saved = await evaluate('api.state()'); assert.equal(path.resolve(saved.dataDirectory), path.resolve(temporary)); assert.deepEqual(saved.profiles.map(p => p.id), ['fixture-a', 'fixture-b']);
   check('Actual packaged app uses only disposable user-data directory and profiles');
   check('Packaged header and About display the expected source version', saved.version === metadata.version && await evaluate(`$('version').textContent===${JSON.stringify('v' + metadata.version)}&&$('aboutVersion').textContent===${JSON.stringify(metadata.version)}`));
+  await evaluate(`$('help').click(); true`);
+  check('Packaged Help provides the Wiki, connection guide, troubleshooting, repository, issues and releases', await evaluate(`$('helpDialog').open && JSON.stringify([...$('helpDialog').querySelectorAll('[data-public-link]')].map(b=>b.dataset.publicLink).sort())===${JSON.stringify(JSON.stringify(['manual', 'connections', 'troubleshooting', 'repository', 'issues', 'releases'].sort()))}`));
+  check('Packaged Help rejects arbitrary URLs through the actual preload and main IPC', await evaluate(`(async()=>{try{await api.publicLink('https://attacker.invalid/');return false;}catch(e){return /Unknown help destination/.test(e.message);}})()`));
+  await evaluate(`$('closeHelp').click(); true`);
   report.version = saved.version;
   for (const id of ['fixture-a', 'fixture-b']) {
     await evaluate(`window.__smokeConnect=api.connect(${JSON.stringify(id)}); true`);

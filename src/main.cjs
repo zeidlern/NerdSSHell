@@ -18,14 +18,17 @@ const { FileListings } = require('./file-listings.cjs');
 const { installWorkbench } = require('./workbench.cjs');
 const { installDesktopTools } = require('./desktop-tools.cjs');
 const { installLocalFiles } = require('./local-files.cjs');
+const { installPublicLinks } = require('./public-links.cjs');
 const { installSessionCommands } = require('./session-commands.cjs');
 const { createSessionNotifications } = require('./session-notifications.cjs');
 const { configureScratchpadSpelling, installScratchpadSpelling } = require('./scratchpad-spelling.cjs');
 let workbench, sessionCommands, sessionNotifications;
 const { upload } = require('./transfer.cjs');
 const { profile, integer, pasteText } = require('./core.cjs');
+const { MAX_OPEN_VIEWS, ViewBudget } = require('./session-limits.cjs');
 let window, store, quitting = false, quitPending = false, promptChain = Promise.resolve();
 const connections = new Map(), archives = new Map(), prompts = new Map(), transfers = new Map(), fileListings = new FileListings();
+const viewBudget = new ViewBudget(connections);
 const output = new OutputBuffer({ emit: (type, data) => { emit(type, data); if (type === 'output') standardBackpressure(data.key); }, recover: key => forKey(key).remote.snapshot(key) });
 const uiURL = UI_URL;
 protocol.registerSchemesAsPrivileged([{ scheme: 'nerdsshell', privileges: { standard: true, secure: true } }]);
@@ -162,13 +165,13 @@ async function connect(id, secrets) {
   try {
     let panes = await remote.connect();
     if (!r.wanted || r.remote !== remote) { remote.disconnect(); return []; }
-    if (p.sessionMode === 'standard') { await remote.createSession('Shell', false); panes = remote.panes; }
+    if (p.sessionMode === 'standard') { await viewBudget.run(remote, undefined, () => remote.createSession('Shell', false)); panes = remote.panes; }
     if (!active()) { remote.disconnect(); return []; }
     r.attempts = 0; publishStatus(r, 'connected', `${p.username}@${p.host}`); emit('connected', { profileId: id, panes }); return panes;
   } catch (e) {
     if (!active()) { remote.disconnect(); return []; }
     remote.disconnect(); publishStatus(r, 'disconnected', e.message);
-    if (p.sessionMode === 'standard' || e.code === 'NERDSSHELL_HOST_VERIFICATION' || /auth|identity|key|cancel|support|passphrase|agent|permission|known_hosts/i.test(e.message)) { r.wanted = false; r.secrets = {}; }
+    if (p.sessionMode === 'standard' || ['NERDSSHELL_HOST_VERIFICATION', 'NERDSSHELL_RESOURCE_LIMIT'].includes(e.code) || /auth|identity|key|cancel|support|passphrase|agent|permission|known_hosts/i.test(e.message)) { r.wanted = false; r.secrets = {}; }
     else if (r.wanted && !quitting) { const delay = Math.min(30000, 1000 * 2 ** Math.min(r.attempts++, 5)); r.timer = setTimeout(() => connect(id).catch(() => {}), delay); }
     throw e;
   } finally { r.busy = false; }
@@ -183,7 +186,7 @@ function handle(name, fn) {
 function registerIPC() {
   installDesktopTools({ handle, app, dialog, getWindow: () => window, confirm, adminLaunch: id => workbench.openAdministrator(id) });
   const localFiles = installLocalFiles({ handle, fileOwner, dialog, getWindow: () => window, confirm, sendFiles, beginTransfer, transfers, emit });
-  handle('state', () => ({ profiles: store.data.profiles, workspace: store.data.workspace, appearance: store.data.appearance, notifications: store.data.notifications, sessionDefaults: store.data.sessionDefaults, version: app.getVersion(), dataDirectory: app.getPath('userData') }));
+  handle('state', () => ({ profiles: store.data.profiles, workspace: store.data.workspace, appearance: store.data.appearance, notifications: store.data.notifications, sessionDefaults: store.data.sessionDefaults, sessionLimits: { maxOpenViews: MAX_OPEN_VIEWS }, version: app.getVersion(), dataDirectory: app.getPath('userData') }));
   handle('saveAppearance', value => store.setAppearance(value));
   handle('savePreferences', value => { const saved = store.setPreferences(value); sessionNotifications?.refreshPreferences(); return saved; });
   handle('sessionAttention', (key, state) => sessionNotifications?.update(key, state));
@@ -192,8 +195,8 @@ function registerIPC() {
   handle('deleteProfile', async id => { const p = saved(id), consent = disconnectConsent(id); if (!await confirm('Remove saved connection', `Remove ${p.name}?`, 'Persistent sessions and local history files will not be deleted. Any standard SSH shells on this connection will close; their running work may stop.')) return false; consent.validate(); if (saved(id) !== p) throw new Error('Connection settings changed during confirmation. Review them again.'); disconnect(id); connections.delete(id); store.data.profiles = store.data.profiles.filter(x => x.id !== id); store.save(); return true; });
   handle('connect', id => connect(id)); handle('disconnect', async id => { const approved = await approveDisconnect(id); if (!approved) return false; approved(); disconnect(id); return true; });
   handle('discover', id => runtime(id).remote.discover());
-  handle('open', key => forKey(key).remote.open(key));
-  installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow: () => window,
+  handle('open', key => { const { remote } = forKey(key); return viewBudget.run(remote, key, () => remote.open(key)); });
+  installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow: () => window, withViewSlot: (remote, key, operation) => viewBudget.run(remote, key, operation),
     forget: key => { workbench?.forget(key); sessionCommands?.forget(key); sessionNotifications?.forget(key); fileListings.cancelView(key); discardOutput(key); } });
   handle('input', (key, data) => { workbench?.assertInput(key); return forKey(key).remote.input(key, data); });
   handle('resize', (key, cols, rows) => { integer(cols, 20, 1000, 'columns'); integer(rows, 5, 500, 'rows'); return forKey(key).remote.resize(key, cols, rows); });
@@ -240,7 +243,8 @@ function registerIPC() {
   });
   handle('cancelTransfer', id => transfers.get(id)?.abort());
   handle('dataFolder', () => shell.openPath(app.getPath('userData')));
-  workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key) });
+  installPublicLinks({ handle, shell });
+  workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key), withViewSlot: (remote, key, operation) => viewBudget.run(remote, key, operation) });
   sessionCommands = installSessionCommands({ handle, connections, forKey, assertInput: key => workbench.assertInput(key), resolveAction: (key, id, argument) => workbench.resolvePaneAction(key, id, argument) });
 }
 // Resolve storage before the single-instance lock so upgrades share the same

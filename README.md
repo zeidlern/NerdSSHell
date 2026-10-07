@@ -8,67 +8,72 @@
 
 **Built for Windows nerds with Linux problems.**
 
-A Windows workspace for SSH, persistent remote sessions, local PowerShell and Command Prompt. Keep connections, tabs, split panes, file transfers and notes together instead of juggling separate windows.
+NerdSSHell is a Windows workspace for SSH, persistent remote sessions, local PowerShell and Command Prompt. Keep your servers, split terminals, file transfers and notes together. It is designed for developers and homelab users who work on Linux from a Windows desktop.
 
-**Public source version: 1.0.1; Windows release publication pending.** This independent repository contains reviewed clean history. The previous development repository remains private. A public source version is not a published or signed installer. Read the [clean migration checkpoint](docs/CLEAN-PUBLIC-MIGRATION-2026-10-06.md) and [release gates](docs/PUBLIC-RELEASE.md) before binary distribution. No independent security certification is claimed.
+[User manual](https://github.com/zeidlern/NerdSSHell/wiki) · [Downloads](https://github.com/zeidlern/NerdSSHell/releases) · [Report a bug](https://github.com/zeidlern/NerdSSHell/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/zeidlern/NerdSSHell/issues/new?template=feature_request.yml)
 
-## Start here
+## Why NerdSSHell?
 
-**[Live Wiki manual](https://github.com/zeidlern/NerdSSHell/wiki)** · **[Repository copy](docs/wiki/Home.md)** · **[Install locally](docs/wiki/Installation.md)** · **[Install with Codex](docs/wiki/Install-with-Codex.md)**
-
-The manual describes the implemented interface and includes connection setup, trust verification, session lifecycle, SFTP, commands, notes, preferences, shortcuts, troubleshooting, upgrades, backups and removal. The reviewed 14 chapters, sidebar and footer are maintained in `docs/wiki/` and published separately to the Wiki with editing restricted to collaborators. Keep future changes synchronized using the [Wiki publication step](docs/wiki/Publishing-the-Wiki.md). The [clean migration checkpoint](docs/CLEAN-PUBLIC-MIGRATION-2026-10-06.md) records this repository's controls; older dated setup and acceptance records identify their private historical provenance.
-
-For a published installer, use only the project's [Releases](https://github.com/zeidlern/NerdSSHell/releases) page and verify the exact checksum and signing status. If no release exists, do not substitute an unofficial download. General users should wait for a signed, reviewed release rather than disable Windows security to run a candidate.
-
-## What it does
-
-| Feature | Practical use |
+| Feature | What it helps you do |
 | --- | --- |
-| Saved SSH connections | Keep server settings and locally approved trust pins together |
-| Persistent Session (tmux) | Reattach to remote work after closing or disconnecting the client |
-| Standard SSH | Use a regular remote shell without requiring tmux |
-| Local Windows consoles | Use PowerShell and Command Prompt beside SSH sessions; deliberate next-launch Administrator option |
-| Tabs and split panes | One pane, side-by-side, stacked or four quadrants, with resizable dividers and movable panes |
-| File SFTP | Per-remote-pane Local/Remote file browsing, confirmed uploads/downloads and copy drag-and-drop |
-| Actions and Favorites | Submit a configured command plus Enter to its originating terminal |
-| Command workbench | Separately review scripts and run them in a new selected console |
-| Scratchpad | Plain-text notes, bounded highlighting, local English spelling, word wrap and explicit Save As |
-| Waiting alerts | Per-session indicators, optional sound and Windows notifications for recognized background prompts |
-| Preferences | Clipboard behavior, terminal palettes, light/dark appearance, commands and history defaults |
+| Saved SSH connections | Keep server settings and approved host fingerprints together |
+| Persistent sessions with tmux | Close the client and reconnect to remote work later |
+| Standard SSH | Open an ordinary remote shell without requiring tmux |
+| Windows consoles | Use PowerShell and Command Prompt beside SSH; optionally launch a new Administrator console |
+| Tabs and split panes | Arrange one, two or four terminals with resizable dividers |
+| File SFTP | Browse Local/Remote folders per terminal and copy files with upload/download confirmation |
+| Actions and Favorites | Submit configured commands into their originating terminal |
+| Command workbench | Review a script and run it in a new selected console |
+| Scratchpad and alerts | Keep plain-text notes and receive optional alerts for recognized background prompts |
+| Preferences | Customize terminal colors, clipboard behavior, commands and history |
 
-## Important behavior
+## Install
 
-**Persistent Close/Disconnect is not End.** Closing a persistent view leaves its server-side work running; **End** deliberately terminates it after confirmation. Standard SSH and local consoles cannot be reattached after closure and their work may stop. A server reboot still stops persistent processes. Recovery never promises resurrection of a lost process.
+The supported desktop platform is **Windows 11 x64**. Official installers bundle the runtime; Node.js, Git and Codex are not required to run them.
 
-**Actions/Favorites execute immediately in the current terminal context.** They do not invoke the separate workbench review. Verify the host, account, program and partial input line before clicking. A nested SSH connection, editor or password prompt is still the program receiving that input.
+Download Windows installers from [GitHub Releases](https://github.com/zeidlern/NerdSSHell/releases). Each release identifies available assets, checksums, signing status and known limitations. If a release contains only source archives, use the source-build instructions below. Check the exact asset's checksum and publisher status before installing; an unsigned build has no verified publisher identity. See [installation, upgrades and removal](docs/wiki/Installation.md).
 
-**History and notes are not a secret vault.** Disk recording is off by default; archives, exports, saved notes and backups are plaintext. Unsaved Scratchpad notes are memory-only. Copy-on-selection is on by default and can place terminal text into Windows clipboard history. See [security and privacy](docs/wiki/Security-and-Privacy.md).
+Remote connections require a reachable SSH server. Persistent sessions need **tmux 3.2 or newer**; file transfer needs the server's SFTP subsystem. Local consoles work without a server.
 
-## Requirements and local builds
+## First connection
 
-The desktop target is **Windows 11 x64**. Remote connections need a reachable SSH server; persistent mode requires tmux 3.2 or newer and file transfer needs SFTP. Installers bundle the app runtime: Node.js and Codex are not needed simply to use an installer-built app.
+1. Add a connection with the server address, username and authentication method.
+2. Verify the server's host fingerprint through an independent trusted source before accepting it.
+3. Create a **Persistent session** to keep work on the server, or uncheck persistence for **Standard SSH**.
+4. Choose a layout, open **File SFTP**, or use the **Scratchpad** as needed.
 
-Source builds use a current **Node 22 x64 version at least 22.12.0** and the committed lockfile. Follow the [complete installation instructions](docs/wiki/Installation.md), including source-revision verification and data backup. From a clean, reviewed checkout in normal Windows PowerShell:
+**Persistent Close/Disconnect leaves remote work running.** **End** terminates it after confirmation. A server reboot or server-side termination still stops that work. Standard SSH and local consoles cannot be reattached after closure and their work may stop.
+
+**Actions and Favorites send a command plus Enter into the current terminal context.** Check the host, account, program and partial input line before clicking. The separate workbench provides command review for a new console.
+
+Disk recording is off by default. Archives, exports, saved notes and backups are plaintext. Copy-on-selection is on by default and can put terminal text into Windows clipboard history. Read [security and privacy](docs/wiki/Security-and-Privacy.md).
+
+## Build from source
+
+Use Windows 11 x64, Git and a current **Node 22 x64 version at least 22.12.0**. Clone the repository and select the release tag or commit you intend to build:
 
 ```powershell
+git clone https://github.com/zeidlern/NerdSSHell.git
+Set-Location NerdSSHell
+git rev-parse HEAD
 powershell.exe -NoProfile -File .\scripts\Install-Windows.ps1 -BuildOnly
-if ($LASTEXITCODE -ne 0) { throw 'Build or verification failed; do not install.' }
+if ($LASTEXITCODE -ne 0) { throw 'Build or verification failed.' }
 node .\scripts\Verify-Notices.cjs
 if ($LASTEXITCODE -ne 0) { throw 'License notice verification failed.' }
 ```
 
-The helper uses `npm ci --omit=optional`, tests and verifies the versioned installer. `-BuildOnly` does not install; it also does not create a settings backup, sign an artifact or replace every native/manual acceptance check. Do not bypass PowerShell policy or Windows security if blocked. The manual has policy-compatible alternatives and a copy-ready Codex prompt.
+The helper installs locked dependencies with `npm ci --omit=optional`, runs source checks and tests, then builds and verifies the versioned installer. `-BuildOnly` stops before installation. Full commands, development launch, backups and policy-compatible alternatives are in the [installation guide](docs/wiki/Installation.md). Source use and redistribution remain subject to [LICENSE](LICENSE).
 
-## Compatibility and limits
+## Documentation and support
 
-The package, Windows app ID, UI/resource protocol, IPC and native bridge now use NerdSSHell identity. The original installer GUID is explicitly pinned so upgrades retain installation registration and directory. Existing profiles, trust pins, preferences and archives stay in their existing data folder; startup does not move, merge or delete data.
+The [Wiki](https://github.com/zeidlern/NerdSSHell/wiki) covers connections, trust, sessions, SFTP, commands, notes, shortcuts, preferences and troubleshooting. Its [repository copy](docs/wiki/Home.md) is available with the source. The application's **Help and about** menu also opens the manual.
 
-Fresh installations use `%APPDATA%\nerdsshell`. Upgrades retain `%APPDATA%\betterssh` when that legacy folder exists. Explicit `--user-data-dir` profiles remain isolated. Existing persistent sessions retain their stable tokens and saved keys; the remote legacy marker remains a compatibility alias for older clients. Current UI and new upload defaults use NerdSSHell. See [identity compatibility](docs/IDENTITY-COMPATIBILITY.md).
+For help, see [SUPPORT.md](SUPPORT.md). Bugs and feature requests are welcome through [Issues](https://github.com/zeidlern/NerdSSHell/issues); focused pull requests are welcome through [CONTRIBUTING.md](CONTRIBUTING.md). Report security vulnerabilities [privately](SECURITY.md).
 
-This version does not provide a tested ARM64/mobile/macOS/Linux desktop build, full OpenSSH configuration parity, ProxyJump, SSH tunneling UI, recursive/resumable folder transfer, cloud sync or unattended automatic updates. Prompt detection can miss unfamiliar programs. See the [known limits](docs/wiki/Troubleshooting.md) and [architecture](docs/ARCHITECTURE.md).
+Windows ARM64, macOS/Linux desktop builds, mobile clients, ProxyJump, a tunneling UI, recursive/resumable folder transfer, cloud sync and unattended updates are not implemented. Prompt detection can miss unfamiliar programs. See [known limits](docs/wiki/Troubleshooting.md).
 
-## Project information
+## License
 
-[Changelog](CHANGELOG.md) · [Security policy](SECURITY.md) · [Maintainer publication checklist](docs/wiki/Maintainer-Publication.md) · [Branding](docs/BRANDING.md) · [Third-party notices](docs/THIRD-PARTY-NOTICES.md) · [Implementation/recovery log](docs/NERDSSHELL-IMPLEMENTATION.md)
+NerdSSHell uses a custom **source-available license**. Official unmodified releases may be used personally or internally in a business. GitHub viewing and forking are governed by GitHub's terms; redistribution and publishing modified builds require the copyright holder's prior written permission. Read [LICENSE](LICENSE) for the complete terms. Third-party components retain their own licenses and [notices](docs/THIRD-PARTY-NOTICES.md).
 
-NerdSSHell is **source-available**, not permissively open source. Read [LICENSE](LICENSE) for permitted use and restrictions. Third-party components retain their own licenses. [CONTRIBUTING.md](CONTRIBUTING.md) describes the no-unsolicited-code-contributions policy; report ordinary bugs with synthetic/redacted data and security concerns through a verified private channel. Public visibility does not grant visitors write access to the official repository.
+[Changelog](CHANGELOG.md) · [Architecture](docs/ARCHITECTURE.md) · [Security policy](SECURITY.md) · [Release process](docs/PUBLIC-RELEASE.md) · [Identity compatibility](docs/IDENTITY-COMPATIBILITY.md)

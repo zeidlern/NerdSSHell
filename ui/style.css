@@ -45,3 +45,5 @@
 .pane-body[data-file-dock="bottom"] .file-list{flex:1 1 0;min-height:20px;margin-bottom:0}
 .pane-body[data-file-dock="bottom"] .file-actions{grid-column:1/-1;grid-row:3}
 .pane-body[data-file-dock="bottom"] .file-note{grid-column:1/-1;grid-row:4;max-height:65px;overflow:auto}
+.help-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.help-links button { white-space: normal; text-align: left; }

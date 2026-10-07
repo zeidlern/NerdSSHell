@@ -26,7 +26,7 @@ Running persistent sessions are discovered under their connection. Select one to
 
 **End:** deliberately terminates the selected session/shell. Read the confirmation and verify the destination; it is destructive. For persistent work this is the action that kills the server-side session rather than merely hiding it.
 
-**Rename:** changes the selected session's display/session name through the relevant control. Renaming is not reconnection, migration or a new process.
+**Rename:** changes the selected session's display/session name. It keeps the same process and session identity.
 
 Cancel is the safe default for app-owned confirmation dialogs. Windows-owned dialogs, file pickers and UAC have their own platform layout.
 
@@ -55,5 +55,3 @@ Scroll with the mouse wheel; **Alt+wheel** passes wheel input to the terminal ap
 On reconnection, a persistent view reconstructs available server-retained output and screen state. That is not a continuous recording of everything that happened while disconnected. Very busy/full-screen applications can redraw. If buffering limits are reached, the view can resynchronize with a notice rather than retain unbounded data.
 
 Disconnected keystrokes must not be replayed later. After a network failure, inspect the current prompt and destination before entering another command. For Standard SSH, create a new shell deliberately; do not assume the previous one returned.
-
-Source references: `ui/app.js`, `src/remote.cjs`, `src/standard-remote.cjs`, `src/local-remote.cjs`, `src/storage.cjs`.

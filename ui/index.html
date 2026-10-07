@@ -119,7 +119,16 @@
 <h2 id="aboutHeading">Help and about</h2>
 <section class="about-info">
 <div class="about-brand"><img id="aboutBrandIcon" class="about-logo" src="branding/app-dark-512.png" width="180" height="180" alt="NerdSSHell mascot with Windows and Linux glasses and a terminal prompt"><div class="about-brand-copy"><p class="about-name">NerdSSHell</p><p class="about-tagline">Built for Windows nerds<br>with Linux problems</p><p class="about-version">Version <span id="aboutVersion"></span><br><span>Release build</span></p></div></div>
-<p>Developed by Nicholas Zeidler.<br>Project: github.com/zeidlern/NerdSSHell</p><p>Release notes, known limitations and project licensing information are maintained in the repository. Third-party components retain their own licenses.</p>
+<p>Developed by Nicholas Zeidler.</p>
+<nav class="help-links" aria-label="NerdSSHell documentation and support">
+<button type="button" data-public-link="manual" class="primary">Open Wiki manual ↗</button>
+<button type="button" data-public-link="connections">Connections and trust ↗</button>
+<button type="button" data-public-link="troubleshooting">Troubleshooting ↗</button>
+<button type="button" data-public-link="repository">GitHub repository ↗</button>
+<button type="button" data-public-link="issues">Report a bug or request a feature ↗</button>
+<button type="button" data-public-link="releases">Releases ↗</button>
+</nav>
+<p class="hint">Links open in your default browser. Release notes and license terms are in the repository; third-party components retain their own licenses.</p>
 </section>
 <h3 class="about-shortcuts-heading">Keyboard and workspace shortcuts</h3>
 <div class="help-grid"><kbd>Ctrl+Tab</kbd><span>Next session tab</span><kbd>Ctrl+Shift+Tab</kbd><span>Previous session tab</span><kbd>Ctrl+Alt+1 / 2 / 3 / 4</kbd><span>Single / side by side / stacked / four quadrants</span><kbd>F11</kbd><span>Full screen, with tabs</span><kbd>Ctrl+Shift+T</kbd><span>New session — choose persistence</span><kbd>Ctrl+Shift+W</kbd><span>Close view; Standard/local work may stop</span><kbd>Highlight text</kbd><span>Auto-copy on mouse release (turn off in Preferences)</span><kbd>Ctrl+C</kbd><span>Copy selection, otherwise interrupt</span><kbd>Ctrl+V</kbd><span>Paste with multiline confirmation</span><kbd>Ctrl+F</kbd><span>Find in terminal scrollback</span><kbd>Ctrl+Shift+F</kbd><span>Search recorded output</span><kbd>Mouse wheel</kbd><span>Local scrollback; Alt+wheel passes to the application</span><kbd>Drop file</kbd><span>Upload after confirmation; Shift+drop inserts its local path</span><kbd>Drag a session</kbd><span>Move it into a tab or layout slot</span></div><p class="hint">“End session” is destructive and always asks for confirmation. Closing NerdSSHell leaves persistent sessions running. Standard SSH shells close and cannot be reattached. Restarting the server itself does not preserve running processes.</p><button id="closeHelp" class="primary">Got it</button>

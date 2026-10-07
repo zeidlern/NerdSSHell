@@ -22,9 +22,12 @@ jobs:
           package-manager-cache: false
       - name: Audit supported build graph without lifecycle scripts
         run: npm audit --package-lock-only --omit=optional --ignore-scripts --audit-level=low
-      - name: Report advisories in omitted optional dependencies
-        continue-on-error: true
+      - name: Audit the complete dependency graph
         run: npm audit --package-lock-only --ignore-scripts --audit-level=low
+      - name: Install the complete build graph without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Verify optional build proxy and checksum enforcement
+        run: node scripts/Verify-Build-Proxy.cjs
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 10

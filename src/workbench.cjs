@@ -11,7 +11,7 @@ function preferences(value = {}) {
   if (!Array.isArray(favorites) || favorites.length > 3 || favorites.some(id => !actions.some(a => a.id === id))) throw new Error('Choose up to three built-in favorite actions.');
   return { favorites: [...new Set(favorites)] };
 }
-function installWorkbench({ handle, connections, getStore, app, dialog, getWindow, emit, queueOutput, discardOutput, output, forKey, actionTarget = () => undefined, shellProvider = installedShells, localFactory = (s, o) => new LocalRemote(s, o) }) {
+function installWorkbench({ handle, connections, getStore, app, dialog, getWindow, emit, queueOutput, discardOutput, output, forKey, actionTarget = () => undefined, shellProvider = installedShells, localFactory = (s, o) => new LocalRemote(s, o), withViewSlot = (_remote, _key, operation) => operation() }) {
   const facts = new WeakMap(), probes = new WeakMap(), reviews = new ReviewTickets(), locks = new Map(), journal = [];
   let activeProbes = 0, launches = 0, confirmations = 0;
   const localConsoleSequence = new Map();
@@ -76,7 +76,7 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
   async function launch(o, title, code, cwd, validateReview = () => {}) {
     if (launches >= 4) throw new Error('Wait for a console launch to finish.');
     launches++;
-    try {
+    try { return await withViewSlot(o.local ? connections.get(o.id)?.remote : o.remote, undefined, async bind => {
       o.validate();
       const r = o.local ? await getLocal(o.shell, cwd) : connections.get(o.id);
       o.validate(); validateReview(); // Last check before submitting creation; no await before create/createTask.
@@ -85,13 +85,17 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
       const name = o.local && code === undefined ? `${family === 'cmd' ? 'Command Prompt' : 'PowerShell'} ${localConsoleSequence.get(family)}` : (code === undefined ? 'Shell-' : 'Task-') + randomUUID().slice(0, 8);
       // A local cwd is passed only to this synchronous PTY spawn, never written to remote profiles.
       const oldHome = o.local ? r.remote.home : undefined;
+      const beforeShells = new Set(r.remote.shells?.keys() || []);
       let pending;
       try { if (o.local && cwd !== undefined) r.remote.home = cwd; const guard = { validate: () => { o.validate(); validateReview(); } }; pending = code === undefined ? r.remote.create(name, undefined, guard) : !o.local && r.remote.createTaskFor ? r.remote.createTaskFor(name, code, o.persistent) : r.remote.createTask(name, code, guard); }
       finally { if (o.local) r.remote.home = oldHome; }
+      const createdShell = [...(r.remote.shells?.keys() || [])].find(key => !beforeShells.has(key));
+      if (createdShell !== undefined) bind?.(r.remote, createdShell);
       const pane = await pending;
       try { o.validate(); } catch { throw new Error('Destination changed after launch was submitted. The console or task may have started on the original target. It was not retried; inspect that target before trying again.'); }
       record(code === undefined ? 'Local console opened' : 'Reviewed task console opened', o.id);
       return { profile: r.profile, pane, title };
+    });
     } finally { launches--; }
   }
   handle('workbenchContext', context);

@@ -2,7 +2,7 @@
 
 [Manual home](Home.md) · [Workspace](Sessions-and-Workspace.md)
 
-These shortcuts apply to the implemented 1.0.0 workspace. Focus and modal dialogs matter; ordinary text-entry fields keep their normal editing behavior.
+These shortcuts apply to the 1.0.x workspace. Focus and modal dialogs matter; ordinary text-entry fields keep their normal editing behavior.
 
 | Shortcut or gesture | Result |
 | --- | --- |
@@ -34,5 +34,3 @@ These shortcuts apply to the implemented 1.0.0 workspace. Focus and modal dialog
 | Drag divider | Resize panes/panels |
 
 Closing a view is not the same as **End**. Ending persistent work uses the explicit End control and confirmation. Multiline paste confirmation is not a substitute for reading the command or checking the host.
-
-Source references: `ui/index.html`, `ui/app.js`, `ui/workbench.js`.

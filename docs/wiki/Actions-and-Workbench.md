@@ -51,5 +51,3 @@ Reviewed remote scripts are bounded to 32 KiB and reviewed local scripts to 8 Ki
 ## Diagnostics
 
 Workbench diagnostics can gather useful system/output information, but may include hostnames, usernames, paths and commands. Review before copying or sharing. Do not paste a complete diagnostic transcript into a public GitHub issue or an AI chat without redaction. No diagnostic collection is a substitute for host-key verification.
-
-Source references: `ui/pane-actions.js`, `ui/workbench.js`, `ui/command-review.js`, `src/session-commands.cjs`, `src/action-settings.cjs`, `src/action-catalog.cjs`, `src/workbench.cjs`, `src/diagnostics.cjs`.

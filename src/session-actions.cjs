@@ -3,7 +3,7 @@
 function isStandardSession(remote, key) {
   return !!(remote?.profile?.local || remote?.isStandard?.(key) || remote?.shells?.has(key));
 }
-function installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow, forget }) {
+function installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow, forget, withViewSlot = (_remote, _key, operation) => operation() }) {
   const pending = new Set();
   function capture(key) {
     const r = forKey(key), remote = r.remote, pane = remote.pane(key), token = pane.sessionToken;
@@ -26,8 +26,7 @@ function installSessionActions({ handle, runtime, connections, forKey, dialog, g
   handle('create', (id, name, persistent = true) => {
     if (typeof persistent !== 'boolean') throw new Error('Choose whether the new session is persistent.');
     const remote = runtime(id).remote;
-    if (remote.profile.local) return remote.create(name);
-    return remote.createSession(name, persistent);
+    return withViewSlot(remote, undefined, () => remote.profile.local ? remote.create(name) : remote.createSession(name, persistent));
   });
   handle('close', async key => {
     if (typeof key !== 'string' || key.length > 240) throw new Error('Invalid session.');

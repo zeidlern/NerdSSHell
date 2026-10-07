@@ -1,5 +1,6 @@
 'use strict';
 const { randomUUID, createHash, createHmac, timingSafeEqual } = require('node:crypto');
+const { MAX_DISCOVERED_PANES, resourceLimitError } = require('./session-limits.cjs');
 
 function text(value, label, max = 4096) {
   if (typeof value !== 'string' || value.length > max || /[\x00-\x1f\x7f]/.test(value)) throw new Error(`Invalid ${label}.`);
@@ -85,6 +86,7 @@ function parsePanes(data) {
   const result = [];
   for (const line of data.replace(/\n+$/, '').split('\n')) {
     if (!line) continue;
+    if (result.length >= MAX_DISCOVERED_PANES) throw resourceLimitError(`The server session list exceeds the ${MAX_DISCOVERED_PANES}-pane safety limit. No sessions were changed.`);
     const a = line.split('\t');
     if (a.length !== 13) throw new Error('The server returned an unrecognized session list.');
     result.push({ sessionId: id(a[0], '$'), sessionName: unescapeFormat(a[1]), windowId: id(a[2], '@'),

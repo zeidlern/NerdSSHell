@@ -1,16 +1,16 @@
 {
   "name": "nerdsshell",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "NerdSSHell — Built for Windows nerds with Linux problems",
   "author": "Nicholas Zeidler",
   "main": "src/main.cjs",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/unit.test.cjs test/security.test.cjs test/isolation.test.cjs test/transfer.test.cjs test/storage-security.test.cjs test/packaging.test.cjs test/clipboard-shortcut.test.cjs test/input-output.test.cjs test/layout.test.cjs test/keepalive.test.cjs test/sftp-standard.test.cjs test/per-pane-files.test.cjs test/sftp-resource.test.cjs test/standard-output.test.cjs test/selection-copy.test.cjs test/color-preferences.test.cjs test/workbench-catalog.test.cjs test/workbench.test.cjs test/local-powershell.test.cjs test/powershell-environment.test.cjs test/command-review.test.cjs test/command-review-ui.test.cjs test/diagnostics.test.cjs test/action-recipes.test.cjs test/session-lifecycle.test.cjs test/ux-sftp.test.cjs test/ux-actions.test.cjs test/ux-desktop.test.cjs test/ux-integration.test.cjs test/ux-security.test.cjs test/elevated-pty.test.cjs test/local-terminal.test.cjs test/preferences.test.cjs test/session-attention.test.cjs test/local-cmd.test.cjs test/session-commands.test.cjs test/branding.test.cjs test/preferences-ui.test.cjs test/scratchpad-spelling.test.cjs test/application-identity.test.cjs test/session-identity-compat.test.cjs test/application-startup.test.cjs",
+    "test": "node --test test/unit.test.cjs test/security.test.cjs test/isolation.test.cjs test/transfer.test.cjs test/storage-security.test.cjs test/packaging.test.cjs test/clipboard-shortcut.test.cjs test/input-output.test.cjs test/layout.test.cjs test/keepalive.test.cjs test/sftp-standard.test.cjs test/per-pane-files.test.cjs test/sftp-resource.test.cjs test/standard-output.test.cjs test/selection-copy.test.cjs test/color-preferences.test.cjs test/workbench-catalog.test.cjs test/workbench.test.cjs test/local-powershell.test.cjs test/powershell-environment.test.cjs test/command-review.test.cjs test/command-review-ui.test.cjs test/diagnostics.test.cjs test/action-recipes.test.cjs test/session-lifecycle.test.cjs test/ux-sftp.test.cjs test/ux-actions.test.cjs test/ux-desktop.test.cjs test/ux-integration.test.cjs test/ux-security.test.cjs test/elevated-pty.test.cjs test/local-terminal.test.cjs test/preferences.test.cjs test/session-attention.test.cjs test/local-cmd.test.cjs test/session-commands.test.cjs test/branding.test.cjs test/preferences-ui.test.cjs test/scratchpad-spelling.test.cjs test/application-identity.test.cjs test/session-identity-compat.test.cjs test/application-startup.test.cjs test/public-links.test.cjs test/view-budget-ui.test.cjs",
     "test:integration": "node --test test/integration.test.cjs test/input-order.integration.test.cjs test/sftp-standard.integration.test.cjs test/workbench.integration.test.cjs test/mixed.integration.test.cjs",
     "check": "node scripts/check.cjs",
     "pack": "electron-builder --dir --publish never",
@@ -31,6 +31,13 @@
     "electron": "44.5.1",
     "electron-builder": "26.15.3",
     "resedit": "3.1.0"
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "@electron/get": {
+        "global-agent": "4.1.3"
+      }
+    }
   },
   "build": {
     "appId": "app.nerdsshell.desktop",
@@ -91,6 +98,16 @@
       "uninstallerIcon": "ui/branding/nerdsshell.ico",
       "guid": "48ee049e-c2f6-57b2-ab6e-7f5df516dcc0"
     },
-    "artifactName": "NerdSSHell-${version}-${arch}-Setup.${ext}"
-  }
+    "artifactName": "NerdSSHell-${version}-${arch}-Setup.${ext}",
+    "copyright": "Copyright © 2026 Nicholas Zeidler"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zeidlern/NerdSSHell.git"
+  },
+  "homepage": "https://github.com/zeidlern/NerdSSHell/wiki",
+  "bugs": {
+    "url": "https://github.com/zeidlern/NerdSSHell/issues"
+  },
+  "license": "SEE LICENSE IN LICENSE"
 }

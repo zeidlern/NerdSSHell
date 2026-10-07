@@ -73,13 +73,15 @@ test('keyboard focus in a terminal or browser activates its owner without moving
   const grid = node(), views = new Map(), state = { activeElement: null }, toolbarOwners = [], dimensions = [], selectionBindings = [];
   const context = vm.createContext({ element: node, button: node, Terminal, FitAddon: { FitAddon: class {} }, SearchAddon: { SearchAddon: class {} },
     ResizeObserver: class { observe() {} }, NerdSSHellFiles: { create: options => ({ owner: options.key }) }, views,
+    maxOpenViews: require('../src/session-limits.cjs').MAX_OPEN_VIEWS, pendingViewSlots: 0,
     // This fixture isolates focus/layout; real gesture behavior is covered in selection-copy tests.
     NerdSSHellSelectionCopy: { attach(options) { selectionBindings.push(options); return { dispose() {} }; } },
     profiles: new Map([['host', { name: 'Host' }]]), api: {}, appearance: {}, active: 'host/a', selectedProfile: '',
     label: p => p.key, terminalTheme() {}, waitingIndicator: node, $: () => grid, message() {}, syncFileToggle() {}, renderTabs() {}, renderConnections() {}, syncActiveAttention() {},
     syncFiles() { toolbarOwners.push(context.active); }, updateDimensions() { dimensions.push(context.active); }, remember() {}, dropTarget() {}, dragSource() {},
     render() { throw new Error('Focus must not rearrange visible panes.'); }, window: { NerdSSHellAttention: { attach: () => ({ acknowledge() {}, input() {} }) } }, document: state });
-  vm.runInContext(source.slice(source.indexOf('function activateVisiblePane('), source.indexOf('function visibleKeys(')) +
+  vm.runInContext(source.slice(source.indexOf('function requireViewCapacity('), source.indexOf('\nconst activeTransfers')) +
+    source.slice(source.indexOf('function activateVisiblePane('), source.indexOf('function visibleKeys(')) +
     source.slice(source.indexOf('function createView('), source.indexOf('async function openPane(')), context);
   const a = context.createView({ key: 'host/a', profileId: 'host' }), b = context.createView({ key: 'host/b', profileId: 'host' });
   assert.equal(selectionBindings.length, 2);

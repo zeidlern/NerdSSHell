@@ -6,9 +6,9 @@
 
 **Most users:** install an official Windows x64 release. Node.js, Git and Codex are not prerequisites for running an installer-built app. Electron and the application runtime are bundled.
 
-**Maintainers and authorized source users:** build a reviewed revision on Windows. This requires Git, Node.js/npm and network access for dependencies and packaging tools. Source-build instructions do not grant redistribution rights; read LICENSE.
+**Source builds:** build a selected revision on Windows for evaluation or contribution. This requires Git, Node.js/npm and network access for dependencies and packaging tools. Source-build instructions do not grant redistribution rights; read [LICENSE](https://github.com/zeidlern/NerdSSHell/blob/main/LICENSE).
 
-> At this manual's October 6, 2026 preparation, no GitHub Release existed. A file named `NerdSSHell-1.0.0-x64-Setup.exe` in a development/CI folder is a candidate, not proof that version 1.0.0 has been publicly released. Do not download a similarly named executable from a search result or unofficial mirror.
+Check [Releases](https://github.com/zeidlern/NerdSSHell/releases) for available assets, signing status and known limitations. A source archive is not a Windows installer. Use source builds when no Windows asset is available.
 
 ## Requirements
 
@@ -20,25 +20,26 @@ Do not expose a home server's SSH port to the internet just to use NerdSSHell; a
 
 ## Route A: an official installer
 
-1. Open the project's **Releases** page. Choose a release whose notes explicitly describe the Windows x64 artifact, its signing status and known limitations. Download the `...-x64-Setup.exe` asset, not GitHub's automatic source-code ZIP.
+1. Open the project's [Releases](https://github.com/zeidlern/NerdSSHell/releases) page. Choose a release whose notes describe the Windows x64 artifact, its signing status and known limitations. Download the `...-x64-Setup.exe` asset, not GitHub's automatic source-code ZIP.
 2. Compare the download's SHA-256 with the checksum published for that exact asset. In PowerShell, using your real download path:
 
    ```powershell
-   Get-FileHash -LiteralPath "$HOME\Downloads\NerdSSHell-1.0.0-x64-Setup.exe" -Algorithm SHA256
-   Get-AuthenticodeSignature -LiteralPath "$HOME\Downloads\NerdSSHell-1.0.0-x64-Setup.exe" |
+   $installerPath = Read-Host 'Full path to the downloaded installer'
+   Get-FileHash -LiteralPath $installerPath -Algorithm SHA256
+   Get-AuthenticodeSignature -LiteralPath $installerPath |
        Format-List Status,StatusMessage,SignerCertificate
    ```
 
-   The filename is an example for the 1.0.0 target; use the actual released version. A matching hash checks byte identity, not the publisher's identity. For a signed release, the signature must be valid and the publisher must match the release documentation. An unexpected publisher or invalid signature is a reason to stop.
+   A matching hash checks byte identity, rather than publisher identity. For a signed release, the signature must be valid and the publisher must match the release documentation. An unexpected publisher or invalid signature is a reason to stop.
 3. Save notes and finish local/Standard SSH work. Exit an existing NerdSSHell normally. Do not use Task Manager to kill it as a routine upgrade step.
-4. Run the installer interactively as your normal user. Keep the existing installation directory on upgrades unless the maintainer explicitly documents a migration. A per-user install is the normal route.
+4. Run the installer interactively as your normal user. Keep the existing installation directory on upgrades unless release instructions say otherwise. A per-user install is the normal route.
 5. Launch NerdSSHell from Start, open **? / Help and about**, and verify the version. Begin with a disposable test session.
 
-**Unsigned candidates:** Windows may report an unknown publisher or apply reputation-based blocking. This manual does not instruct users to disable Defender, SmartScreen, signature checks or organizational controls. General users should wait for a signed release; authorized testers should have the publisher/provenance and risks reviewed through their normal security process. Stop on security detection or a checksum mismatch.
+**Unsigned builds:** Windows may report an unknown publisher or apply reputation-based blocking. Check the release's documented provenance and signing status through your normal security process. Do not disable Defender, SmartScreen, signature checks or organizational controls. Stop on security detection or a checksum mismatch.
 
 ## Route B: build from reviewed source
 
-Open a normal Windows PowerShell terminal in a directory where you keep source projects. Authenticate to GitHub only through normal Git/Git Credential Manager prompts; do not embed tokens in clone URLs or paste them into an AI chat. A private repository is readable only by authorized accounts.
+Open a normal Windows PowerShell terminal in a directory where you keep source projects. The public repository can be cloned without credentials. If a tool requests authentication for another operation, use normal Git/Git Credential Manager prompts; never embed tokens in clone URLs or AI chat.
 
 ```powershell
 git clone https://github.com/zeidlern/NerdSSHell.git
@@ -50,7 +51,7 @@ node --version
 npm.cmd --version
 ```
 
-For a reproducible release build, use the published reviewed commit or release tag, not an unexplained branch. For example, after a `v1.0.0` tag actually exists, fetch and check out that tag in this new checkout. Do not assume that it has been created. Record the full SHA before building. Existing working copies with local changes must not be reset, cleaned, overwritten or silently stashed.
+For a reproducible release build, check out the published tag or full commit SHA for the intended version, then record `git rev-parse HEAD`. Preserve local changes in existing checkouts; use a new directory rather than resetting or overwriting them.
 
 Inspect `AGENTS.md`, `SECURITY.md`, `package.json` and `scripts/Install-Windows.ps1`. The supplied helper runs locked dependency installation, source checks, unit tests, Windows packaging and package verification:
 
@@ -86,7 +87,7 @@ From an already prepared checkout, `npm.cmd start` launches the development app.
 
 ## Upgrade and rollback
 
-Before an upgrade, locate the actual data folder, close the application and copy the entire folder privately. Version 1.0.1 uses `%APPDATA%\nerdsshell` for fresh installations and retains an existing `%APPDATA%\betterssh` legacy folder for upgrades; confirm which contains `settings.json`. Startup does not copy, merge or delete either folder. The UI has no visible Data folder button. Do not create/delete directories based only on the display name. Backups contain private profiles, trust pins and possibly terminal output. The installer helper does not create this backup.
+Before an upgrade, locate the actual data folder, close the application and copy the entire folder privately. Fresh installations use `%APPDATA%\nerdsshell`; upgrades retain an existing `%APPDATA%\betterssh` legacy folder. Confirm which contains `settings.json`. Startup does not copy, merge or delete either folder. The UI has no visible Data folder button. Do not create/delete directories based only on the display name. Backups contain private profiles, trust pins and possibly terminal output. The installer helper does not create this backup.
 
 After upgrading, check About, saved connections, trust behavior, Favorites and disposable persistence. Package/app ID use current NerdSSHell identity; the original installer GUID and existing data directory preserve upgrades. If both default folders exist, startup selects legacy data and leaves the current folder untouched. Review that state deliberately; do not merge or delete either copy blindly.
 
@@ -95,5 +96,3 @@ For rollback, stop and retain both the old backup and current data. Install only
 ## Uninstall
 
 Use **Windows Settings > Apps > Installed apps > NerdSSHell > Uninstall**. Save notes and close local work first. The configured uninstaller preserves application data. That is useful for reinstalling, but it is not a privacy wipe. Review and remove retained data/backups separately after confirming you no longer need them. Uninstalling the Windows app does not itself delete server-side tmux sessions; never terminate remote jobs merely to remove a local installation.
-
-Source references: `scripts/Install-Windows.ps1`, `package.json`, `scripts/Verify-Packaged.cjs`, `scripts/Verify-Notices.cjs`.

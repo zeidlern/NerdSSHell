@@ -10,6 +10,17 @@ let sessionDefaults = { scrollback: 100000, archiveMB: 256, record: false, start
 let preferenceSection = 'copy', preferenceGeneration = 0, preferenceSaving = false, preferenceLoaded = false, attentionActiveKey = '';
 let order = [], savedOrder = [], slots = [], savedSlots = [], active = '', desiredActive = '', layout = 1, twoPaneOrientation = 'side-by-side', splitX = 50, splitY = 50;
 let saveTimer, noticeTimer, promptId, entryResolve, historyKey, selectedProfile;
+let maxOpenViews = 64, pendingViewSlots = 0;
+function requireViewCapacity(key) {
+  if (!views.has(key) && views.size + pendingViewSlots >= maxOpenViews) throw new Error(`NerdSSHell supports ${maxOpenViews} open terminal views. Close a view before opening another; persistent remote work keeps running.`);
+}
+async function withViewCapacity(operation) {
+  requireViewCapacity(); pendingViewSlots++;
+  let reserved = true;
+  const release = () => { if (reserved) { reserved = false; pendingViewSlots--; } };
+  try { return await operation(release); }
+  finally { release(); }
+}
 const activeTransfers = new Map();
 function syncFiles() {
   for (const view of views.values()) {
@@ -47,6 +58,17 @@ function element(tag, cls, text) { const e = document.createElement(tag); if (cl
 function button(text, action, cls, title) { const b = element('button', cls, text); if (title) b.title = title; b.addEventListener('click', e => { e.stopPropagation(); run(action()); }); return b; }
 function label(p) { return p.windowPanes > 1 || [...panes.values()].some(x => x.key !== p.key && x.sessionId === p.sessionId && x.profileId === p.profileId) ? `${p.sessionName} / ${p.windowName} / ${p.paneIndex + 1}` : p.sessionName; }
 function connected(id) { return statuses.get(id)?.state === 'connected'; }
+async function connectProfile(id) {
+  if (profiles.get(id)?.sessionMode !== 'standard' || connected(id)) return api.connect(id);
+  return withViewCapacity(async release => {
+    const result = await api.connect(id);
+    release();
+    // The connected event may arrive while the reserved slot is still held.
+    // Attach its returned ordinary shell before another launch can take it.
+    for (const pane of result || []) { panes.set(pane.key, pane); if (!pane.dead) await openPane(pane.key, false); }
+    return result;
+  });
+}
 function remember() {
   clearTimeout(saveTimer); saveTimer = setTimeout(() => {
     savedOrder = [...order];
@@ -160,7 +182,7 @@ function renderConnections() {
     if (state.state === 'connected') {
       actions.append(button('+ New', () => newSession(p.id), 'small'), button('Refresh', () => api.discover(p.id), 'small'), button('Disconnect', () => api.disconnect(p.id), 'small'));
     } else if (state.state === 'connecting') actions.append(button('Cancel', () => api.disconnect(p.id), 'small'));
-    else actions.append(button('Connect', () => { selectedProfile = p.id; return api.connect(p.id); }, 'small'), button('Remove', async () => { if (await api.deleteProfile(p.id)) { profiles.delete(p.id); renderConnections(); } }, 'small'));
+    else actions.append(button('Connect', () => { selectedProfile = p.id; return connectProfile(p.id); }, 'small'), button('Remove', async () => { if (await api.deleteProfile(p.id)) { profiles.delete(p.id); renderConnections(); } }, 'small'));
     box.append(actions);
     for (const pane of panes.values()) if (pane.profileId === p.id && !pane.local) box.append(sessionRow(pane));
     root.append(box);
@@ -264,6 +286,7 @@ function write(term, data) { return new Promise(resolve => term.write(data, reso
 function decode(data) { return Uint8Array.from(atob(data), ch => ch.charCodeAt(0)); }
 async function copySelection(terminal) { await api.copy(terminal.getSelection()); terminal.clearSelection(); }
 function createView(pane) {
+  requireViewCapacity(pane.key);
   const wrapper = element('section', 'terminal-pane'), head = element('div', 'pane-head'), host = element('div', 'terminal-host'), bottom = element('div', 'pane-bottom');
   const state = element('span', 'pane-state', 'Opening…'), context = element('div', 'pane-head-context'), controls = element('div', 'pane-session-controls');
   const locationBadge = element('span', 'pane-location-badge ' + (pane.local ? 'local' : 'remote'), pane.local ? 'LOCAL' : 'REMOTE');
@@ -382,9 +405,13 @@ function finishNewSession(accepted) {
 async function newSession(profileId) {
   const id = profileId || panes.get(active)?.profileId || selectedProfile || [...profiles.keys()].find(connected);
   if (!id || !connected(id)) { message('Connect to a server before creating a session.'); return; }
+  requireViewCapacity();
   const choice = await chooseNewSession(id);
   if (choice === null) return;
-  const pane = await api.create(id, choice.name, choice.persistent); panes.set(pane.key, pane); await openPane(pane.key);
+  await withViewCapacity(async release => {
+    const pane = await api.create(id, choice.name, choice.persistent); panes.set(pane.key, pane);
+    release(); await openPane(pane.key);
+  });
 }
 async function performSessionAction(key, action) {
   const p = panes.get(key) || views.get(key)?.pane; if (!p) return;
@@ -521,7 +548,12 @@ api.onEvent(event => {
       for (const pane of event.panes) panes.set(pane.key, pane);
       const live = event.panes.filter(x => !x.dead).map(x => x.key), previous = [...new Set([...order, ...savedOrder])].filter(k => live.includes(k));
       const wanted = p.sessionMode === 'standard' ? live : p.startup === 'all' ? [...new Set([...previous, ...live])] : p.startup === 'restore' ? previous : order.filter(k => live.includes(k));
-      for (const key of wanted) await openPane(key, false);
+      let skipped = 0;
+      for (const key of wanted) {
+        if (!views.has(key) && views.size + pendingViewSlots >= maxOpenViews) { skipped++; continue; }
+        await openPane(key, false);
+      }
+      if (skipped) message(`${skipped} session(s) remain in the sidebar. Close a view to open another (limit ${maxOpenViews}); their remote work keeps running.`);
       if (desiredActive && order.includes(desiredActive)) { active = desiredActive; desiredActive = ''; slots = [...savedSlots]; }
       render();
     })());
@@ -570,7 +602,7 @@ api.onEvent(event => {
 $('connectionForm').addEventListener('submit', e => {
   e.preventDefault(); run((async () => {
     const form = e.target, p = Object.fromEntries(new FormData(form)); p.autoConnect = form.elements.autoConnect.checked; p.record = form.elements.record.checked;
-    try { const result = await api.saveProfile(p); profiles.set(result.id, result); selectedProfile = result.id; $('connectionDialog').close(); renderConnections(); await api.connect(result.id); }
+    try { const result = await api.saveProfile(p); profiles.set(result.id, result); selectedProfile = result.id; $('connectionDialog').close(); renderConnections(); await connectProfile(result.id); }
     catch (error) { $('connectionError').textContent = error.message; message(error.message); }
   })());
 });
@@ -646,6 +678,7 @@ $('cancelPreferences').onclick = closePreferences;
 $('preferencesDialog').addEventListener('cancel', e => { e.preventDefault(); closePreferences(); });
 $('preferencesDialog').addEventListener('close', () => { if (!$('preferencesDialog').open) { preferenceGeneration++; preferenceLoaded = false; window.NerdSSHellPanes.cancelConfiguration(); applyAppearance(appearance); } });
 $('help').onclick = () => $('helpDialog').showModal(); $('closeHelp').onclick = () => $('helpDialog').close();
+for (const link of $('helpDialog').querySelectorAll('[data-public-link]')) link.addEventListener('click', () => run(api.publicLink(link.dataset.publicLink)));
 $('findNext').onclick = () => views.get(active)?.search.findNext($('searchText').value); $('findPrev').onclick = () => views.get(active)?.search.findPrevious($('searchText').value);
 $('searchText').onkeydown = e => { if (e.key === 'Enter') { if (e.shiftKey) $('findPrev').click(); else $('findNext').click(); } };
 $('closeSearch').onclick = () => { $('searchbar').hidden = true; views.get(active)?.terminal.focus(); };
@@ -690,6 +723,7 @@ document.addEventListener('paste', e => {
 window.addEventListener('beforeunload', () => { clearTimeout(saveTimer); api.workspace({ layout, twoPaneOrientation, order, slots, active, splitX, splitY }).catch(() => {}); });
 run((async () => {
   const state = await api.state(); appearance = NerdSSHellAppearance.appearance(state.appearance); notifications = { ...notifications, ...state.notifications }; sessionDefaults = { ...sessionDefaults, ...state.sessionDefaults }; applyAppearance(appearance); for (const p of state.profiles) profiles.set(p.id, p);
+  if (Number.isInteger(state.sessionLimits?.maxOpenViews) && state.sessionLimits.maxOpenViews > 0 && state.sessionLimits.maxOpenViews <= 64) maxOpenViews = state.sessionLimits.maxOpenViews;
   savedOrder = state.workspace.order; savedSlots = state.workspace.slots || []; desiredActive = state.workspace.active; layout = state.workspace.layout; twoPaneOrientation = state.workspace.twoPaneOrientation || 'side-by-side'; splitX = state.workspace.splitX; splitY = state.workspace.splitY; $('version').textContent = 'v' + state.version; $('aboutVersion').textContent = state.version;
-  render(); for (const p of profiles.values()) if (p.autoConnect) { try { await api.connect(p.id); } catch (e) { message(e.message); } }
+  render(); for (const p of profiles.values()) if (p.autoConnect) { try { await connectProfile(p.id); } catch (e) { message(e.message); } }
 })());

@@ -1,0 +1,65 @@
+{
+  "productName": "NerdSSHell",
+  "tagline": "Built for Windows nerds with Linux problems",
+  "sourceCommit": "69f86f1fc5444263fe805791054461a238cfbec3",
+  "pngSizes": [
+    16,
+    20,
+    24,
+    32,
+    40,
+    48,
+    64,
+    128,
+    256,
+    512
+  ],
+  "icoSizes": [
+    16,
+    20,
+    24,
+    32,
+    40,
+    48,
+    64,
+    128,
+    256
+  ],
+  "microSizes": [
+    16,
+    20,
+    24
+  ],
+  "masterSha256": {
+    "app-light-master.png": "6a53fec073ebc80ea8a37c82cce02a3401a9d1dc7041fedac5fb36b621143c55",
+    "app-dark-master.png": "8a19176a594328bb2c92154c1d6e649386ed03b27c45c7624b8b9fa49ec9937b",
+    "app-micro-master.png": "4e3d24500bd7d1f1237c6932ea3f9878640ec0c10f826f1d3aa00a71ba720d86"
+  },
+  "outputs": {
+    "assets/branding/nerdsshell/production/wordmark-dark-tagline.svg": "50e55c2ef92d23127146724eb1e14cbef00f2488ac9e6b00fee08d195c1e09e1",
+    "assets/branding/nerdsshell/production/wordmark-dark.svg": "21917c88c3bf43fa724c286f2113efdbe39915f380f391715adf943f6999cd82",
+    "assets/branding/nerdsshell/production/wordmark-light-tagline.svg": "12c13cefb94bba98ba98172a986597f734167d339de4ab478f66b1b5bb65335c",
+    "assets/branding/nerdsshell/production/wordmark-light.svg": "4629f013f72e5b7bf72f799d144fabdeaa425e85c057e053f3d1e53595c6eb42",
+    "ui/branding/app-dark-128.png": "668146ae228d22a590a96132e211c3bdce3af21020e9d381017467d14ddd92a4",
+    "ui/branding/app-dark-16.png": "f6044ed8354da553c690952c607a10edc4c4d90656dfd1daf6759dbd11d3f520",
+    "ui/branding/app-dark-20.png": "de9c6dd51dbc4fd0da2dbaacff1ee830ccd55cb830f9583e39cacfdb466fc1ed",
+    "ui/branding/app-dark-24.png": "ecfb0b86d2b587e2590555979b7f1371a9cd42f262ad363186a264c537806887",
+    "ui/branding/app-dark-256.png": "7361412994b3244e3a46af5c2f2e49e0e7167e0a0fa17aa4f4d418281ee9b1dd",
+    "ui/branding/app-dark-32.png": "1b60b0293777bba05dfbdde074e7f0f58bf981b2e4038a5828100dda651b8651",
+    "ui/branding/app-dark-40.png": "110f7d39230abb900197abff94ea4454c269daf502c634c8bf01d30f50a066c4",
+    "ui/branding/app-dark-48.png": "96fadd406dd0ed735b06ad127d32c28c9be2c25d5e0ec9f0ccebaa2ab4f99dfa",
+    "ui/branding/app-dark-512.png": "8ab02eb5690b97692263844c291b3e4fbe3cf650685e2c88f6477649e92bb3d6",
+    "ui/branding/app-dark-64.png": "89c649a7d3476cd61e443844d54ad076213009e5576d5b7b4e0e7c6016a644ac",
+    "ui/branding/app-light-128.png": "9c2a583510ff452106855fc0184830e116b417f68a146244a4fe36a2b9604bec",
+    "ui/branding/app-light-16.png": "f6044ed8354da553c690952c607a10edc4c4d90656dfd1daf6759dbd11d3f520",
+    "ui/branding/app-light-20.png": "de9c6dd51dbc4fd0da2dbaacff1ee830ccd55cb830f9583e39cacfdb466fc1ed",
+    "ui/branding/app-light-24.png": "ecfb0b86d2b587e2590555979b7f1371a9cd42f262ad363186a264c537806887",
+    "ui/branding/app-light-256.png": "057d49be98a190daa7dfe305eb7753939d51cb8d7c82fab9bad94c0883861b02",
+    "ui/branding/app-light-32.png": "1445180e7cab41a36a86694866b852eb8a4efd67e376ab00438d20c9e493fb52",
+    "ui/branding/app-light-40.png": "0c3ad4a5c5aef137ad80e24200bb102747dc2c8eb464d77c16126c46d83f8fcf",
+    "ui/branding/app-light-48.png": "dd68115a9e99c238757737c79d8c2614268d32c878d4bb6b5dd00a6301387e72",
+    "ui/branding/app-light-512.png": "0a8af1325e1f32bd40466d0e7dbbebe51412ad6c665584e4caa3e5f68794684a",
+    "ui/branding/app-light-64.png": "37876e33613335e664e307c8b5192fccb39ad07f7fd7dd1d5950aa0fd26e39d8",
+    "ui/branding/nerdsshell.ico": "2be64450c3ec4759c62a83e95f6a87d8fbf0cedaabc223101aa8da1f1cc27d7a"
+  }
+}

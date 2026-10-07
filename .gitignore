@@ -1,0 +1,24 @@
+node_modules/
+dist/
+*.log
+*.tmp
+.env*
+!.env.example
+coverage/
+test-results/
+playwright-report/
+.local/
+settings.json*
+history/
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+# Local trust stores, signing material and connection backups must stay private.
+.ssh/
+known_hosts*
+*.pfx
+*.p12
+*.kdbx
+settings.json.backup
+settings.json.tmp

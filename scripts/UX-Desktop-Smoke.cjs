@@ -1,0 +1,62 @@
+'use strict';
+/** Extends only the disposable loopback packaged fixture, never installed user sessions. */
+async function uxDesktopSmoke({ evaluate, wait, check, screenshot }) {
+  check('Compact local launchers show PowerShell and Command Prompt below Scratchpad', await evaluate(`$('localPowerShell').innerText.trim()==='PowerShell'&&$('localCommandPrompt').innerText.trim()==='Command Prompt'&&getComputedStyle($('localPowerShell').querySelector('.launcher-icon')).display==='none'&&document.querySelector('.local-launcher').firstElementChild.id==='scratchpadToggle'`));
+  check('Toolbar keeps four accessible Layout buttons and removes redundant bottom/configuration controls', await evaluate(`document.querySelectorAll('.layout-buttons [data-layout-choice]').length===4 && [...document.querySelectorAll('.layout-buttons button')].every(b=>b.getAttribute('aria-label')&&b.title) && !$('wbLaunch') && !$('statusbar') && !$('newSessionBottom') && !$('filesToggle') && !$('focusPane') && !$('fullScreen') && !$('dataFolder')`));
+  check('Session controls and location badges reflect each owner', await evaluate(`__smokeKeys.every(key=>{const v=views.get(key),head=v.wrapper.querySelector('.pane-session-controls'),labels=[...head.querySelectorAll('button')].map(b=>b.textContent);return ['Rename','End Session'].every(label=>labels.includes(label))&&labels.includes('Disconnect')===!v.pane.local&&v.wrapper.querySelector('.pane-location-badge').textContent===(v.pane.local?'LOCAL':'REMOTE');})`));
+  await evaluate(`run(newSession()); true`);
+  await wait(`$('newSessionDialog').open`, 'Per-session creation dialog did not open.');
+  check('New session explains Persistent Session (tmux) and keeps Cancel last/right', await evaluate(`$('newSessionPersistent').checked && $('newSessionPersistence').textContent.includes('Persistent Session (tmux)') && $('newSessionPersistence').textContent.includes('Keeps the remote shell running') && $('newSessionForm').querySelector('.dialog-actions').lastElementChild.id==='cancelNewSession'`));
+  await evaluate(`$('cancelNewSession').click(); true`);
+  await evaluate(`$('sidebarToggle').click(); true`);
+  check('Connection rail collapses without closing consoles', await evaluate(`$('connectionSidebar').classList.contains('collapsed') && __smokeKeys.every(k=>views.get(k).ready)`));
+  check('Collapsed launcher shows PS while the distinct Expand Sidebar control remains accessible', await evaluate(`getComputedStyle($('localPowerShell').querySelector('.launcher-icon')).display!=='none'&&getComputedStyle($('localPowerShell').querySelector('span')).display==='none'&&$('sidebarToggle').getAttribute('aria-label')==='Expand Sidebar'`));
+  await evaluate(`$('sidebarToggle').click(); $('scratchpadToggle').click(); true`);
+  await wait(`!$('scratchpad').hidden`, 'Shared scratchpad did not open.');
+  const note = '## Fixture notes\n**bold**\nWrite-Output "safe preview"\n<img src=x onerror=alert(1)>';
+  await evaluate(`$('scratchText').value=${JSON.stringify(note)}; $('scratchText').dispatchEvent(new Event('input',{bubbles:true})); true`);
+  check('Scratchpad text becomes visible immediately while syntax painting waits', await evaluate(`$('scratchText').getAttribute('data-highlight')==='pending'&&$('scratchHighlight').hidden&&getComputedStyle($('scratchText')).color!=='rgba(0, 0, 0, 0)'&&$('scratchText').spellcheck`));
+  await wait(`$('scratchHighlight').textContent.includes('<img src=x')`, 'Scratchpad highlighting did not render literal input.');
+  check('Scratchpad text remains inert and includes Markdown/code highlighting', await evaluate(`!$('scratchHighlight').querySelector('img,script,a') && !!$('scratchHighlight').querySelector('.syntax-bold') && $('scratchStatus').textContent.includes('Unsaved')`));
+  const before = await evaluate(`$('scratchpad').getBoundingClientRect().width`);
+  await evaluate(`$('scratchGrip').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true})); true`);
+  check('Scratchpad keyboard divider changes only its width', await evaluate(`$('scratchpad').getBoundingClientRect().width!==${before} && __smokeKeys.every(k=>views.get(k).ready)`));
+  for (const value of ['1','2-side-by-side','2-stacked','4']) {
+    await evaluate(`document.querySelector('[data-layout-choice="'+${JSON.stringify(value)}+'"]').click(); true`);
+    check(`Layout ${value} has exactly one matching pressed button`, await evaluate(`document.querySelectorAll('.layout-buttons [aria-pressed="true"]').length===1 && document.querySelector('.layout-buttons [aria-pressed="true"]').dataset.layoutChoice===${JSON.stringify(value)}`));
+    check(`Shared scratchpad retains full height in layout ${value}`, await evaluate(`(()=>{const p=$('scratchpad').getBoundingClientRect(),m=document.querySelector('main').getBoundingClientRect();return !p.hidden && Math.abs(p.top-m.top)<2 && Math.abs(p.bottom-m.bottom)<2 && $('scratchText').value.includes('Fixture notes');})()`));
+  }
+  await screenshot('ux-scratchpad');
+  await require('./Scratchpad-Wrap-Smoke.cjs').scratchpadWrapSmoke({ evaluate, wait, check, screenshot });
+  await evaluate(`$('scratchText').value=${JSON.stringify(note)}; $('scratchText').dispatchEvent(new Event('input',{bubbles:true})); true`);
+  await evaluate(`$('scratchCollapse').click(); true`);
+  check('Collapsing notes preserves memory and every original shell', await evaluate(`$('scratchpad').hidden && $('scratchText').value.includes('Fixture notes') && __smokeKeys.every(k=>views.get(k).ready)`));
+  await evaluate(`$('scratchpadToggle').click(); $('scratchText').value=''; $('scratchText').dispatchEvent(new Event('input',{bubbles:true})); true`);
+  await wait(`!$('scratchStatus').textContent.includes('Unsaved')`, 'Cleared fixture scratchpad remained dirty.');
+  await evaluate(`$('scratchCollapse').click(); true`);
+  check('Both Administrator launch switches start off and explain Windows UAC', await evaluate(`!$('localAdmin').checked && !$('localCommandAdmin').checked && $('localAdmin').closest('label').title.includes('Windows UAC') && $('localCommandAdmin').closest('label').title.includes('Windows UAC')`));
+  const savedAppearance = await evaluate(`JSON.stringify(appearance)`);
+  await evaluate(`openPreferences('system').then(()=>{$('themeLight').click(); return true;})`);
+  check('Preferences deep-links to one category and previews matching light branding', await evaluate(`$('preferencesDialog').open&&document.querySelectorAll('.preferences-content>.preference-section:not([hidden])').length===1&&!$('preferences-system').hidden&&$('brandIcon').getAttribute('src').endsWith('app-light-64.png')`));
+  await evaluate(`NerdSSHellPreferences.open('favorites')`);
+  check('Favorites configuration shares the two-pane Preferences transaction', await evaluate(`!$('preferences-favorites').hidden&&$('preferences-system').hidden&&$('favoriteOS').options.length>0&&!$('actionConfigDialog')`));
+  await screenshot('ux-preferences-favorites');
+  await evaluate(`$('cancelPreferences').click(); true`);
+  check('Cancel discards color previews and closes the shared Preferences window', await evaluate(`!$('preferencesDialog').open&&JSON.stringify(appearance)===${JSON.stringify(savedAppearance)}&&document.documentElement.style.getPropertyValue('--bg')===appearance.uiBackground`));
+  await evaluate(`$('help').click(); true`);
+  check('About identifies NerdSSHell, its developer and release build without placeholders', await evaluate(`$('helpDialog').open && $('helpDialog').textContent.includes('NerdSSHell') && $('helpDialog').textContent.includes('Developed by Nicholas Zeidler') && $('helpDialog').textContent.includes('Release build') && !$('helpDialog').textContent.includes('to be completed')`));
+  await wait(`$('aboutBrandIcon').complete&&$('aboutBrandIcon').naturalWidth===512`, 'Packaged About artwork did not load through the app protocol.');
+  check('Packaged About uses the larger theme-matched production logo', await evaluate(`$('aboutBrandIcon').getBoundingClientRect().width>=140&&$('aboutBrandIcon').getAttribute('src')===(luminance(appearance.uiBackground)>0.179?'branding/app-light-512.png':'branding/app-dark-512.png')`));
+  await screenshot('ux-about-brand');
+  await evaluate(`$('closeHelp').click(); true`);
+  await evaluate(`layout=4;active=__smokeKeys[3];slots=[...__smokeKeys];render();true`);
+  const originals = await evaluate(`[...order]`);
+  await evaluate(`(()=>{const data=new DataTransfer();data.setData('application/x-betterssh-pane',__smokeKeys[3]);views.get(__smokeKeys[0]).wrapper.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data}));return true;})()`);
+  await wait(`slots[0]===__smokeKeys[3]&&document.activeElement.closest('.terminal-pane')?.dataset.paneKey===__smokeKeys[3]`, 'Packaged quadrant drop did not move and focus the source terminal.');
+  check('Packaged drag swaps occupied quadrants without replacing a live transport', await evaluate(`slots[3]===__smokeKeys[0]&&__smokeKeys.every(k=>views.get(k).ready)`));
+  await evaluate(`slots=[__smokeKeys[0],null,__smokeKeys[1],null];active=__smokeKeys[1];render();(()=>{const data=new DataTransfer();data.setData('application/x-betterssh-pane',__smokeKeys[0]);document.querySelectorAll('.empty-slot')[1].dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data}));})();true`);
+  await wait(`slots[3]===__smokeKeys[0]&&document.activeElement.closest('.terminal-pane')?.dataset.paneKey===__smokeKeys[0]`, 'Packaged drop into an empty quadrant did not settle.');
+  check('Packaged empty-slot placement keeps the other positions and persists validated slots', await evaluate(`(async()=>{remember();await new Promise(r=>setTimeout(r,350));const saved=await api.state();return slots[0]===null&&slots[2]===__smokeKeys[1]&&JSON.stringify(saved.workspace.slots)===JSON.stringify(slots);})()`));
+  await evaluate(`order=${JSON.stringify(originals)};slots=[...__smokeKeys];active=__smokeKeys[0];render();remember();true`);
+}
+module.exports = { uxDesktopSmoke };

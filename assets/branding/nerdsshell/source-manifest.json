@@ -1,0 +1,55 @@
+{
+  "sourceCommit": "69f86f1fc5444263fe805791054461a238cfbec3",
+  "originalConcepts": [
+    {
+      "path": "dark/badge.png",
+      "gitBlobSha": "397b71cda37c91617638adf97448708ea642b430",
+      "bytes": 1117849
+    },
+    {
+      "path": "dark/desktop-icon.png",
+      "gitBlobSha": "595bb627463eb661a4a932290ca41cdd6bec14a9",
+      "bytes": 1310397
+    },
+    {
+      "path": "dark/emoji-avatar.png",
+      "gitBlobSha": "8c30525a92fb7a69df84fa7d21f0f594c018dfb6",
+      "bytes": 1021410
+    },
+    {
+      "path": "dark/website-logo-tagline.png",
+      "gitBlobSha": "416b530e97ba9906a9ac92e54d00d76a6101c79a",
+      "bytes": 1141507
+    },
+    {
+      "path": "dark/website-logo.png",
+      "gitBlobSha": "1db43c0383351ffbb97d272324e18d5f910b0ae9",
+      "bytes": 989085
+    },
+    {
+      "path": "light/desktop-icon.png",
+      "gitBlobSha": "feb2d04f6caf63f67039b71e655525afa5d74221",
+      "bytes": 1180396
+    },
+    {
+      "path": "light/emoji-avatar.png",
+      "gitBlobSha": "08a92c71b926b4f52eec100986bf0ae9356419b3",
+      "bytes": 900609
+    },
+    {
+      "path": "light/mascot.png",
+      "gitBlobSha": "84f6dc74a30515c9ca5e428887075c5690549370",
+      "bytes": 900412
+    },
+    {
+      "path": "light/website-logo-tagline.png",
+      "gitBlobSha": "204a87c66d1305e6d3b36f806482ec338a4b8960",
+      "bytes": 886368
+    },
+    {
+      "path": "light/website-logo.png",
+      "gitBlobSha": "0fb8dca815a77d9f2bc5f050d2daf5b47a3d3fd8",
+      "bytes": 822127
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+## NerdSSHell manual
+
+- [Home and feature overview](Home.md)
+- [Installation and upgrades](Installation.md)
+- [Install with Codex](Install-with-Codex.md)
+- [Connections and trust](Connections-and-Trust.md)
+- [Sessions and workspace](Sessions-and-Workspace.md)
+- [File SFTP](File-SFTP.md)
+- [Actions and workbench](Actions-and-Workbench.md)
+- [Scratchpad and alerts](Scratchpad-and-Alerts.md)
+- [Preferences and data](Preferences-and-Data.md)
+- [Keyboard shortcuts](Keyboard-Shortcuts.md)
+- [Troubleshooting](Troubleshooting.md)
+- [Security and privacy](Security-and-Privacy.md)
+- [Maintainer publication](Maintainer-Publication.md)
+- [Publish the Wiki](Publishing-the-Wiki.md)

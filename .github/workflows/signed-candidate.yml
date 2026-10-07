@@ -1,0 +1,71 @@
+name: Build signed Windows candidate
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full reviewed commit SHA on protected main
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  signed-candidate:
+    # Never invoke this job from a PR or an arbitrary branch/ref. The
+    # windows-signing environment must also have required reviewers and a
+    # main-only deployment rule before any certificate secrets are added.
+    if: github.repository == 'zeidlern/NerdSSHell' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    environment: windows-signing
+    steps:
+      - name: Match the reviewed commit
+        shell: pwsh
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          if ($env:EXPECTED_SHA -notmatch '^[0-9a-fA-F]{40}$' -or
+              $env:EXPECTED_SHA.ToLowerInvariant() -ne '${{ github.sha }}') {
+            throw 'The selected main commit does not match expected_sha.'
+          }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm ci --omit=optional
+      - run: node scripts/Verify-Publication.cjs --installed
+      - run: npm run check
+      - run: npm test
+      - run: node scripts/Generate-SupplyChain.cjs
+      - name: Build and verify signed installer
+        shell: pwsh
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT: ${{ vars.NERDSSHELL_EXPECTED_SIGNER_THUMBPRINT || vars.BETTERSSH_EXPECTED_SIGNER_THUMBPRINT }}
+        run: npm run dist:signed
+      - name: Verify packaged resources and write hashes
+        shell: pwsh
+        run: |
+          npm run verify:package
+          node scripts/Verify-Notices.cjs
+          $files = @(Get-Item 'dist/win-unpacked/NerdSSHell.exe') + @(Get-Item 'dist/*Setup.exe')
+          if ($files.Count -ne 2) { throw 'Expected exactly one application and one installer.' }
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($file.Name)"
+          }
+          $lines | Set-Content -LiteralPath 'dist/SHA256.txt' -Encoding ascii
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NerdSSHell-signed-candidate-${{ github.sha }}
+          path: |
+            dist/*Setup.exe
+            dist/SHA256.txt
+            docs/SBOM.spdx.json
+            docs/SBOM-runtime.spdx.json
+            docs/THIRD-PARTY-NOTICES.md
+          if-no-files-found: error
+          retention-days: 7

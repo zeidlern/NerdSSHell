@@ -1,0 +1,31 @@
+name: Bug report
+description: Report a non-security defect using sanitized information.
+body:
+  - type: markdown
+    attributes:
+      value: "For vulnerabilities, follow SECURITY.md instead. Never include credentials, private keys, real connection settings, or unredacted terminal recordings."
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction and expected result
+      description: Use disposable hosts, sessions and synthetic output.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Operating systems and relevant versions
+      description: Do not include usernames, addresses, private paths or full connection profiles.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed sensitive and personal information from this report.
+          required: true

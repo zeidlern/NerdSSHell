@@ -1,0 +1,30 @@
+:root{--bg:#242328;--accent:#00aaf0;--on-accent:#111111}
+/* Compact chrome: terminal controls remain scoped to their owner, even in four panes. */
+.layout-buttons{display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;flex-shrink:0}
+.layout-buttons>span{color:var(--muted);margin-right:2px}.layout-buttons button{min-width:32px;padding:5px 7px}
+#connectionSidebar{width:252px;flex:0 0 252px;min-width:0}
+#sidebarToggle{align-self:flex-end;margin:6px;min-width:30px;font-size:18px;padding:2px 7px}
+#connectionSidebar.collapsed{width:48px;flex-basis:48px}
+#connectionSidebar.collapsed #connections,#connectionSidebar.collapsed .aside-heading,#connectionSidebar.collapsed .local-launcher span{display:none}
+.local-launcher{display:flex;flex-direction:column;padding:0 10px 12px;border-bottom:1px solid var(--line);gap:8px}
+.local-launcher button{text-align:left;white-space:nowrap}
+#connectionSidebar.collapsed .local-launcher{padding:0 4px 8px}
+.pane-head{overflow:hidden;gap:6px;padding:4px 6px}
+.pane-head-context{display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow-x:auto;scrollbar-width:thin}
+.pane-head-context>*{flex-shrink:0}.pane-head-context .pane-title{min-width:48px;flex:1}
+.pane-session-controls{display:flex;align-items:center;gap:4px;margin-left:auto;flex:none}
+.pane-session-controls button{padding:3px 5px}
+.pane-move{cursor:grab;user-select:none;touch-action:none;color:var(--muted);font-size:20px;line-height:1;padding:2px 4px;border:1px solid var(--line);border-radius:4px}.pane-move:hover{color:var(--accent);border-color:var(--accent)}.pane-move:active{cursor:grabbing}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px}
+#helpDialog{width:660px}
+.about-info{border-bottom:1px solid var(--line);font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:18px;padding-bottom:8px}
+.about-brand{display:flex;align-items:center;justify-content:center;gap:28px;margin:6px 0 22px}
+.about-logo{width:180px;height:180px;object-fit:contain;flex:none}
+.about-brand-copy{min-width:0}.about-brand-copy p{margin:0}
+.about-brand-copy .about-name{font-size:36px;font-weight:650;line-height:1.2;letter-spacing:-.5px;color:var(--text)}
+.about-brand-copy .about-tagline{font-size:15px;line-height:1.5;margin:10px 0 16px;color:var(--text)}
+.about-brand-copy .about-version{font-size:12px;color:var(--text)}.about-version>span:last-child{color:var(--muted)}
+.about-shortcuts-heading{font-size:13px;font-weight:600;margin:0 0 16px}
+#helpDialog .help-grid{grid-template-columns:minmax(0,170px) minmax(0,1fr);gap:10px 16px}#helpDialog .help-grid>*{overflow-wrap:anywhere}
+@media(max-width:560px){#helpDialog{padding:20px}.about-brand{flex-direction:column;gap:16px;text-align:center}.about-logo{width:144px;height:144px}.about-brand-copy .about-name{font-size:32px}#helpDialog .help-grid{grid-template-columns:minmax(0,130px) minmax(0,1fr);gap:10px}}
+@media(max-width:700px){#titlebar{padding:0 8px;gap:8px}.brand{font-size:15px}.toolbar{min-width:0}.layout-buttons>span{display:none}}

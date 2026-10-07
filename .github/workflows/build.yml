@@ -1,0 +1,116 @@
+name: Validate and build NerdSSHell
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nerdsshell-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Archive exact tracked source without Git history or local files
+        shell: bash
+        run: |
+          git archive --format=zip --output="$RUNNER_TEMP/NerdSSHell-source.zip" HEAD
+          git rev-parse HEAD > "$RUNNER_TEMP/NerdSSHell-source-revision.txt"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NerdSSHell-source
+          retention-days: 14
+          path: |
+            ${{ runner.temp }}/NerdSSHell-source.zip
+            ${{ runner.temp }}/NerdSSHell-source-revision.txt
+          if-no-files-found: error
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --omit=optional
+      - run: node scripts/Verify-Publication.cjs --installed
+      - run: npm run check
+      - run: npm test
+      - name: Start disposable SSH service
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tmux openssh-server
+          bash scripts/ci-sshd.sh
+      - run: npm run test:integration
+  windows:
+    needs: tests
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm ci --omit=optional
+      - run: node scripts/Verify-Publication.cjs --installed
+      - run: npm run check
+      - run: npm test
+        timeout-minutes: 5
+      - name: Parse Windows installation helper
+        shell: pwsh
+        run: |
+          $parseTokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'scripts/Install-Windows.ps1'), [ref]$parseTokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count) { $parseErrors | Format-List | Out-String | Write-Error }
+      - run: node scripts/Generate-SupplyChain.cjs
+      - run: npm run dist
+      - id: verify_package
+        run: npm run verify:package
+      - name: Packaged native administrator bridge without UAC
+        run: node scripts/Elevated-Console-Smoke.cjs --asar dist/win-unpacked/resources/app.asar
+      - name: Windows local scratchpad spelling and correction acceptance
+        run: node scripts/Scratchpad-Spelling-Smoke.cjs
+      - name: Packaged SSH, SFTP, workbench, PowerShell and Command Prompt smoke
+        if: ${{ !cancelled() && steps.verify_package.outcome == 'success' }}
+        run: node scripts/Packaged-PerPane-Smoke.cjs
+      - run: node scripts/Verify-Notices.cjs
+      - name: Hash installer
+        shell: pwsh
+        run: Get-FileHash dist\*Setup.exe -Algorithm SHA256 | Format-List | Tee-Object -FilePath dist\SHA256.txt
+      - name: Preserve failed disposable Windows acceptance evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NerdSSHell-Windows-failure-evidence
+          include-hidden-files: true
+          retention-days: 14
+          path: |
+            .local/packaged-per-pane/results.json
+            .local/packaged-per-pane/*.png
+            .local/scratchpad-spelling-smoke/report.json
+            .local/scratchpad-spelling-smoke/failure.txt
+            .local/scratchpad-spelling-smoke/diagnostics.json
+            .local/scratchpad-spelling-smoke/*.png
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NerdSSHell-Windows-x64
+          include-hidden-files: true
+          path: |
+            dist/*Setup.exe
+            dist/SHA256.txt
+            docs/SBOM.spdx.json
+            docs/SBOM-runtime.spdx.json
+            docs/THIRD-PARTY-NOTICES.md
+            package-lock.json
+            .local/packaged-per-pane/results.json
+            .local/packaged-per-pane/*.png
+            .local/scratchpad-spelling-smoke/report.json
+            .local/scratchpad-spelling-smoke/*.png
+          if-no-files-found: error

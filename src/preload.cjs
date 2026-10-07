@@ -1,0 +1,11 @@
+'use strict';
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
+const invoke = name => (...args) => ipcRenderer.invoke('betterssh:' + name, ...args);
+const api = {};
+for (const name of ['state', 'savePreferences', 'sessionAttention', 'activeSession', 'paneActionRun', 'saveProfile', 'saveAppearance', 'deleteProfile', 'connect', 'disconnect', 'discover', 'open', 'close', 'input', 'resize', 'create', 'rename', 'end', 'snapshot', 'workspace', 'promptReply', 'ack', 'chooseKey', 'copy', 'paste', 'fullscreen', 'history', 'export', 'cancelTransfer', 'dataFolder', 'listFiles', 'cancelFileList', 'downloadFile', 'workbenchContext', 'workbenchPreferences', 'localOpen', 'workbenchActions', 'workbenchDetect', 'workbenchTemplate', 'workbenchReview', 'workbenchCancelReview', 'workbenchRun', 'inputLock', 'workbenchDiagnostics', 'localAdminOpen', 'scratchpadDirty', 'scratchpadRead', 'scratchpadSave', 'actionConfiguration', 'actionConfigurationSave', 'actionNewId', 'actionTemplates', 'actionPreview', 'paneActions', 'localFilesList', 'localFilesChoose', 'localFilesUpload', 'localFilesDownload']) api[name] = invoke(name);
+api.chooseUpload = key => ipcRenderer.invoke('betterssh:upload', key, null);
+api.dropUpload = (key, files) => ipcRenderer.invoke('betterssh:upload', key, files.map(file => webUtils.getPathForFile(file)));
+api.browserUpload = (key, directory, files) => ipcRenderer.invoke('betterssh:browserUpload', key, directory, files === null ? null : files.map(file => webUtils.getPathForFile(file)));
+api.filePaths = files => files.map(file => webUtils.getPathForFile(file));
+api.onEvent = callback => { const handler = (_event, data) => callback(data); ipcRenderer.on('betterssh:event', handler); return () => ipcRenderer.removeListener('betterssh:event', handler); };
+contextBridge.exposeInMainWorld('betterssh', Object.freeze(api));

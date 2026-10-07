@@ -1,0 +1,324 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "betterssh@1.0.0",
+  "documentNamespace": "http://spdx.org/spdxdocs/betterssh-1.0.0-***",
+  "creationInfo": {
+    "created": "2026-10-06T03:35:08.609Z",
+    "creators": [
+      "Tool: npm/cli-11.6.2"
+    ]
+  },
+  "documentDescribes": [
+    "SPDXRef-Package-betterssh-1.0.0"
+  ],
+  "packages": [
+    {
+      "name": "betterssh",
+      "SPDXID": "SPDXRef-Package-betterssh-1.0.0",
+      "versionInfo": "1.0.0",
+      "packageFileName": "",
+      "description": "NerdSSHell — Built for Windows nerds with Linux problems",
+      "primaryPackagePurpose": "APPLICATION",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/betterssh@1.0.0"
+        }
+      ]
+    },
+    {
+      "name": "@xterm/addon-fit",
+      "SPDXID": "SPDXRef-Package-xterm.addon-fit-0.11.0",
+      "versionInfo": "0.11.0",
+      "packageFileName": "node_modules/@xterm/addon-fit",
+      "downloadLocation": "https://registry.npmjs.org/@xterm/addon-fit/-/addon-fit-0.11.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40xterm/addon-fit@0.11.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "8d87204fac6d558867860c61dd08180e79cd3184dc7fc1256f1c45cd7d08668faf69b42a48f0230b7735c09aca079135f55c107a2f3d40289964ff3a0c23c5ee"
+        }
+      ]
+    },
+    {
+      "name": "@xterm/addon-search",
+      "SPDXID": "SPDXRef-Package-xterm.addon-search-0.16.0",
+      "versionInfo": "0.16.0",
+      "packageFileName": "node_modules/@xterm/addon-search",
+      "downloadLocation": "https://registry.npmjs.org/@xterm/addon-search/-/addon-search-0.16.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40xterm/addon-search@0.16.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f4e7ae045bb4fee6493eefbd007298ea0ff0d02cf26ff52dd00e6defd23850ba14e087d4e411293c55464313f8cd34cc75f6446245484586c7057d715b08de48"
+        }
+      ]
+    },
+    {
+      "name": "@xterm/xterm",
+      "SPDXID": "SPDXRef-Package-xterm.xterm-6.0.0",
+      "versionInfo": "6.0.0",
+      "packageFileName": "node_modules/@xterm/xterm",
+      "downloadLocation": "https://registry.npmjs.org/@xterm/xterm/-/xterm-6.0.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40xterm/xterm@6.0.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "4d0c037501adc300edfb67202832e7d0845a4b162ed6d4948e029aad20e450cd193624915c5a63c44b2f73f66073992ae68989f95d1af3f908336583dec30e62"
+        }
+      ]
+    },
+    {
+      "name": "asn1",
+      "SPDXID": "SPDXRef-Package-asn1-0.2.6",
+      "versionInfo": "0.2.6",
+      "packageFileName": "node_modules/asn1",
+      "downloadLocation": "https://registry.npmjs.org/asn1/-/asn1-0.2.6.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/asn1@0.2.6"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "8b1fc5c4f9f43038dec89ee2ff2a07185b7f117e8bc8d6f148484f3d73833cbf8a07454f93ce9461f2f494c772f8a0a7bfe7e6bc8cf24b068ae423b0a956d64d"
+        }
+      ]
+    },
+    {
+      "name": "bcrypt-pbkdf",
+      "SPDXID": "SPDXRef-Package-bcrypt-pbkdf-1.0.2",
+      "versionInfo": "1.0.2",
+      "packageFileName": "node_modules/bcrypt-pbkdf",
+      "downloadLocation": "https://registry.npmjs.org/bcrypt-pbkdf/-/bcrypt-pbkdf-1.0.2.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/bcrypt-pbkdf@1.0.2"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a9e1485ed3f8312a22e8d2ea3b5d967ea011596b822a2d919fff6124b126b41e724cdafd0ea1569094427f6a92856ccf7803119ce802aead2c83f28bbf9112f7"
+        }
+      ]
+    },
+    {
+      "name": "node-addon-api",
+      "SPDXID": "SPDXRef-Package-node-addon-api-7.1.1",
+      "versionInfo": "7.1.1",
+      "packageFileName": "node_modules/node-addon-api",
+      "downloadLocation": "https://registry.npmjs.org/node-addon-api/-/node-addon-api-7.1.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/node-addon-api@7.1.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e66ddbb32ae3156135c5fee7cfb61774de2e76756d5caebf61f827e6a9da84be9b0a47f6c8ab789379ee4ca02d4f8af7206f09351da772c20c759b80cc98c741"
+        }
+      ]
+    },
+    {
+      "name": "node-pty",
+      "SPDXID": "SPDXRef-Package-node-pty-1.2.0-beta.15",
+      "versionInfo": "1.2.0-beta.15",
+      "packageFileName": "node_modules/node-pty",
+      "downloadLocation": "https://registry.npmjs.org/node-pty/-/node-pty-1.2.0-beta.15.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/node-pty@1.2.0-beta.15"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "bce452cc75e2e0e7e5ec77a6556a6eb9d2ea08f75a41be0b7e94425291391cfc61a78258b1c97ccd9c31875d69dbabf6c2f5b6e163309cc7cb8e144b8b1adfc4"
+        }
+      ]
+    },
+    {
+      "name": "safer-buffer",
+      "SPDXID": "SPDXRef-Package-safer-buffer-2.1.2",
+      "versionInfo": "2.1.2",
+      "packageFileName": "node_modules/safer-buffer",
+      "downloadLocation": "https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/safer-buffer@2.1.2"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "619a372bcd920fb462ca2d04d4440fa232f3ee4a5ea6749023d2323db1c78355d75debdbe5d248eeda72376003c467106c71bbbdcc911e4d1c6f0a9c42b894b6"
+        }
+      ]
+    },
+    {
+      "name": "ssh2",
+      "SPDXID": "SPDXRef-Package-ssh2-1.17.0",
+      "versionInfo": "1.17.0",
+      "packageFileName": "node_modules/ssh2",
+      "downloadLocation": "https://registry.npmjs.org/ssh2/-/ssh2-1.17.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/ssh2@1.17.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c0f95d0a4ddab226c08d0fe4ce259042dd568773e00c5a42d17a70725cca71d4f5bea97a29e6317f92c8b789e516451e47c5aea6160c2aa500e7a5f8ae36df81"
+        }
+      ]
+    },
+    {
+      "name": "tweetnacl",
+      "SPDXID": "SPDXRef-Package-tweetnacl-0.14.5",
+      "versionInfo": "0.14.5",
+      "packageFileName": "node_modules/tweetnacl",
+      "downloadLocation": "https://registry.npmjs.org/tweetnacl/-/tweetnacl-0.14.5.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "Unlicense",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/tweetnacl@0.14.5"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "2975c515d01b15763881e148c28c8d2be7f96756fbb307d70017cbec75c29a821630a5377664b6ebaef603811e42d0f32cacbb49799f06ee7526896f10ac2d18"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-Package-betterssh-1.0.0",
+      "relationshipType": "DESCRIBES"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-xterm.xterm-6.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-betterssh-1.0.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-xterm.addon-fit-0.11.0",
+      "relatedSpdxElement": "SPDXRef-Package-betterssh-1.0.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-xterm.addon-search-0.16.0",
+      "relatedSpdxElement": "SPDXRef-Package-betterssh-1.0.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-ssh2-1.17.0",
+      "relatedSpdxElement": "SPDXRef-Package-betterssh-1.0.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-node-pty-1.2.0-beta.15",
+      "relatedSpdxElement": "SPDXRef-Package-betterssh-1.0.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-safer-buffer-2.1.2",
+      "relatedSpdxElement": "SPDXRef-Package-asn1-0.2.6",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-tweetnacl-0.14.5",
+      "relatedSpdxElement": "SPDXRef-Package-bcrypt-pbkdf-1.0.2",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-node-addon-api-7.1.1",
+      "relatedSpdxElement": "SPDXRef-Package-node-pty-1.2.0-beta.15",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-asn1-0.2.6",
+      "relatedSpdxElement": "SPDXRef-Package-ssh2-1.17.0",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-bcrypt-pbkdf-1.0.2",
+      "relatedSpdxElement": "SPDXRef-Package-ssh2-1.17.0",
+      "relationshipType": "DEPENDENCY_OF"
+    }
+  ]
+}

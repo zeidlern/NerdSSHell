@@ -1,0 +1,4 @@
+# Generated branding text has canonical bytes recorded in its SHA-256 manifest.
+# Preserve LF on Windows even when the contributor has core.autocrlf enabled.
+assets/branding/nerdsshell/production/*.svg text eol=lf
+assets/branding/nerdsshell/production/manifest.json text eol=lf

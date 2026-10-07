@@ -1,0 +1,55 @@
+/* Compact Windows-first workspace. Scope these overrides to avoid changing terminal geometry. */
+#titlebar{height:64px}main{height:calc(100% - 64px)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}.brand-copy{min-width:0}.brand-name{font-size:20px;font-weight:650;line-height:1.25}.brand-tagline{font-size:10px;font-weight:400;color:var(--muted);margin-top:3px;letter-spacing:.05px}.brand img{object-fit:contain;flex:none}.brand .version{margin-left:5px}
+#connectionSidebar{position:relative;width:260px;flex:0 0 260px;transition:none;min-width:0}
+#sidebarToggle{align-self:flex-end;margin:7px 9px;min-width:32px;height:29px;padding:1px 7px;font-size:19px;border-color:var(--accent-strong);background:var(--active-bg);color:var(--accent)}
+#sidebarToggle:hover{background:var(--accent);color:var(--on-accent)}#connectionSidebar.collapsed{width:48px;flex-basis:48px}
+#connectionSidebar.collapsed #sidebarToggle{align-self:center;margin:7px 0 12px;width:36px;border-width:2px;box-shadow:0 2px 0 var(--line)}
+#connectionSidebar.collapsed #connections,#connectionSidebar.collapsed .aside-heading,#connectionSidebar.collapsed .admin-switch,#connectionSidebar.collapsed .local-launcher span{display:none}
+.local-launcher{display:flex;flex-direction:column;gap:6px;padding:0 8px 12px;border-bottom:1px solid var(--line)}
+.local-launcher button{display:flex;align-items:center;gap:7px;text-align:left;white-space:nowrap;font-size:12px;padding:6px 8px}
+.shell-launcher{display:flex;align-items:center;gap:5px;min-width:0}.shell-launcher>button{flex:1;min-width:0;font-size:11px;padding:6px}
+.admin-switch{display:flex;gap:4px;align-items:center;font-size:10px;margin:0;line-height:1.3;white-space:nowrap;flex:none}.admin-switch input{width:auto;accent-color:var(--accent)}
+.launcher-icon{font-family:Consolas,monospace;font-size:12px;min-width:17px;text-align:center}.shell-launcher .launcher-icon{display:none}
+#connectionSidebar.collapsed .launcher-icon{display:inline}#connectionSidebar.collapsed .local-launcher{padding:0 4px 8px}.local-connection .connection-head{font-size:12px}.local-connection .connection-address{padding-bottom:8px}
+.session-item{min-width:0}.session-kind{font:9px Consolas,monospace;color:var(--muted);flex:none;min-width:20px}.session-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pane-location-badge{display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:9px;line-height:1.5;font-weight:750;letter-spacing:.35px;border-radius:3px;padding:1px 5px;color:#fff;white-space:nowrap}
+.pane-location-badge.remote{background:#b22232}.pane-location-badge.local{background:#19683d}
+button.danger,.error,.connection-status.disconnected{color:var(--danger,#ff9298)}
+.waiting-indicator{display:inline-flex;align-items:center;gap:3px;flex:none;border:1px solid var(--accent-strong);background:var(--active-bg);color:var(--text);border-radius:3px;padding:1px 4px;font-size:9px;font-weight:650;line-height:1.4;white-space:nowrap}
+.waiting-indicator::before{content:"!";font-weight:800}.attention-new .waiting-indicator{border-color:var(--accent)}.session-item.waiting{box-shadow:inset 3px 0 var(--accent)}.tab.waiting{border-top-color:var(--accent);opacity:1}.pane-dimensions{white-space:nowrap;color:var(--muted);font-size:10px}
+#notice{bottom:16px}#transfers{bottom:16px}
+.pane-head{display:flex;gap:5px;overflow-x:auto;white-space:nowrap;flex-shrink:0}.pane-head .pane-title{min-width:65px}.pane-rename{margin-left:auto}
+.pane-head button{flex-shrink:0}.pane-head .pane-title,.pane-head .pane-state{overflow:hidden;text-overflow:ellipsis}.dialog-actions{display:flex;justify-content:flex-end;gap:8px}
+.pane-actions{display:flex;align-items:center;gap:6px;min-height:34px;padding:3px 7px;border-bottom:1px solid var(--line);background:var(--panel);flex:none;min-width:0}.pane-favorites{display:flex;flex:1 1 100px;gap:5px;overflow-x:auto;scrollbar-width:thin;min-width:0}.pane-favorites button{flex:none;white-space:nowrap;font-size:11px;padding:4px 7px}.pane-favorites-configure{flex:none;white-space:nowrap;font-size:11px;padding:4px 7px}.pane-action-select{flex:none;width:auto;max-width:180px;padding:4px;font-size:11px}
+.pane-actions{flex-wrap:wrap}.pane-action-argument{display:flex;align-items:center;flex-wrap:wrap;gap:7px;flex:1 0 100%;padding:5px 0 3px;margin:0}.pane-action-argument-title{font-size:11px;font-weight:600}.pane-action-argument label{display:flex;flex-direction:row;align-items:center;gap:6px;font-size:11px;margin:0}.pane-action-argument input{width:180px;max-width:220px;padding:4px 6px;font-size:11px}.pane-action-argument button{font-size:11px;padding:4px 7px}
+.favorite-config-row{display:flex;flex-direction:row;gap:10px;align-items:center;margin:0;padding:11px 8px;border-bottom:1px solid var(--line-soft);font-size:12px;line-height:1.4}.favorite-config-row:hover{background:var(--button-hover)}
+#actionConfigList>.wb-action{width:100%;text-align:left;margin:2px 0;white-space:normal}
+#scratchpad{position:relative;display:flex;flex-direction:column;flex:0 0 auto;min-width:240px;max-width:70vw;border-left:1px solid var(--accent);background:var(--bg);padding:0;overflow:hidden}#scratchpad[hidden]{display:none}
+#scratchpad header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;flex:none}.scratch-tools{display:flex;flex-wrap:wrap;gap:5px;padding:0 10px 8px;flex:none}.scratch-tools select{width:auto;font-size:11px;padding:4px}
+#scratchGrip{position:absolute;left:0;top:0;bottom:0;width:6px;cursor:col-resize;z-index:2}#scratchGrip:focus{outline:2px solid var(--accent)}
+.scratch-editor{position:relative;flex:1;min-height:0;margin:0 8px 8px;overflow:hidden;background:var(--terminal-bg);border:1px solid var(--line)}
+#scratchText,#scratchHighlight{box-sizing:border-box;position:absolute;inset:0;width:100%;height:100%;margin:0;padding:12px;border:0;font:14px/1.6 "Cascadia Mono",Consolas,monospace;white-space:pre;tab-size:4;letter-spacing:0;overflow:auto;resize:none;min-height:0}
+/* Reserve identical scrollbar space even when the preview has a trailing line. */
+#scratchText,#scratchHighlight{scrollbar-gutter:stable}
+#scratchpad[data-wrap="on"] #scratchText,#scratchpad[data-wrap="on"] #scratchHighlight{white-space:pre-wrap;overflow-wrap:anywhere;overflow-x:hidden}
+#scratchWrap[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-translucent)}
+#scratchHighlight{color:var(--text);pointer-events:none}#scratchHighlight[hidden]{display:none}#scratchText{color:var(--text);background:transparent;caret-color:var(--text)}#scratchText[data-highlight="current"]{color:transparent}#scratchText::selection{background:var(--accent-translucent);color:var(--text)}#scratchText::placeholder{color:var(--muted)}#scratchStatus{padding:0 10px 8px;flex:none;color:var(--text)}
+/* Preserve the textarea's exact glyph advances and caret positions. */
+.syntax-bold{font-weight:inherit;color:var(--accent);text-shadow:0 0 .35px currentColor}.syntax-keyword{color:var(--syntax-keyword,#c9b1ff)}.syntax-string{color:var(--syntax-string,#a8d8a5)}.syntax-variable{color:var(--syntax-variable,#8ed9e8)}.syntax-comment{color:var(--syntax-comment,#aaa4b2)}.syntax-number{color:var(--syntax-number,#ead29d)}
+.action-config-layout{display:grid;grid-template-columns:minmax(240px,.8fr) minmax(300px,1.2fr);gap:20px}.action-config-layout>section{min-width:0}#actionConfigList{max-height:50vh;overflow:auto}#actionCode{width:100%;font:13px/1.5 Consolas,monospace;min-height:220px;resize:vertical}.pane-bottom{overflow-x:auto;white-space:nowrap;flex:none}
+/* Dual-panel SFTP takes the pane, not a global sidebar. The live PTY is not closed. */
+.pane-body.sftp-full>.terminal-host{visibility:hidden;position:absolute;inset:0;pointer-events:none}.pane-body.sftp-full>.file-drawer{width:100%;height:100%;border-left:0}
+.pane-body[data-file-dock]>.file-drawer{display:flex;flex-direction:column;gap:3px}.file-dual{display:flex;gap:10px;flex:1 0 140px;min-height:140px;min-width:0;overflow:auto}
+.file-dual>.file-local,.file-dual>.file-remote{display:flex;flex-direction:column;flex:1;min-width:210px;min-height:0;overflow:auto;border:1px solid var(--line);padding:5px}.file-dual strong{font-size:11px;color:var(--accent);flex:none}
+.file-dual .file-view{flex:1;min-height:70px}.file-dual .file-list{min-height:58px;flex:1 0 58px}.file-dual .file-controls{flex:none;overflow:visible}.files-heading select{width:90px}
+.admin-switch{flex-direction:row;justify-content:flex-start}.admin-switch input[role="switch"]{appearance:none;position:relative;flex:0 0 30px;width:30px;height:17px;border-radius:12px;padding:0;background:var(--line-strong);cursor:pointer}.admin-switch input[role="switch"]::after{content:"";position:absolute;left:2px;top:2px;width:11px;height:11px;background:var(--text);border-radius:50%}.admin-switch input[role="switch"]:checked{background:var(--accent)}.admin-switch input[role="switch"]:checked::after{left:15px;background:var(--bg)}
+.file-modified{color:var(--muted);font-size:10px;white-space:nowrap;flex:none}.file-dual .file-entry{min-width:280px}.file-dual .file-list{overflow:auto}.file-dual .file-toolbar{flex-wrap:wrap;flex-shrink:0}.file-dual .file-toolbar input:not([type=checkbox]){min-width:60px}.file-dual .file-actions{margin-top:auto}
+/* Let the drawer scroll in short panes; never shrink a file list into its actions. */
+.pane-body[data-file-dock] .file-dual{flex:1 0 auto;min-height:300px;overflow:visible}
+.pane-body[data-file-dock] .file-dual>.file-local,.pane-body[data-file-dock] .file-dual>.file-remote{flex:1 0 240px;min-width:240px;overflow:visible}
+.pane-body[data-file-dock] .file-dual .file-view{flex:1 0 120px;min-height:120px;overflow:hidden}
+.pane-body[data-file-dock] .file-dual .file-list{flex:1 1 58px;min-height:58px}
+@media(max-width:1000px){.action-config-layout{grid-template-columns:1fr}#actionConfigList{max-height:28vh}#actionCode{min-height:150px}}
+
+@media(max-width:850px){.brand-name{font-size:17px}.brand-tagline{font-size:9px}.brand{gap:7px}#titlebar{padding:0 10px}.brand img{width:32px;height:32px}}

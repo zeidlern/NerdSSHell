@@ -1,0 +1,45 @@
+NerdSSHell Source-Available License
+Version 1.0 — October 2026
+
+Copyright (c) 2026 Nicholas Zeidler. All rights reserved.
+
+1. Official releases
+
+Permission is granted, without charge, to download, install, and use unmodified
+official releases of NerdSSHell for personal use or internal business use.
+
+2. Source availability
+
+The NerdSSHell source code is made available for inspection, security review,
+education, and evaluation. Rights that GitHub must provide for normal viewing
+and forking on its service are governed by GitHub's terms.
+
+3. Restrictions
+
+Except with prior written permission from the copyright holder, no permission
+is granted to:
+
+- redistribute NerdSSHell source code or compiled binaries;
+- publish or distribute modified builds or derivative works;
+- sell, sublicense, or commercially redistribute NerdSSHell;
+- use the NerdSSHell name, logo, artwork, or other branding to market a
+  modified or third-party distribution.
+
+4. No trademark grant
+
+This license does not grant rights to any NerdSSHell names, logos, marks, or
+branding except as necessary to identify an unmodified official release.
+
+5. Third-party software
+
+NerdSSHell includes third-party components that remain subject to their own
+licenses. Those notices and licenses are not replaced by this license.
+
+6. No warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT
+OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

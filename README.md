@@ -12,6 +12,18 @@ NerdSSHell is a Windows workspace for SSH, persistent remote sessions, local Pow
 
 [User manual](https://github.com/zeidlern/NerdSSHell/wiki) · [Downloads](https://github.com/zeidlern/NerdSSHell/releases) · [Report a bug](https://github.com/zeidlern/NerdSSHell/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/zeidlern/NerdSSHell/issues/new?template=feature_request.yml)
 
+## Screenshots
+
+NerdSSHell 1.0.2 in dark mode, using disposable demo connections and sample terminal output. Click an image to view it at full size.
+
+**Two terminals with a shared scratchpad** — watch server health and build output side by side while keeping notes in view.
+
+![NerdSSHell in dark mode with two SSH terminals, saved connections and a shared scratchpad](docs/screenshots/two-panes-scratchpad-dark.png)
+
+**One terminal with a scratchpad** — give the active session more room while keeping commands and a checklist nearby.
+
+![NerdSSHell in dark mode with one SSH terminal and a scratchpad containing commands and a deployment checklist](docs/screenshots/single-pane-scratchpad-dark.png)
+
 ## Why NerdSSHell?
 
 | Feature | What it helps you do |
@@ -26,18 +38,6 @@ NerdSSHell is a Windows workspace for SSH, persistent remote sessions, local Pow
 | Command workbench | Review a script and run it in a new selected console |
 | Scratchpad and alerts | Keep plain-text notes and receive optional alerts for recognized background prompts |
 | Preferences | Customize terminal colors, clipboard behavior, commands and history |
-
-## Screenshots
-
-NerdSSHell 1.0.2 in dark mode, using disposable demo connections and sample terminal output. Click an image to view it at full size.
-
-**Two terminals with a shared scratchpad** — watch server health and build output side by side while keeping notes in view.
-
-![NerdSSHell in dark mode with two SSH terminals, saved connections and a shared scratchpad](docs/screenshots/two-panes-scratchpad-dark.png)
-
-**One terminal with a scratchpad** — give the active session more room while keeping commands and a checklist nearby.
-
-![NerdSSHell in dark mode with one SSH terminal and a scratchpad containing commands and a deployment checklist](docs/screenshots/single-pane-scratchpad-dark.png)
 
 ## Install
 

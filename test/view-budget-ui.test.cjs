@@ -66,10 +66,10 @@ test('pending launch reservations cannot be stolen by another view and release o
 test('Standard connection reserves its first shell and displays it when its event arrives before the IPC result', async () => {
   const views = new Map(Array.from({ length: MAX_OPEN_VIEWS }, (_, i) => ['other/' + i, {}]));
   const panes = new Map(), pane = { key: 'server/first', profileId: 'server', dead: false };
-  let connections = 0, listener, eventTask;
+  let connections = 0, listener, eventTask; const notices = [];
   const context = vm.createContext({ views, panes, maxOpenViews: MAX_OPEN_VIEWS, pendingViewSlots: 0,
     profiles: new Map([['server', { sessionMode: 'standard' }]]), connected: () => false,
-    order: [], savedOrder: [], desiredActive: '', savedSlots: [], render() {}, message() {},
+    order: [], savedOrder: [], desiredActive: '', savedSlots: [], render() {}, message: text => notices.push(text),
     run: promise => { eventTask = promise; },
     api: { onEvent: fn => { listener = fn; }, connect: async () => { connections++; listener({ type: 'connected', profileId: 'server', panes: [pane] }); return [pane]; } },
     openPane: async key => { context.requireViewCapacity(key); if (!views.has(key)) views.set(key, {}); },
@@ -84,4 +84,5 @@ test('Standard connection reserves its first shell and displays it when its even
   await context.connectProfile('server'); await eventTask;
   assert.equal(connections, 1); assert.ok(views.has(pane.key)); assert.equal(views.size, MAX_OPEN_VIEWS);
   assert.equal(context.pendingViewSlots, 0); assert.equal(panes.get(pane.key), pane);
+  assert.deepEqual(notices, [], 'The reserved ordinary shell is displayed; no stale overflow notice remains');
 });

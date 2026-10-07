@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, dialog: nativeDialog, clipboard, Menu, shell, protocol, net, Notification, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog: nativeDialog, clipboard, Menu, shell, protocol, net, Notification, session, safeStorage } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -9,6 +9,7 @@ const { selectUserDataDirectory } = require('./application-identity.cjs');
 const { randomUUID } = require('node:crypto');
 const { OutputBuffer } = require('./output-buffer.cjs');
 const { StateStore, Archive, publishExport } = require('./storage.cjs');
+const { PasswordStore } = require('./password-store.cjs');
 const { cancelOnRight } = require('./dialog-policy.cjs');
 const dialog = cancelOnRight(nativeDialog);
 const { MixedRemote } = require('./mixed-remote.cjs');
@@ -26,7 +27,8 @@ let workbench, sessionCommands, sessionNotifications;
 const { upload } = require('./transfer.cjs');
 const { profile, integer, pasteText } = require('./core.cjs');
 const { MAX_OPEN_VIEWS, ViewBudget } = require('./session-limits.cjs');
-let window, store, quitting = false, quitPending = false, promptChain = Promise.resolve();
+let window, store, passwords, quitting = false, quitPending = false, promptChain = Promise.resolve();
+const credentialVersions = new Map();
 const connections = new Map(), archives = new Map(), prompts = new Map(), transfers = new Map(), fileListings = new FileListings();
 const viewBudget = new ViewBudget(connections);
 const output = new OutputBuffer({ emit: (type, data) => { emit(type, data); if (type === 'output') standardBackpressure(data.key); }, recover: key => forKey(key).remote.snapshot(key) });
@@ -39,19 +41,62 @@ function emit(type, data = {}) {
   if (type === 'status' && ['connecting', 'disconnected'].includes(data.state)) sessionNotifications?.clearProfile(data.profileId); if (window && !window.isDestroyed()) window.webContents.send('nerdsshell:event', { type, ...data }); }
 function confirm(title, message, detail = '') { return dialog.showMessageBox(window, { type: 'question', title, message, detail, buttons: ['Cancel', 'Continue'], defaultId: 0, cancelId: 0, noLink: true }).then(x => x.response === 1); }
 function ask(options) {
-  const { valid = () => true, ...publicOptions } = options;
+  const { valid = () => true, onRemember, ...publicOptions } = options;
+  publicOptions.rememberPasswordAvailable = options.rememberPasswordAvailable === true;
+  publicOptions.rememberPassword = publicOptions.rememberPasswordAvailable && options.rememberPassword === true;
   const task = promptChain.then(() => {
     if (!valid()) return null;
     if (options.confirm) return confirm(options.title, options.message).then(answer => valid() ? answer : null);
     return new Promise(resolve => {
       const id = randomUUID(); const timer = setTimeout(() => { prompts.delete(id); emit('promptCancelled', { id }); resolve(null); }, 180000);
-      const done = value => { clearTimeout(timer); prompts.delete(id); resolve(valid() ? value : null); }; done.profileId = options.profileId;
+      const done = (value, remember) => {
+        clearTimeout(timer); prompts.delete(id);
+        if (!valid()) { resolve(null); return; }
+        if (value !== null && publicOptions.rememberPasswordAvailable) onRemember?.(remember ?? publicOptions.rememberPassword);
+        resolve(value);
+      }; done.profileId = options.profileId; done.rememberPasswordAvailable = publicOptions.rememberPasswordAvailable;
       prompts.set(id, done); emit('prompt', { id, ...publicOptions });
     });
   });
   promptChain = task.catch(() => {}); return task;
 }
 function saved(id) { const p = store.data.profiles.find(x => x.id === id); if (!p) throw new Error('Unknown connection.'); return p; }
+function credentialVersion(id) { if (!credentialVersions.has(id)) credentialVersions.set(id, randomUUID()); return credentialVersions.get(id); }
+function invalidatePassword(id) { credentialVersions.set(id, randomUUID()); const r = connections.get(id); if (r?.secrets) delete r.secrets.password; if (r?.remote?.secrets) delete r.remote.secrets.password; }
+function samePasswordTarget(a, b) { return a.id === b.id && a.host.toLowerCase() === b.host.toLowerCase() && a.port === b.port && a.username === b.username && a.auth === b.auth; }
+function putProfile(p) {
+  const prior = store.data.profiles;
+  try { return store.putProfile(p); } catch (error) { store.data.profiles = prior; throw error; }
+}
+function passwordPreference(p, rememberPassword) {
+  const updated = p.rememberPassword === rememberPassword ? p : putProfile({ ...p, rememberPassword });
+  const r = connections.get(p.id); if (r) r.profile = updated;
+  emit('profile', { profile: updated }); return updated;
+}
+function forgetPassword(id) {
+  const p = saved(id); invalidatePassword(id); passwords.delete(id);
+  return passwordPreference(p, false);
+}
+function rejectRememberedPassword(p, error, version, remote, continued = false) {
+  if (p.auth !== 'password' || !p.rememberPassword || error.level !== 'client-authentication' || error.code === 'NERDSSHELL_HOST_VERIFICATION' || remote.passwordFactorAccepted === true || credentialVersion(p.id) !== version) return;
+  const r = connections.get(p.id); if (r?.secrets) delete r.secrets.password; if (remote.secrets) delete remote.secrets.password;
+  try { if (passwords.delete(p.id)) emit('notice', { message: continued ? 'The remembered SSH password was rejected and removed. Your interactive sign-in stays connected.' : 'The remembered password was rejected and removed. Connect again to enter an updated password.' }); }
+  catch { emit('notice', { message: 'The remembered password was rejected, but could not be removed. Use Forget password before signing in again.' }); }
+}
+function rememberSuccessfulPassword(p, r, remote, choice, version) {
+  if (choice === undefined || credentialVersion(p.id) !== version || !samePasswordTarget(saved(p.id), p)) return;
+  const prior = saved(p.id);
+  if (choice === false && !prior.rememberPassword) return;
+  if (choice && remote.passwordAuthenticated !== true) {
+    emit('notice', { message: 'This sign-in did not authenticate the SSH password. Interactive responses are not remembered.' }); return;
+  }
+  try {
+    if (!choice) { passwords.delete(p.id); passwordPreference(prior, false); return; }
+    const updated = passwordPreference(prior, true);
+    try { passwords.set(updated, r.secrets.password); }
+    catch (error) { if (updated !== prior) passwordPreference(updated, prior.rememberPassword); throw error; }
+  } catch (error) { emit('notice', { message: error.publishedOwnedCopyPossible === true ? 'Signed in, but remembering could not finish. An encrypted copy may remain. Check file access and use Forget password.' : 'Signed in, but the password preference could not be saved. Review Remember password or use Forget password.' }); }
+}
 function runtime(id) { const r = connections.get(id); if (!r?.remote?.connected) throw new Error('This server is disconnected.'); return r; }
 function forKey(key) {
   if (typeof key !== 'string' || key.length > 240) throw new Error('Invalid session.');
@@ -136,9 +181,15 @@ async function connect(id, secrets) {
   r.profile = p; r.wanted = true; r.busy = true; clearTimeout(r.timer);
   r.secrets = secrets || r.secrets; publishStatus(r, 'connecting', 'Signing in…');
   const token = r.promptToken = randomUUID();
+  const passwordVersion = credentialVersion(id); let rememberChoice;
   const active = () => r.remote === remote && r.wanted && r.promptToken === token && r.state !== 'disconnected';
   const RemoteClass = MixedRemote;
-  const remote = r.remote = new RemoteClass(p, { ask: options => ask({ ...options, profileId: id, valid: active }), secrets: r.secrets, pins: store.data.pins,
+  const remote = r.remote = new RemoteClass(p, { ask: options => {
+    const eligible = p.auth === 'password' && options.credentialKind === 'ssh-password' && options.secret === true;
+    return ask({ ...options, profileId: id, valid: active,
+      rememberPasswordAvailable: eligible && passwords?.isAvailable() === true, rememberPassword: p.rememberPassword,
+      onRemember: choice => { if (eligible && credentialVersion(id) === passwordVersion) rememberChoice = choice; } });
+  }, secrets: r.secrets, pins: store.data.pins,
     savePin: (target, fp) => { if (active()) { store.data.pins[target] = fp; store.save(); } },
     trust: async v => {
       if (!active()) return false;
@@ -154,6 +205,7 @@ async function connect(id, secrets) {
   remote.on('detached', key => { if (!active()) return; fileListings.cancelView(key); discardOutput(key); emit('detached', { key }); });
   remote.on('disconnected', error => {
     if (!active() || quitting) return;
+    rejectRememberedPassword(p, error, passwordVersion, remote);
     cancelRemoteFiles(id);
     for (const pane of remote.panes) discardOutput(pane.key);
     publishStatus(r, 'disconnected', error.message);
@@ -163,15 +215,21 @@ async function connect(id, secrets) {
     clearTimeout(r.timer); r.timer = setTimeout(() => connect(id).catch(() => {}), delay);
   });
   try {
+    if (p.auth === 'password' && p.rememberPassword && r.secrets.password === undefined) {
+      const remembered = passwords.get(p); if (remembered !== null) r.secrets.password = remembered;
+    }
     let panes = await remote.connect();
     if (!r.wanted || r.remote !== remote) { remote.disconnect(); return []; }
+    if (remote.passwordRejected === true) rejectRememberedPassword(p, { level: 'client-authentication' }, passwordVersion, remote, true);
     if (p.sessionMode === 'standard') { await viewBudget.run(remote, undefined, () => remote.createSession('Shell', false)); panes = remote.panes; }
     if (!active()) { remote.disconnect(); return []; }
+    rememberSuccessfulPassword(p, r, remote, rememberChoice, passwordVersion);
     r.attempts = 0; publishStatus(r, 'connected', `${p.username}@${p.host}`); emit('connected', { profileId: id, panes }); return panes;
   } catch (e) {
     if (!active()) { remote.disconnect(); return []; }
+    rejectRememberedPassword(p, e, passwordVersion, remote);
     remote.disconnect(); publishStatus(r, 'disconnected', e.message);
-    if (p.sessionMode === 'standard' || ['NERDSSHELL_HOST_VERIFICATION', 'NERDSSHELL_RESOURCE_LIMIT'].includes(e.code) || /auth|identity|key|cancel|support|passphrase|agent|permission|known_hosts/i.test(e.message)) { r.wanted = false; r.secrets = {}; }
+    if (p.sessionMode === 'standard' || e.level === 'client-authentication' || String(e.code).startsWith('PASSWORD_STORAGE_') || ['NERDSSHELL_HOST_VERIFICATION', 'NERDSSHELL_RESOURCE_LIMIT'].includes(e.code) || /auth|identity|key|cancel|support|passphrase|agent|permission|known_hosts/i.test(e.message)) { r.wanted = false; r.secrets = {}; }
     else if (r.wanted && !quitting) { const delay = Math.min(30000, 1000 * 2 ** Math.min(r.attempts++, 5)); r.timer = setTimeout(() => connect(id).catch(() => {}), delay); }
     throw e;
   } finally { r.busy = false; }
@@ -184,6 +242,7 @@ function handle(name, fn) {
   });
 }
 function registerIPC() {
+  passwords ||= new PasswordStore(app.getPath('userData'), safeStorage, { platform: process.platform });
   installDesktopTools({ handle, app, dialog, getWindow: () => window, confirm, adminLaunch: id => workbench.openAdministrator(id) });
   const localFiles = installLocalFiles({ handle, fileOwner, dialog, getWindow: () => window, confirm, sendFiles, beginTransfer, transfers, emit });
   handle('state', () => ({ profiles: store.data.profiles, workspace: store.data.workspace, appearance: store.data.appearance, notifications: store.data.notifications, sessionDefaults: store.data.sessionDefaults, sessionLimits: { maxOpenViews: MAX_OPEN_VIEWS }, version: app.getVersion(), dataDirectory: app.getPath('userData') }));
@@ -191,8 +250,11 @@ function registerIPC() {
   handle('savePreferences', value => { const saved = store.setPreferences(value); sessionNotifications?.refreshPreferences(); return saved; });
   handle('sessionAttention', (key, state) => sessionNotifications?.update(key, state));
   handle('activeSession', key => sessionNotifications?.setActive(key));
-  handle('saveProfile', async p => { p = profile(p); const prior = store.data.profiles.find(x => x.id === p.id), approved = await approveDisconnect(p.id); if (!approved) throw new Error('Connection edit cancelled.'); approved(); if (store.data.profiles.find(x => x.id === p.id) !== prior) throw new Error('Connection settings changed during confirmation. Review them again.'); if (connections.has(p.id)) { disconnect(p.id); connections.delete(p.id); } return store.putProfile(p); });
-  handle('deleteProfile', async id => { const p = saved(id), consent = disconnectConsent(id); if (!await confirm('Remove saved connection', `Remove ${p.name}?`, 'Persistent sessions and local history files will not be deleted. Any standard SSH shells on this connection will close; their running work may stop.')) return false; consent.validate(); if (saved(id) !== p) throw new Error('Connection settings changed during confirmation. Review them again.'); disconnect(id); connections.delete(id); store.data.profiles = store.data.profiles.filter(x => x.id !== id); store.save(); return true; });
+  handle('saveProfile', async p => { p = profile(p); const prior = store.data.profiles.find(x => x.id === p.id), approved = await approveDisconnect(p.id); if (!approved) throw new Error('Connection edit cancelled.'); approved(); if (store.data.profiles.find(x => x.id === p.id) !== prior) throw new Error('Connection settings changed during confirmation. Review them again.');
+    if (prior && (!samePasswordTarget(prior, p) || !p.rememberPassword)) { invalidatePassword(p.id); passwords.delete(p.id); }
+    if (connections.has(p.id)) { disconnect(p.id); connections.delete(p.id); } return putProfile(p); });
+  handle('deleteProfile', async id => { const p = saved(id), consent = disconnectConsent(id); if (!await confirm('Remove saved connection', `Remove ${p.name}?`, 'Persistent sessions and local history files will not be deleted. Any standard SSH shells on this connection will close; their running work may stop.')) return false; consent.validate(); if (saved(id) !== p) throw new Error('Connection settings changed during confirmation. Review them again.'); invalidatePassword(id); passwords.delete(id); disconnect(id); connections.delete(id); store.data.profiles = store.data.profiles.filter(x => x.id !== id); store.save(); credentialVersions.delete(id); return true; });
+  handle('forgetPassword', id => forgetPassword(id));
   handle('connect', id => connect(id)); handle('disconnect', async id => { const approved = await approveDisconnect(id); if (!approved) return false; approved(); disconnect(id); return true; });
   handle('discover', id => runtime(id).remote.discover());
   handle('open', key => { const { remote } = forKey(key); return viewBudget.run(remote, key, () => remote.open(key)); });
@@ -203,7 +265,11 @@ function registerIPC() {
   handle('rename', (key, name) => forKey(key).remote.rename(key, name));
   handle('snapshot', key => forKey(key).remote.snapshot(key));
   handle('workspace', w => store.setWorkspace(w));
-  handle('promptReply', (id, value) => { if (value !== null && (typeof value !== 'string' || value.length > 4096)) throw new Error('Invalid response.'); prompts.get(id)?.(value); });
+  handle('promptReply', (id, value, remember) => {
+    if (value !== null && (typeof value !== 'string' || value.length > 4096) || remember !== undefined && typeof remember !== 'boolean') throw new Error('Invalid response.');
+    const done = prompts.get(id); if (remember === true && done && !done.rememberPasswordAvailable) throw new Error('This prompt cannot remember a password.');
+    done?.(value, remember);
+  });
   handle('ack', (key, epoch, sequence) => { output.ack(key, epoch, sequence); standardBackpressure(key); });
   handle('chooseKey', async () => { const r = await dialog.showOpenDialog(window, { title: 'Choose SSH private key', properties: ['openFile'] }); return r.canceled ? null : r.filePaths[0]; });
   handle('copy', value => { if (typeof value !== 'string' || value.length > 8 * 1024 * 1024) throw new Error('Selection is too large. Export history instead.'); return clipboard.writeText(value); });
@@ -271,7 +337,7 @@ else {
       try { return await net.fetch(pathToFileURL(asset).href); }
       catch (error) { console.error('NerdSSHell UI asset load failed:', error); return new Response('Resource unavailable', { status: 500 }); }
     });
-    store = new StateStore(app.getPath('userData')); registerIPC();
+    store = new StateStore(app.getPath('userData')); passwords = new PasswordStore(app.getPath('userData'), safeStorage, { platform: process.platform }); registerIPC();
     if (session) configureScratchpadSpelling(session.defaultSession);
     window = new BrowserWindow({ width: 1440, height: 920, minWidth: 850, minHeight: 540, backgroundColor: '#11151d', title: PRODUCT_NAME, icon: path.join(__dirname, '..', WINDOW_ICON),
       webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, spellcheck: true, backgroundThrottling: false } });

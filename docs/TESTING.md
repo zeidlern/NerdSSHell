@@ -25,11 +25,14 @@ npm.cmd run dist
 npm.cmd run verify:package
 node .\scripts\Verify-Notices.cjs
 node .\scripts\Elevated-Console-Smoke.cjs --asar dist/win-unpacked/resources/app.asar
+node .\scripts\Packaged-Password-Smoke.cjs
 node .\scripts\Scratchpad-Spelling-Smoke.cjs
 node .\scripts\Packaged-PerPane-Smoke.cjs
 ```
 
 Run acceptance scripts only in an approved disposable Windows test environment. They use temporary profiles, synthetic output and owned loopback sessions; inspect each fixture before running it. Package verification checks real executable/resource bytes, rather than configuration alone. The packaged UI fixture exercises actual preload/IPC, shells, SSH, SFTP and workbench behavior.
+
+Remembered-password acceptance launches the actual packaged application with a generated loopback SSH key and a separate explicit user-data directory. It verifies Windows-protected ciphertext, a genuine app restart without another password prompt, live-session preservation on Forget, declined/failed saving, rejected-password eviction and fresh replacement. Reports contain only check names, artifact digests and owned fixture metrics; never include real profiles, plaintext passwords or copied credential files.
 
 The PowerShell acceptance fixture waits for a fresh native prompt after each completed command and for the corresponding renderer write to drain before submitting the next command. A result marker alone does not establish that the shell is ready for more input. Prompt observation binds the original view, generation and local shell identity; it never retries commands or synthesizes cursor replies. Commands deliberately left running for the Ctrl+C check require their result marker without waiting for completion. Command failures preserve bounded terminal/cursor diagnostics and a screenshot in the disposable acceptance evidence.
 

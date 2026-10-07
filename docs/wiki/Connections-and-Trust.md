@@ -19,6 +19,7 @@ Select **Add a connection** on the welcome screen or the **+** beside the connec
 | Port | Usually 22; use the administrator's actual value |
 | Username | The server account, not necessarily your Windows username |
 | Sign in with | Windows SSH agent, private-key file or password |
+| Remember password on this PC | Optional for password sign-in; saves the next successfully authenticated password encrypted for your Windows account |
 | On connection | Open all running sessions, restore previous views, or show sessions without opening them |
 | Connect when NerdSSHell starts | Whether the app attempts to connect automatically |
 
@@ -32,7 +33,13 @@ Choose **Save and connect**. Inspect the trust prompt, compare the host fingerpr
 
 **Private-key file:** Browse to the local private key. NerdSSHell stores its path in the profile, not the private-key file contents. Protect the file with Windows permissions and preferably a passphrase. Encrypted keys prompt for a passphrase; it is held in memory for the active connection/reconnection, not saved into settings.
 
-**Password:** NerdSSHell prompts when needed and keeps it in memory for the active connection/intentional recovery. It does not save it to settings. Keyboard-interactive challenges can also prompt during sign-in. Actual server authentication policy still applies; choosing a method in the UI cannot make the server accept it.
+**Password:** NerdSSHell prompts when needed and keeps it in memory for the active connection/intentional recovery. Select **Remember password on this PC** in the connection form or password prompt to reuse it after disconnecting or restarting the app. Remembering is off by default. The password is saved only after the server's host key is verified and authentication succeeds. It is encrypted using Windows account protection and kept separately from ordinary connection settings; the edit form never displays a saved password.
+
+Use **Forget password** in the connection controls to remove the saved password and turn remembering off. This clears the app's reconnect password cache and leaves an already authenticated session running. You can also turn remembering off while editing the connection. A rejected saved password is removed so you can enter a replacement. Changing the server, port, username or authentication method, or removing the profile, removes its saved password.
+
+Saved passwords are intended for the same Windows account on this PC. Other software running as your Windows user may be able to decrypt them; account protection does not defend against same-user malware or a compromised operating system. If Windows encryption is unavailable, NerdSSHell does not fall back to plaintext password storage. See [security and privacy](Security-and-Privacy.md).
+
+Keyboard-interactive challenges can also prompt during sign-in, but their answers and private-key passphrases cannot be remembered. Actual server authentication policy still applies; choosing a method in the UI cannot make the server accept it.
 
 ## Host trust: stop on changes
 

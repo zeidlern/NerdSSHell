@@ -44,7 +44,7 @@ class Remote extends EventEmitter {
         if (passphrase === null || this.closing) throw new Error('Sign-in cancelled.'); this.secrets.passphrase = passphrase;
       } else if (parsed instanceof Error) throw parsed;
     } else if (p.auth === 'password') {
-      password = this.secrets.password ?? await this.ask({ title: `Sign in to ${p.name}`, message: `${p.username}@${p.host} — password is not saved to disk.`, secret: true });
+      password = this.secrets.password ?? await this.ask({ title: `Sign in to ${p.name}`, message: `${p.username}@${p.host}`, secret: true, credentialKind: 'ssh-password' });
       if (password === null || this.closing) throw new Error('Sign-in cancelled.'); this.secrets.password = password;
     }
     if (this.closing) throw new Error('Sign-in cancelled.');
@@ -63,6 +63,19 @@ class Remote extends EventEmitter {
       options.agent = process.platform === 'win32' ? '\\\\.\\pipe\\openssh-ssh-agent' : process.env.SSH_AUTH_SOCK;
       if (!options.agent) throw new Error('No SSH agent is available. Choose a private key file or password in the connection settings.');
     }
+    // Observe the same default password-method order used by pinned ssh2. A
+    // rejected password followed by successful keyboard-interactive sign-in
+    // must not make that rejected password eligible for permanent storage.
+    let lastAuth, passwordPartial = false, authIndex = 0;
+    this.passwordAuthenticated = false; this.passwordRejected = false; this.passwordFactorAccepted = false;
+    if (p.auth === 'password') options.authHandler = (_methodsLeft, partialSuccess) => {
+      if (lastAuth === 'password') {
+        if (partialSuccess === true) passwordPartial = this.passwordFactorAccepted = true;
+        else this.passwordRejected = true;
+      }
+      lastAuth = ['none', 'password', 'keyboard-interactive'][authIndex++] || false;
+      return lastAuth;
+    };
     client.on('keyboard-interactive', async (_name, instructions, _language, prompts, finish) => {
       try {
         const answers = [];
@@ -81,7 +94,11 @@ class Remote extends EventEmitter {
     });
     await new Promise((resolve, reject) => {
       const error = e => reject(this.lastError || e);
-      client.once('error', error); client.once('ready', () => { client.off('error', error); resolve(); });
+      client.once('error', error); client.once('ready', () => {
+        this.passwordAuthenticated = p.auth === 'password' && (lastAuth === 'password' || passwordPartial);
+        if (this.passwordAuthenticated) this.passwordFactorAccepted = true;
+        client.off('error', error); resolve();
+      });
       client.once('close', () => reject(this.lastError || new Error('Connection closed before sign-in completed.')));
       client.connect(options);
     });

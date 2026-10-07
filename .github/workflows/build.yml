@@ -72,6 +72,8 @@ jobs:
       - run: npm run dist
       - id: verify_package
         run: npm run verify:package
+      - name: Windows-protected remembered passwords and packaged restart acceptance
+        run: node scripts/Packaged-Password-Smoke.cjs
       - name: Packaged native administrator bridge without UAC
         run: node scripts/Elevated-Console-Smoke.cjs --asar dist/win-unpacked/resources/app.asar
       - name: Windows local scratchpad spelling and correction acceptance
@@ -91,6 +93,7 @@ jobs:
           include-hidden-files: true
           retention-days: 14
           path: |
+            .local/packaged-password/results.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json
@@ -109,6 +112,7 @@ jobs:
             docs/SBOM-runtime.spdx.json
             docs/THIRD-PARTY-NOTICES.md
             package-lock.json
+            .local/packaged-password/results.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json

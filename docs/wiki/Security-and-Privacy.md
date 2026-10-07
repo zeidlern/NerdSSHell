@@ -20,9 +20,13 @@ Clipboard paste checks reject unwanted terminal control characters and request c
 
 ## What is retained
 
-Saved settings include connection addresses, usernames, key-file paths, local trust pins, preferences, layout and custom commands/Favorites. Passwords and key passphrases are not saved in settings, but are held in memory for active connections/recovery. Releasing references is not guaranteed secure memory erasure; paging, crash dumps and other software are outside that promise.
+Saved settings include connection addresses, usernames, key-file paths, local trust pins, preferences, layout, custom commands/Favorites and each connection's password-remembering preference. Plaintext passwords and key passphrases are not saved in settings. They are held in memory for active connections/recovery. Releasing references is not guaranteed secure memory erasure; paging, crash dumps and other software are outside that promise.
 
-Optional terminal archives, exports and saved notes are **plaintext**. Output can contain echoed secrets. Recording is off by default. Turning it off, deleting a saved connection or uninstalling the program does not guarantee deletion of old archives/backups. Windows roaming profiles, backup software and clipboard history/sync can retain copies.
+**Remember password on this PC** is optional and off by default. A login password is stored only after host verification and successful authentication. NerdSSHell uses [Electron's Windows account encryption (DPAPI)](https://www.electronjs.org/docs/latest/api/safe-storage) and a separate `remembered-passwords.json` credential file in its per-user data directory. It refuses plaintext fallback when encryption is unavailable. This protection does not stop software running as the same Windows user from decrypting a password, and does not protect against a compromised OS. Private-key passphrases and keyboard-interactive challenge answers are not saved.
+
+**Forget password** removes the saved credential and turns remembering off without disconnecting the active session. A rejected saved password is removed. Changing the server, port, username or authentication method, or removing the profile, also removes its saved credential. Forgetting cannot erase copies already retained by backup/profile software or guarantee physical erasure from disk.
+
+Optional terminal archives, exports and saved notes are **plaintext**; password encryption does not encrypt these files. Output can contain echoed secrets. Recording is off by default. Turning it off, deleting a saved connection or uninstalling the program does not guarantee deletion of old archives/backups. Windows roaming profiles, backup software and clipboard history/sync can retain copies.
 
 Keep configuration, logs, notes, archives and private installation records out of public issues, screenshots, Git repositories and AI prompts. Do not save tokens/passwords as custom Actions. EncodedCommand is not encryption.
 

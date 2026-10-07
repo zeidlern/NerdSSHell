@@ -3,7 +3,7 @@ description: Report a non-security defect using sanitized information.
 body:
   - type: markdown
     attributes:
-      value: "For vulnerabilities, follow SECURITY.md instead. Never include credentials, private keys, real connection settings, or unredacted terminal recordings."
+      value: "For vulnerabilities, use https://github.com/zeidlern/NerdSSHell/security/advisories/new instead. Never include credentials, private keys, real connection settings, or unredacted terminal recordings."
   - type: input
     id: version
     attributes:
@@ -13,15 +13,15 @@ body:
   - type: textarea
     id: reproduce
     attributes:
-      label: Reproduction and expected result
-      description: Use disposable hosts, sessions and synthetic output.
+      label: Steps, expected behavior and actual behavior
+      description: Describe a minimal reproduction using disposable sessions and synthetic output. Include sanitized screenshots or short logs when useful.
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
-      label: Operating systems and relevant versions
-      description: Do not include usernames, addresses, private paths or full connection profiles.
+      label: Windows version and session type
+      description: Include Windows version and local PowerShell/CMD or remote Persistent/Standard SSH. Add server/tmux versions if relevant; omit usernames, addresses, private paths and full profiles.
   - type: checkboxes
     id: privacy
     attributes:

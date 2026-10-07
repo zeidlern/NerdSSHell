@@ -43,5 +43,3 @@ There are limits and timeouts for listings, transfers and SFTP channels. A limit
 This version does not provide recursive folder transfer, synchronization, resumed/interrupted-file recovery, destructive move semantics, or complete remote file-management parity with Explorer. The documented drag-and-drop workflow is a copy/transfer operation, not an assurance that Windows Explorer or another external app can consume every internal drag payload.
 
 SFTP v3 does not provide a portable way to prevent every symlink/path replacement race on an actively changing or malicious server. Use dedicated directories and avoid transferring sensitive data through an account or server you do not trust.
-
-Source references: `ui/files.js`, `ui/local-files.js`, `src/local-files.cjs`, `src/file-listings.cjs`, `src/sftp-browser.cjs`, `src/transfer.cjs`.

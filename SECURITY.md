@@ -1,39 +1,45 @@
-# Security policy and data boundaries
+# Security policy
 
-## Reporting a vulnerability
+## Report a vulnerability privately
 
-Do not report vulnerabilities, credentials, private keys, or unredacted terminal recordings in public issues. Use GitHub's **Security > Report a vulnerability** route when it is available. If that private route is not enabled, coordinate privately with the maintainer through an already-established private channel rather than posting vulnerability details publicly.
+Use [GitHub's private vulnerability report form](https://github.com/zeidlern/NerdSSHell/security/advisories/new). Do not put vulnerabilities, credentials, private keys or unredacted terminal recordings in public issues or pull requests. If the form is unavailable, use an already-established private channel with the maintainer; a public issue may ask for a private contact without disclosing technical details.
 
-Include the affected commit/version, operating system, minimal synthetic reproduction, impact and relevant sanitized logs. Do not include real credentials or attack unrelated systems. No response-time SLA, bug bounty or independent audit certification is promised. The current supported line is **v1.0.x**; older 0.1.x development builds are not supported.
+Include the affected version/commit, Windows version, a minimal synthetic reproduction, expected impact and relevant sanitized logs. Do not include real credentials or test unrelated systems. The supported line is **v1.0.x**. Reports are handled as time permits; no response-time SLA, bug bounty or independent audit certification is promised.
 
-## Threat model
+## Trust boundaries
 
-Treat SSH server output, terminal escape sequences, names, SFTP replies and protocol responses as untrusted, even after authenticating the server. Protect the local computer, credentials, clipboard and session identity across the renderer/main-process boundary. Host authentication establishes the server identity, not the safety of every program running there.
+Treat SSH server output, escape sequences, names, SFTP replies and protocol responses as untrusted, even after verifying a server's identity. Host authentication does not establish that every remote program or file is safe.
 
-The desktop renderer is sandboxed, with context isolation and no Node integration. IPC checks the sending window, main frame and exact application URL. Navigation, new windows and permission requests are denied. CSP blocks network connections and remote scripts. Terminal output is VT data, never HTML. Remote OSC 52 clipboard writes are blocked. Clipboard paste rejects terminal control characters other than tab/newline/carriage return; multiline paste still asks for confirmation. Normal keyboard interrupts are unaffected.
+The desktop renderer is sandboxed, with context isolation and no Node integration. Main-process IPC validates the sending window, main frame and exact application URL. Navigation, new windows and permission requests are denied. CSP blocks remote scripts and network connections. Terminal output is VT data, never HTML. Remote OSC 52 clipboard writes are blocked. Clipboard paste rejects terminal control characters other than tab/newline/carriage return; multiline paste requires confirmation.
 
-## Credentials and trust
+Passwords and key passphrases remain in memory for an active connection and intentional reconnection. Disconnect releases application-held references. JavaScript, paging, crash dumps and the SSH library do not guarantee secure erasure. Key selection stores the path, rather than key contents. Prefer an SSH agent or a passphrase-protected key.
 
-Passwords and key passphrases are held in memory for the active connection and intentional network reconnection. Disconnect releases application-held references, but JavaScript, operating-system paging, crash dumps and the SSH library do not provide guaranteed secure memory erasure. Key selection stores its path, not its contents. Prefer an SSH agent or a passphrase-protected key.
+OpenSSH known_hosts is read without modification. User-approved fingerprints are pinned locally. Changed or revoked keys are blocked; cancellation and verification errors stop trust retries. Verify key changes independently rather than suppressing a trust failure.
 
-OpenSSH known_hosts is read, not modified. New user-approved fingerprints are pinned locally. Changed or revoked keys are blocked. Verification cancellation/errors must not become an automatic retry loop. Trust changes require independent fingerprint verification; never suppress these failures for convenience.
+## Sessions, commands and transfers
 
-## Local data
+Persistent Close/Disconnect/Quit leaves remote work running. Discovery and reconnect never launch jobs or replay disconnected input. End requires explicit confirmation and a stable session identity. Standard SSH and local closure require confirmation because their work may stop. Standard network loss never silently creates a replacement shell.
 
-Settings and optional archives are in Electron's per-user application-data directory. On Windows this may be a roaming-profile location; backup/profile-sync policies can copy it. Archive encryption is not implemented. Protection relies on actual Windows profile ACLs and disk protection, not Unix permission numbers. Same-user malware or a compromised OS is outside the application's protection boundary.
+Actions and Favorites execute immediately in their originating terminal context. The separate workbench reviews a command and creates a new selected console. Neither provides a command sandbox. Administrator consoles use Windows UAC; NerdSSHell does not collect a Windows password or change security policy.
 
-Recording is off by default and size-limited. Output may contain echoed secrets even though raw keystrokes are not intentionally logged. Turning recording off or removing a profile does not erase old archives. Exports are plaintext. See the release checklist for verified ACLs, retention/deletion controls and optional OS-backed encryption work.
+Missing Persistent server support is installed only after explicit approval over a verified connection. Normal use does not change sudoers, global tmux configuration, firewalls or startup services.
 
-## Server operations and transfers
+SFTP uses APIs on the verified transport. Filenames are text, never HTML or shell commands. Uploads use exclusive temporary files and separately confirmed replacement. Downloads reject detectable final symlinks and publish exclusively to a new local name. SFTP v3 lacks portable atomic no-follow or identity binding: a server-side swap restored between checks or same-size/time replacement can evade detection. Confirmed upload replacement retains a concurrent-writer race. Downloaded files are never automatically executed.
 
-Missing Persistent server support is installed only after explicit approval, over a verified SSH connection. Standard SSH does not probe or install tmux. Normal use does not write sudoers, global tmux configuration, firewall settings or startup services. Closing Persistent views never sends an exit or interrupt to running shells. Standard SSH tab closure/disconnect/quit requires confirmation because closing its channel may stop work; network loss never silently replaces a Standard shell.
+Listings, transfers and outstanding channel opens have separate limits and timeouts. Cancelled opens retain reservations until actual completion or transport cleanup, with an app-wide combined cap of 20 outstanding opens/live SFTP channels. Hard disconnections can leave temporary files; cleanup targets only files owned by the operation.
 
-Per-terminal SFTP browsers use APIs on the verified transport, never shell commands or remote names as HTML. Uploads use exclusive temporary files, restrictive requested permissions and separately confirmed atomic replacement. Downloads reject final symlinks, check metadata around opening/streaming and publish exclusively to a new local filename. SFTP v3 has no portable atomic no-follow or identity binding: an undetected server-side replacement remains possible. Confirmed upload replacement also retains a concurrent-writer race. No file is automatically executed.
+## Local data and privacy
 
-Listings, transfers and outstanding channel opens have independent limits and timeouts. Cancelled opens retain a resource reservation until actual completion/transport cleanup, with a combined app-wide cap of 20 outstanding opens/live SFTP channels. Hard disconnections can leave temporary files; cleanup must not delete unrelated files. Focused adversarial cancellation, delayed-open, symlink and timeout regressions cover these paths; they do not establish safety against every hostile server.
+Settings and optional archives use Electron's per-user data directory; see [data location and compatibility](docs/IDENTITY-COMPATIBILITY.md). Windows roaming/profile policies may copy that data. Protection depends on actual Windows ACLs and disk protection. Same-user malware and a compromised OS are outside the application's protection boundary.
 
-## Distribution and remaining limits
+Recording is off by default and size-limited. Output can contain echoed secrets. Archives, exports, notes and backups are plaintext; encryption is not implemented. Turning recording off or removing a profile does not erase old archives. Unsaved Scratchpad notes remain in memory. There is no archive-deletion control in the UI.
 
-Windows installer candidates are unsigned unless a specific release artifact is explicitly identified as Authenticode-signed. Hashes do not authenticate a publisher. Electron fuse/ASAR hardening and automated dependency/secret checks are part of the release process, but no test suite proves the software is vulnerability-free. There is no unattended auto-update mechanism. Supported CI/build installs omit optional npm dependencies; the release-gating audit matches that installed build graph, while the security workflow also reports full-lock advisories for omitted optional dependencies.
+Copy-on-selection is enabled by default. Windows clipboard history/synchronization can retain copied data; the app does not control those OS features. Output-sharing previews require review and do not automatically redact secrets.
 
-Review [SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md) and [PUBLIC-RELEASE.md](docs/PUBLIC-RELEASE.md). No code review or passing test suite establishes that software is free of vulnerabilities.
+## Distribution
+
+Use official [Releases](https://github.com/zeidlern/NerdSSHell/releases) and inspect each artifact's documented signing status. An unsigned artifact has no Authenticode-verified publisher identity; a checksum verifies bytes, rather than publisher identity. There is no unattended auto-update mechanism.
+
+Supported builds use `npm ci --omit=optional`. Dependency validation distinguishes that installed graph from the complete lockfile; see [dependency maintenance](docs/DEPENDENCIES.md). Electron fuse and ASAR-integrity checks, native-provider verification, secret scanning and adversarial regressions are part of validation, but cannot prove absence of vulnerabilities.
+
+See [security architecture and regression coverage](docs/SECURITY-REVIEW.md), [release validation](docs/PUBLIC-RELEASE.md) and [current validation results](docs/VALIDATION.md).

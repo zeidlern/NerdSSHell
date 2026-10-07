@@ -44,5 +44,3 @@ A new prompt normally alerts once rather than repeatedly sounding on every redra
 Open **Preferences > Notifications & Alerts** to independently control detection, sound, Windows notifications and visual indicators. Defaults are on. The terminal already active in the focused application stays quiet. Windows notification settings and Do Not Disturb can suppress desktop delivery even when the application's setting is on.
 
 For a safe test, use a disposable background session with a simple confirmation prompt, then verify that an ordinary idle terminal stays quiet. Do not test alerts by launching a destructive administrative command that is waiting for approval.
-
-Source references: `ui/scratchpad.js`, `src/scratchpad-spelling.cjs`, `src/desktop-tools.cjs`, `ui/session-attention.js`, `src/session-notifications.cjs`.

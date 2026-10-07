@@ -1,4 +1,4 @@
-/* global $, api, views, run, message, fit */
+/* global $, api, views, run, message, fit, withViewCapacity */
 'use strict';
 (() => {
   $('sidebarToggle').onclick = () => {
@@ -14,14 +14,16 @@
     if (launcher.disabled) return;
     const administrator = $(toggleId).checked;
     launcher.disabled = true;
-    try {
+    try { await withViewCapacity(async release => {
       const context = await api.workbenchContext(), shells = context.targets.filter(t => t.local);
       const selected = family === 'cmd' ? shells.find(t => t.id === 'local:cmd')
         : shells.find(t => t.id === 'local:pwsh') || shells.find(t => t.id === 'local:powershell');
       if (!selected) throw new Error(`No supported ${family === 'cmd' ? 'Command Prompt' : 'PowerShell'} installation was found.`);
       const result = administrator ? await api.localAdminOpen(selected.id) : await api.localOpen(selected.id);
+      release();
       if (result?.cancelled) message('Administrator launch cancelled. No session was opened.');
       else if (result) await window.NerdSSHellWorkbench.acceptResult(result);
+    });
     } finally { launcher.disabled = false; }
   }
   $('localPowerShell').onclick = () => run(launchLocal('localPowerShell', 'localAdmin', 'powershell'));

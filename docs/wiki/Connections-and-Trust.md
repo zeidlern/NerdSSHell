@@ -55,5 +55,3 @@ There are three separate concepts: saved connection settings, a live SSH transpo
 ## First safe test
 
 Create a disposable persistent session named `persistence-test`, run a harmless command, disconnect through the UI and reconnect. Confirm that you reattach to the same session rather than a newly launched shell. Then use **End** on that disposable session and confirm it disappears. Never use a production task to learn the difference between Disconnect and End.
-
-Source references: `ui/index.html`, `src/core.cjs`, `src/remote.cjs`, `src/standard-remote.cjs`, `src/main.cjs`.

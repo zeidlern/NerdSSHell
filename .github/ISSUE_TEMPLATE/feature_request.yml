@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest an improvement to NerdSSHell.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to improve?
+      description: Describe your workflow and the problem you want to solve.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed behavior
+      description: Explain the result you would like. Alternatives and examples are welcome.
+  - type: input
+    id: version
+    attributes:
+      label: NerdSSHell version
+      description: If this relates to an existing feature, include its version from Help/About.
+  - type: markdown
+    attributes:
+      value: "Please use synthetic examples and remove sensitive data. Report vulnerabilities through the private security route instead."

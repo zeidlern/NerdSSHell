@@ -31,9 +31,9 @@ Summarize exactly what was installed, what was verified, where the private backu
 The prompt intentionally makes the source revision explicit. When a published release tag is unavailable, Codex must report the chosen commit and the fact that it is a source candidate, not claim it downloaded an official release.
 
 ```text
-Build and install NerdSSHell locally on this Windows 11 x64 PC from https://github.com/zeidlern/NerdSSHell. Use a published reviewed release tag when one exists. Otherwise inspect the current main branch, report its full commit SHA and release status, and treat it as a source candidate. Do not use an unrelated development branch or invent a v1.0.0 tag.
+Build and install NerdSSHell locally on this Windows 11 x64 PC from https://github.com/zeidlern/NerdSSHell. Use the published release tag for the intended version when available. Otherwise inspect main, report its full commit SHA and release status, and distinguish the local source build from an official release. Do not invent a release tag.
 
-Reuse an existing checkout only after checking its remote, branch, worktrees and git status. Preserve every uncommitted/untracked user file; do not reset, clean, overwrite, force-push or silently stash. Use a separate new directory when needed. Stop if the intended source cannot be established safely. Read AGENTS.md, SECURITY.md, docs/PUBLIC-RELEASE.md, the current audit report and docs/wiki/Installation.md.
+Reuse an existing checkout only after checking its remote, branch, worktrees and git status. Preserve every uncommitted/untracked user file; do not reset, clean, overwrite, force-push or silently stash. Use a separate new directory when needed. Stop if the intended source cannot be established safely. Read AGENTS.md, SECURITY.md, docs/TESTING.md, docs/DEPENDENCIES.md and docs/wiki/Installation.md.
 
 Use a normal non-elevated Windows account and native Windows tools, not a Linux-only/WSL build represented as Windows acceptance. Verify Git and a current Node 22 x64 version at least 22.12.0. Use the committed lockfile and npm ci --omit=optional. Do not run npm audit fix --force, change dependency versions, turn off tests, disable Windows security or bypass PowerShell policy. Stop on any failed command.
 
@@ -56,6 +56,6 @@ This is an upgrade. Preserve saved profiles, trust pins, appearance, Favorites, 
 
 ## Understanding a blocked attempt
 
-A GitHub authorization failure is not solved by making a private source repository public prematurely. A package/test failure is not solved by deleting tests. A blocked installer is not solved by disabling Defender. Codex should stop at a specific blocker, retain useful diagnostics with secrets redacted, and report what is needed.
+A package/test failure is not solved by deleting tests. A blocked installer is not solved by disabling Defender. Codex should report the specific failure, retain useful redacted diagnostics, and explain what is needed.
 
 A successful local build is not evidence that remote SSH, native UAC, password prompts and all interactive file dialogs work correctly on every Windows system. The current release checklist lists separate acceptance steps.

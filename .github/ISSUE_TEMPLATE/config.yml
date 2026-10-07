@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: User manual
+    url: https://github.com/zeidlern/NerdSSHell/wiki
+    about: Installation, connections, sessions, SFTP and troubleshooting.
+  - name: Report a security vulnerability privately
+    url: https://github.com/zeidlern/NerdSSHell/security/advisories/new
+    about: Keep vulnerability details and sensitive data out of public issues.

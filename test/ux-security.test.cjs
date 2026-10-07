@@ -5,7 +5,7 @@ const { createRequire } = require('node:module');
 const { EventEmitter } = require('node:events');
 const { installDesktopTools } = require('../src/desktop-tools.cjs');
 const { spawnElevatedPty, bootstrap } = require('../src/elevated-pty.cjs');
-async function fixture(t) {
+async function fixture(t, RemoteClass) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-ux-security-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const handlers = new Map(), native = [], app = new EventEmitter(); let window;
@@ -25,18 +25,52 @@ async function fixture(t) {
   const electron = { app, BrowserWindow: Window, ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
     protocol: { registerSchemesAsPrivileged() {}, handle() {} }, dialog, clipboard: {}, Menu: { setApplicationMenu() {} }, shell: {}, net: {} };
   const filename = path.resolve(__dirname, '../src/main.cjs'), req = createRequire(filename), module = { exports: {} };
-  vm.runInNewContext(fs.readFileSync(filename, 'utf8') + '\nmodule.exports={getStore:()=>store};', {
-    require: name => name === 'electron' ? electron : name === './desktop-tools.cjs'
+  vm.runInNewContext(fs.readFileSync(filename, 'utf8') + '\nmodule.exports={getStore:()=>store,getConnections:()=>connections};', {
+    require: name => name === 'electron' ? electron : name === './mixed-remote.cjs' && RemoteClass ? { MixedRemote: RemoteClass } : name === './desktop-tools.cjs'
       ? { installDesktopTools: options => installDesktopTools({ ...options, adminLaunch: async () => { native.push('admin'); return { cancelled: true }; } }) } : req(name),
     module, __dirname: path.dirname(filename), process, Buffer, console, setTimeout, clearTimeout, AbortController, Response, URL
   });
   await new Promise(resolve => setImmediate(resolve));
-  return { app, native, store: module.exports.getStore(), window, handlers,
+  return { app, native, store: module.exports.getStore(), connections: module.exports.getConnections(), window, handlers,
     event: () => ({ sender: window.webContents, senderFrame: window.webContents.mainFrame }) };
 }
+
+test('actual main IPC refuses new open/create resources at capacity and preserves an existing reconnect', async t => {
+  const h = await fixture(t), calls = [], { MAX_OPEN_VIEWS } = require('../src/session-limits.cjs');
+  const panes = Array.from({ length: MAX_OPEN_VIEWS + 1 }, (_, i) => ({ key: 'fixture/pane-' + i }));
+  const remote = { connected: true, closing: false, profile: { id: 'fixture' },
+    views: new Map(panes.slice(0, MAX_OPEN_VIEWS).map(p => [p.key, { active: true }])),
+    pane: key => panes.find(p => p.key === key), open: key => { calls.push(['open', key]); return Promise.resolve(); },
+    createSession: () => { calls.push(['create']); return Promise.resolve(); } };
+  h.connections.set('fixture', { profile: remote.profile, remote });
+  const open = h.handlers.get('nerdsshell:open'), create = h.handlers.get('nerdsshell:create');
+  await assert.rejects(open(h.event(), 'fixture/pane-' + MAX_OPEN_VIEWS), /limit 64/);
+  await assert.rejects(create(h.event(), 'fixture', 'Synthetic', true), /limit 64/);
+  assert.deepEqual(calls, []);
+  await open(h.event(), 'fixture/pane-0'); assert.deepEqual(calls, [['open', 'fixture/pane-0']]);
+  const state = await h.handlers.get('nerdsshell:state')(h.event()); assert.equal(state.sessionLimits.maxOpenViews, MAX_OPEN_VIEWS);
+});
+
+test('oversized hostile discovery stops automatic reconnect and clears retry credentials in actual main', async t => {
+  const { parsePanes } = require('../src/core.cjs'), { MAX_DISCOVERED_PANES } = require('../src/session-limits.cjs');
+  class HostileDiscovery extends EventEmitter {
+    constructor(profile) { super(); this.profile = profile; this.panes = []; }
+    async connect() {
+      this.connected = true;
+      return parsePanes(('$0\tFixture\t@0\t0\tShell\t%0\t0\t120\t36\t0\t11111111-2222-4333-8444-555555555555\t1\tbash\n').repeat(MAX_DISCOVERED_PANES + 1));
+    }
+    disconnect() { this.connected = false; this.closing = true; }
+  }
+  const h = await fixture(t, HostileDiscovery);
+  h.store.putProfile({ id: 'hostile', host: 'synthetic.invalid', username: 'tester', auth: 'agent', sessionMode: 'persistent' });
+  await assert.rejects(h.handlers.get('nerdsshell:connect')(h.event(), 'hostile'), error => error.code === 'NERDSSHELL_RESOURCE_LIMIT');
+  const runtime = h.connections.get('hostile');
+  assert.equal(runtime.wanted, false); assert.equal(runtime.timer, undefined);
+  assert.equal(runtime.state, 'disconnected'); assert.deepEqual(Object.keys(runtime.secrets), []);
+});
 test('all new UX IPC paths reject foreign senders, same-URL subframes and navigated main frames before I/O', async t => {
   const h = await fixture(t), cases = [
-    ['savePreferences', [{}]], ['sessionAttention', ['fixture/pane', {}]], ['activeSession', ['fixture/pane']],
+    ['publicLink', ['manual']], ['savePreferences', [{}]], ['sessionAttention', ['fixture/pane', {}]], ['activeSession', ['fixture/pane']],
     ['paneActionRun', ['fixture/pane', { target: 'synthetic', actionId: 'system.info', bracketedPaste: false }]],
     ['localAdminOpen', ['local:powershell']], ['scratchpadDirty', [true]], ['scratchpadRead', []], ['scratchpadSave', ['synthetic note']],
     ['actionConfiguration', []], ['actionConfigurationSave', [{ custom: [], favoritesByOS: {} }]], ['actionNewId', []],

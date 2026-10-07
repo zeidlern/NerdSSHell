@@ -1,4 +1,4 @@
-/* global api, $, profiles, panes, views, statuses, active, openPane, render, element, button, message, run, NerdSSHellCommandReview */
+/* global api, $, profiles, panes, views, statuses, active, openPane, render, element, button, message, run, NerdSSHellCommandReview, withViewCapacity */
 'use strict';
 (function () {
   const dialog = $('workbenchDialog'), target = $('wbTarget'), code = $('wbCode'), search = $('wbSearch');
@@ -123,16 +123,18 @@
   async function execute() {
     if (busy || !ticket) return;
     const approved = ticket; ticket = null; runningToken = approved.token; serial++; setBusy(true);
-    try {
+    try { await withViewCapacity(async release => {
       const result = await api.workbenchRun(approved.token, $('wbTypedHost').value);
+      release();
       invalidate(); if (result) { dialog.close(); await acceptResult(result); }
       else $('wbFeedback').textContent = 'Cancelled. No task was started.';
+    });
     } catch (e) { invalidate(); error(e); }
     finally { runningToken = null; setBusy(false); renderActions(); }
   }
   async function localOpen(chooseFolder) {
     if (busy) return; setBusy(true);
-    try { const result = await api.localOpen(target.value, chooseFolder); if (result) { dialog.close(); await acceptResult(result); } }
+    try { await withViewCapacity(async release => { const result = await api.localOpen(target.value, chooseFolder); release(); if (result) { dialog.close(); await acceptResult(result); } }); }
     catch (e) { error(e); } finally { setBusy(false); }
   }
   function onView(v) {

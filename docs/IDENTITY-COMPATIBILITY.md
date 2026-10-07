@@ -1,6 +1,6 @@
-# Current identity and upgrade compatibility — 1.0.1
+# Identity and upgrade compatibility
 
-Current package: `nerdsshell`. Windows app ID: `app.nerdsshell.desktop`. UI/resource protocol and IPC prefix: `nerdsshell`. Native broker type: `NerdSSHell.ElevatedConsole`. The name/domain changes do not change the approved artwork or copyright ownership.
+Package: `nerdsshell`. Windows app ID: `app.nerdsshell.desktop`. UI/resource protocol and IPC prefix: `nerdsshell`. Native broker type: `NerdSSHell.ElevatedConsole`.
 
 ## Installer and local data
 
@@ -12,7 +12,7 @@ Before taking the single-instance lock, startup selects the data directory:
 - Source-only `NERDSSHELL_TEST_DATA` may select a test profile; packaged builds ignore it.
 - An existing `%APPDATA%\betterssh` directory is retained for upgrades. No settings, trust pins, archives or notes are copied, renamed, merged or deleted.
 - Fresh users use `%APPDATA%\nerdsshell`. If both default directories exist, legacy data is selected and the other directory is left untouched; resolve that condition deliberately.
-- Unreadable, non-directory or reparse/symlink candidates fail instead of silently switching to empty settings.
+- Unreadable, non-directory or reparse/symlink data paths fail instead of silently switching to empty settings.
 
 The installer helper still recognizes a legacy executable/directory so it can refuse installation over running work and find the existing installation. Those strings are compatibility aliases, not current product branding. No real installed user data is used as a regression fixture.
 
@@ -28,6 +28,6 @@ Attach, rename and End require the observed marker, permit only an empty/equal c
 
 The old UI scheme and IPC channels are not accepted by the current main process. They are not persistent settings or remote job identities; each installed version uses its own matching renderer/preload. Tests reject retired origins and foreign frames before I/O. Renderer isolation, CSP, permission/navigation denial and resource allowlists remain unchanged.
 
-Native namespace, pipe/temporary prefixes, PowerShell variables and test environments use current naming. The owned provider hashes, nonce/parent/ACL checks, UAC behavior and protected PSReadLine loading remain intact. Actual package/native and real tmux integration results are recorded for this candidate; old evidence is not relabeled as 1.0.1.
+Native namespace, pipe/temporary prefixes, PowerShell variables and test environments use current naming. The owned provider hashes, nonce/parent/ACL checks, UAC behavior and protected PSReadLine loading remain intact.
 
-The unchanged 1.0.0 tag/candidate retains its original bytes and dated identity. This 1.0.1 build is a new candidate. Signed distribution, genuine UAC/alternate-account consent, clean-user install/upgrade and physical Windows notification/shortcut behavior remain separate acceptance gates.
+Compatibility regressions use isolated data and disposable sessions, rather than installed user data. See [testing](TESTING.md) and [validation results](VALIDATION.md) for package/native and real tmux checks. Genuine UAC, alternate-account launches, clean-user install/upgrade and physical notification/shortcut behavior require their own Windows acceptance.

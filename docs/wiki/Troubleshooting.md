@@ -6,7 +6,7 @@ Record the About version, full source SHA for source builds, Windows version, se
 
 ## Installation and build problems
 
-**The repository or release is not found:** establish whether the repository is still private and whether an actual release exists. A 404 can mean lack of access. Do not switch to a random fork/mirror or expose the project just to solve access.
+**A release/download is not found:** use the official [repository](https://github.com/zeidlern/NerdSSHell) and [Releases](https://github.com/zeidlern/NerdSSHell/releases). Check whether the intended version includes a Windows installer or source only. Avoid random forks and download mirrors.
 
 **Node/npm is missing:** install the documented Node 22 x64 toolchain and open a new terminal. Use `npm.cmd` in Windows PowerShell where its script shim is blocked. Do not bypass organizational policy.
 
@@ -14,7 +14,7 @@ Record the About version, full source SHA for source builds, Windows version, se
 
 **A check/test fails:** stop before installing. Report the first failed command and test; skipped downstream tests are not passes. Linux/WSL passing cannot replace Windows native/packaging acceptance.
 
-**Windows flags the executable:** check the exact source, hash, signature and release notes. Unsigned candidates can have unknown-publisher warnings. Do not disable security software or add broad exclusions.
+**Windows flags the executable:** check the exact source, hash, signature and release notes. Unsigned builds can have unknown-publisher warnings. Do not disable security software or add broad exclusions.
 
 ## SSH and authentication problems
 
@@ -33,6 +33,8 @@ Confirm the same server, account and tmux socket. Standard SSH and local session
 On a persistent session, review the current screen after reconnecting before resubmitting any command. Remote execution may have continued while you were disconnected. A timeout can leave completion unknown; blind retry can duplicate work.
 
 In-terminal search covers the available view buffer. Archive search requires recording to have been enabled while receiving output. Increasing scrollback cannot recreate lost history. Busy/full-screen programs may repaint when resized; capture a sanitized minimal reproduction rather than injecting control sequences or killing the session.
+
+**Terminal limit reached:** NerdSSHell permits up to 64 open/pending terminals across the app and 64 retained tabs, including offline tabs. Other discovered sessions remain available in the sidebar. Close an unused Persistent view to free a slot; its remote work keeps running. Finish local/Standard work before confirming closure. A discovery result exceeding 1,024 panes is rejected without changing server sessions; use the intended account/tmux socket and review unusually large session lists on the server.
 
 ## File SFTP problems
 
@@ -61,5 +63,3 @@ Security vulnerabilities and credentials belong in a verified private reporting 
 ## Deliberate limitations
 
 Windows 11 x64 desktop only; no tested ARM64 installer. No full OpenSSH configuration parity, ProxyJump, forwarding UI, automatic cloud sync or unattended updater. No recursive/resumable folder transfer. No encrypted archive vault or universal session resurrection. No guarantee that every Linux/macOS recipe works on every release. Native UAC/alternate-account consent, OS pickers, new-user upgrades, notification delivery and accessibility/IME/multimonitor combinations require their own exact-build testing.
-
-Source references: `README.md`, `SECURITY.md`, `docs/ARCHITECTURE.md`, `docs/ACCEPTANCE-RESULTS.md`, `docs/NERDSSHELL-IMPLEMENTATION.md`.

@@ -1,3 +1,3 @@
 NerdSSHell · Built for Windows nerds with Linux problems.
 
-This manual describes the 1.0.x source line. Check Help/About and the exact release notes. A published version number is not a security certification. [Security and privacy](Security-and-Privacy.md) · [Manual home](Home.md)
+This manual covers 1.0.x. Check Help/About and the exact release notes. [Security and privacy](Security-and-Privacy.md) · [Manual home](Home.md)

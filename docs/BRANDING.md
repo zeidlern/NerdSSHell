@@ -75,17 +75,9 @@ node scripts/Verify-Branding.cjs dist/win-unpacked/NerdSSHell.exe
 
 These checks verify branding resources; they do not substitute for the existing package, native Windows or Authenticode acceptance checks. `test/branding.test.cjs` covers missing/changed icon frames and stale product/version metadata using synthetic Windows resource entries.
 
-### Source and visual verification recorded October 3, 2026
+## Identity compatibility
 
-All ten original concept PNGs were read back and matched to their recorded Git blob SHA and byte length. Both original desktop concepts, both avatar concepts and their production counterparts were visually inspected. The production design preserves the nerd-face silhouette, Windows/Linux glasses and terminal prompt.
-
-The exported light/dark wordmarks and icon sizes 16–256px were rendered together in Chromium at their actual physical sizes against `#252525` and `#f5f7fa` backgrounds. All 20 images loaded, transparent edges rendered cleanly, and the name/tagline matched the required spelling. The small-size treatment remains recognizable, with naturally less lens detail at 16px.
-
-`node scripts/Verify-Branding.cjs` passed for all 25 exported assets and nine ICO frames. Four focused resource-verification tests passed, including altered icon bytes, missing icon resources and stale identity/version rejection. Re-running the exporter produced the identical SHA-256 manifest. Packaged Windows icon/metadata acceptance is recorded by the full application's build/package verification, rather than inferred from the source assets alone.
-
-## Compatibility during the rebrand
-
-`src/branding.cjs` centralizes the visible name, tagline, icon, current `nerdsshell` package, `app.nerdsshell.desktop` app ID and pinned installer GUID. Version 1.0.1 uses NerdSSHell for renderer, IPC/protocol and native bridge naming. [Identity compatibility](IDENTITY-COMPATIBILITY.md) defines retained legacy data-directory, installer-process detection and remote-session aliases.
+`src/branding.cjs` centralizes the visible name, tagline, icon, `nerdsshell` package, `app.nerdsshell.desktop` app ID and pinned installer GUID. NerdSSHell naming is used for renderer, IPC/protocol and native bridge. [Identity compatibility](IDENTITY-COMPATIBILITY.md) defines retained legacy data-directory, installer-process detection and remote-session aliases.
 
 Changing these internal identities can affect saved profiles, preferences, archives, installer upgrades and taskbar/notification association. Any future change needs an explicit compatibility design, rather than a global search-and-replace.
 

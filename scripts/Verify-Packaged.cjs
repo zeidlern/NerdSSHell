@@ -40,6 +40,7 @@ async function verify(directory) {
   assert.equal(metadata[0].value, actualHash, 'Windows resource does not match app.asar header');
 
   const packaged = asar.listPackage(archive).map(name => name.replaceAll('\\', '/'));
+  for (const name of ['/LICENSE', '/docs/THIRD-PARTY-NOTICES.md']) assert.ok(packaged.includes(name), `${name} must be bundled inside validated ASAR`);
   assert.ok(packaged.includes('/src/elevated-console.cs') && packaged.includes('/src/elevated-pty.cjs'), 'Administrator helper and bootstrap must remain inside validated ASAR');
   for (const name of ['/src/powershell-environment.cjs', '/src/console-text.cjs', '/src/branding.cjs', '/src/preferences.cjs', '/src/session-commands.cjs', '/src/session-notifications.cjs', '/ui/session-attention.js', '/ui/branding/app-dark-64.png', '/ui/branding/app-light-64.png', '/ui/branding/nerdsshell.ico', '/src/local-remote.cjs', '/src/workbench.cjs', '/src/action-catalog.cjs', '/ui/workbench.js', '/ui/command-review.js', '/ui/workbench.css', '/node_modules/node-pty/lib/index.js', '/node_modules/node-pty/lib/worker/conoutSocketWorker.js', '/src/main.cjs', '/src/preload.cjs', '/src/app-protocol.cjs', '/src/standard-remote.cjs', '/src/sftp-browser.cjs', '/src/file-listings.cjs', '/ui/index.html', '/ui/app.js', '/ui/appearance.js', '/ui/files.js', '/node_modules/ssh2/lib/client.js']) assert.ok(packaged.includes(name), `${name} must be inside app.asar`);
   const unpacked = path.join(resources, 'app.asar.unpacked');

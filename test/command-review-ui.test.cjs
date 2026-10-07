@@ -33,11 +33,26 @@ function harness() {
     button: (text, action) => { const e = new Element('button'); e.textContent = text; e.onclick = action; return e; },
     message() {}, run: promise => Promise.resolve(promise), TextEncoder, NerdSSHellCommandReview: reviewHelpers,
     document: { addEventListener() {}, querySelector: () => [...nodes.values()].find(n => n.open) }, window: {} });
+  context.maxOpenViews = require('../src/session-limits.cjs').MAX_OPEN_VIEWS;
+  context.pendingViewSlots = 0;
+  const appSource = fs.readFileSync(require.resolve('../ui/app.js'), 'utf8'), guardStart = appSource.indexOf('function requireViewCapacity(');
+  vm.runInContext(appSource.slice(guardStart, appSource.indexOf('\nconst activeTransfers', guardStart)), context);
   vm.runInContext(fs.readFileSync(require.resolve('../ui/workbench.js'), 'utf8'), context);
   return { $, api, cancelled, reviewed, runs, copies, context, ui: context.window.NerdSSHellWorkbench,
     event: e => listener(e), setReview(fn) { reviewResponse = fn; }, setRun(fn) { runResponse = fn; } };
 }
 async function ready(h) { await h.ui.open({ target: 'a' }); h.$('wbCode').value = 'printf synthetic'; h.$('wbCode').dispatch('input'); }
+
+test('workbench refuses to create hidden work when retained offline tabs exhaust the renderer budget', async () => {
+  const h = harness(); await ready(h); await h.$('wbReview').onclick();
+  for (let i = 0; i < h.context.maxOpenViews; i++) h.context.views.set('offline/' + i, { ready: false });
+  let localLaunches = 0; h.api.localOpen = async () => { localLaunches++; return null; };
+  await h.$('wbRun').onclick();
+  assert.equal(h.runs.length, 0); assert.ok(h.cancelled.includes('review-1'), 'Blocked review authorization is revoked');
+  assert.match(h.$('wbFeedback').textContent, /64 open terminal views/);
+  await h.$('wbOpenLocal').onclick(); await h.$('wbOpenFolder').onclick();
+  assert.equal(localLaunches, 0); assert.equal(h.context.views.size, h.context.maxOpenViews);
+});
 
 test('renderer review preserves exact code/target, performs no run and edits revoke the ticket', async () => {
   const h = harness(); await ready(h); await h.$('wbReview').onclick();

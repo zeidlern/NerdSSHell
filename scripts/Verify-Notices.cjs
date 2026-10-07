@@ -6,13 +6,16 @@ const path = require('node:path');
 const asar = require('@electron/asar');
 
 const root = path.resolve(__dirname, '..');
-const unpacked = path.join(root, 'dist', 'win-unpacked');
+const unpacked = path.resolve(process.argv[2] || path.join(root, 'dist', 'win-unpacked'));
 const archive = path.join(unpacked, 'resources', 'app.asar');
 const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
 // Git may check Markdown out as CRLF on Windows; preserve byte comparisons
 // for the packaged licenses while normalizing only the text inventory.
 const notices = fs.readFileSync(path.join(root, 'docs', 'THIRD-PARTY-NOTICES.md'), 'utf8').replaceAll('\r\n', '\n');
 let verified = 0;
+for (const file of ['LICENSE', 'docs/THIRD-PARTY-NOTICES.md']) {
+  assert.deepEqual(asar.extractFile(archive, file), fs.readFileSync(path.join(root, file)), `${file} differs in packaged ASAR`);
+}
 
 for (const [name, entry] of Object.entries(lock.packages)) {
   if (!name.startsWith('node_modules/') || entry.dev || entry.optional) continue;
@@ -35,4 +38,4 @@ for (const file of ['LICENSE.electron.txt', 'LICENSES.chromium.html']) {
   const stat = fs.statSync(path.join(unpacked, file));
   assert.ok(stat.size > 100, `Missing or empty ${file}`);
 }
-console.log(`Verified ${verified} exact packaged JavaScript license files and Electron/Chromium notices.`);
+console.log(`Verified project license, third-party notice inventory, ${verified} exact packaged JavaScript license files and Electron/Chromium notices.`);

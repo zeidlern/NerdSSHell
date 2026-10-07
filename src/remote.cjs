@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { Control } = require('./control.cjs');
+const { closeSshTransport } = require('./ssh-transport.cjs');
 const { profile, shellQuote: q, sessionName, tmuxPrefix, PANE_FORMAT, parsePanes, paneKey, fingerprint, knownHostStatus, integer, geometry,
   SESSION_IDENTITY_OPTION, LEGACY_SESSION_IDENTITY_OPTION, SESSION_IDENTITY_FORMAT, parseSessionIdentity } = require('./core.cjs');
 
@@ -388,7 +389,7 @@ class Remote extends EventEmitter {
     for (const v of this.views.values()) v.active = false; this.views.clear();
     // Drop this object's references. The caller separately decides whether retry secrets survive.
     // JavaScript and the SSH library do not promise secure memory zeroization.
-    const client = this.client; this.client = null; this.secrets = {}; client?.end();
+    const client = this.client; this.client = null; this.secrets = {}; closeSshTransport(client);
   }
 }
 module.exports = { Remote };

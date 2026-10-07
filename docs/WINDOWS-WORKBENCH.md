@@ -1,6 +1,6 @@
 # NerdSSHell sessions, Actions and command workbench
 
-This guide describes the **v0.1.10** development interface.
+This guide describes sessions, command submission and workspace tools in the 1.0.x interface. The [user manual](wiki/Home.md) provides a shorter introduction.
 
 Each terminal has an **Actions** dropdown and a horizontally scrollable row of **Favorite buttons** that insert the selected command and send Enter in that same terminal. **Preferences** contains their configuration. **Ctrl+Shift+P** opens a separate command-review workbench for commands you want to inspect and run in a new task console.
 
@@ -13,13 +13,13 @@ Each terminal has an **Actions** dropdown and a horizontally scrollable row of *
 
 Session title bars show a compact **REMOTE** badge with white lettering on red for SSH and a **LOCAL** badge with white lettering on green for PowerShell and Command Prompt. The badge describes the connection owned by NerdSSHell; a nested SSH command or another program inside the terminal does not change that connection's identity.
 
-Use the dedicated Layout buttons **1**, **2 ↔**, **2 ↕** and **4** for one window, two side by side, two stacked or four quadrants. The active button has a pressed state; tooltips show **Ctrl+Alt+1/2/3/4**. Layout changes and divider resizing preserve each open view's identity. Focus mode is removed; fullscreen remains available through F11.
+Use the dedicated Layout buttons **1**, **2 ↔**, **2 ↕** and **4** for one window, two side by side, two stacked or four quadrants. The active button has a pressed state; tooltips show **Ctrl+Alt+1/2/3/4**. Layout changes and divider resizing preserve each open view's identity. Fullscreen is available through F11.
 
 ## Preferences and workspace controls
 
 Preferences uses category navigation on the left and the selected settings on the right. Categories include **Copy & Paste**, **Terminal Colors**, **System Colors**, **Configure Actions**, **Configure Favorites**, **Notifications & Alerts**, and **Sessions & History**. One **Save** applies the settings together; **Cancel** discards the draft. Colors preview while editing and return to the saved appearance on Cancel. The Sessions & History values are defaults for new saved connections; existing connections keep their individual settings.
 
-Layout controls remain on the main interface. **Scratchpad** is at the top of the sidebar, followed by the compact local-shell launchers. The collapsed sidebar's **Expand Sidebar** control has a distinct appearance. The redundant global bottom status/New Session bar has been removed; session creation remains available beside each connected server. Per-terminal controls such as Jump to live and Lock input remain attached to their own terminal.
+Layout controls are on the main interface. **Scratchpad** is at the top of the sidebar, followed by the compact local-shell launchers. Use **Expand Sidebar** to reopen a collapsed sidebar and create sessions beside each connected server. Per-terminal controls such as Jump to live and Lock input stay attached to their own terminal.
 
 ## Local PowerShell and Command Prompt
 
@@ -33,7 +33,7 @@ Discovery uses the fixed Windows PowerShell, Program Files PowerShell 7, and Win
 
 For a new SSH session, **Persistent Session (tmux)** keeps the remote shell running if NerdSSHell disconnects or closes. Unchecking it creates a Standard SSH shell whose channel closure can stop work. This choice is made per remote session; local PowerShell and Command Prompt always remain nonpersistent.
 
-Each local launcher has its own **Administrator** switch to its right. Its setting applies to newly launched sessions, and does not elevate an existing terminal. An administrator launch requests Windows UAC and opens an embedded elevated PowerShell or Command Prompt ConPTY in a new NerdSSHell tab. Launching an administrator console does not elevate NerdSSHell itself. The implementation handles UAC cancellation without retry and revalidates the captured destination/review after approval before sending reviewed startup text to that newly owned console. The app does not collect Windows passwords or change UAC/security controls. Real UAC approval/cancellation and alternate-account credentials still require acceptance against the final installed candidate.
+Each local launcher has its own **Administrator** switch to its right. Its setting applies to newly launched sessions, and does not elevate an existing terminal. An administrator launch requests Windows UAC and opens an embedded elevated PowerShell or Command Prompt ConPTY in a new NerdSSHell tab. Launching an administrator console does not elevate NerdSSHell itself. The implementation handles UAC cancellation without retry and revalidates the captured destination/review after approval before sending reviewed startup text to that newly owned console. The app does not collect Windows passwords or change UAC/security controls. Real UAC approval/cancellation and alternate-account credentials require Windows acceptance against the exact installed build.
 
 `src/elevated-pty.cjs` starts a fixed broker; `src/elevated-console.cs` creates the short-lived Windows-elevated helper. Only the supported Windows PowerShell, PowerShell 7 and Command Prompt IDs and their fixed installation paths are allowed. Exact loaded C# bytes are SHA-256 checked before compilation in both processes; that proves byte consistency, not signing or publisher identity. The protected, remote-rejected pipe checks both spawned process IDs and a fresh 32-byte nonce. Only bounded terminal input, resize and close frames cross the boundary; it exposes no generic filesystem RPC. The helper creates its shell suspended, assigns it to its own kill-on-close Job, then resumes it. Pipe closure and broker-process exit dispose that owned console/job, without attaching existing local or remote work. Its output continues draining during teardown. These mechanisms do not isolate the console from same-user malware, other administrators, SYSTEM or a compromised application/OS; the nonce is present in the helper's encoded process arguments.
 
@@ -43,7 +43,7 @@ Administrator consoles use the same pinned ConPTY/OpenConsole pair as ordinary c
 
 After importing, the bootstrap sets `HistorySaveStyle SaveNothing` before attempting optional `-Colors`. Older PSReadLine releases may reject `-Colors`; that rejection leaves the earlier no-history setting intact and retains the shell's ordinary input colors. An absent supported module means this setup is unavailable. The administrator bootstrap rejects unexpected already-loaded PSReadLine locations and failures to establish/verify SaveNothing, rather than continuing with that module's default history behavior. This is interactive PowerShell input coloring, not arbitrary Python/code output. Other logging, process arguments or deliberate later shell configuration can still expose commands; this setting is not a confidentiality guarantee.
 
-This preview packages the x64 ConPTY components for Windows x64. It is not a native ARM64 or iPad build.
+Local console components target Windows x64. ARM64 and mobile builds are not implemented.
 
 ## Session Actions and Favorites
 
@@ -115,6 +115,4 @@ Favorite IDs and explicitly saved custom actions are stored in user settings. Un
 
 Reviewed remote scripts are limited to 32 KiB, local reviewed scripts to 8 KiB, and local pasted input to 64 KiB per submission with a bounded rate. There are limits on concurrent launches, reviews and platform probes. Exhausted limits fail explicitly rather than queueing unlimited future operations.
 
-Native Windows acceptance, OS-specific administrative actions and multi-monitor/IME/accessibility behavior must be assessed against the exact candidate. The full **0.1.8 packaged UI passed 160 checks**, including all three default resize/editing cycles for both Windows PowerShell 5 and PowerShell 7, without disabling prediction. This establishes the ordinary-console correction for the earlier before-Enter placement failure. The separate system-ConPTY administrator-provider fixture still failed; version 0.1.9 changes that provider and requires its own native validation. See [ACCEPTANCE-RESULTS.md](ACCEPTANCE-RESULTS.md) for exact revisions and results, and [ASTRA-HANDOFF-2026-10-03.md](ASTRA-HANDOFF-2026-10-03.md) for the historical report. The earlier PR #9 evidence applies to its pinned revision, not automatically to later changes. Synthetic transport tests and a no-elevation helper fixture do not establish native UAC acceptance: the fixture inherits its runner's token. Native UAC approval/cancellation, alternate-account credentials and file-picker interaction remain acceptance work; no success is claimed here. No real user's server was used to test reboot, shutdown, updates or privileged actions. Those recipes are reviewed/generated/tested as text; they are not certified across every Linux distribution or macOS release.
-
-The existing unsigned-preview, privacy/history, licensing and independent-security-review gates still apply. This feature does not make the product production-certified.
+Native Windows acceptance covers real UAC approval/cancellation and alternate-account launches, file-picker interaction, multi-monitor/IME/accessibility behavior and shell resize/editing. Synthetic transports and a no-UAC helper fixture do not establish consent acceptance. OS-specific recipes are reviewed as text rather than certified across every server release; use disposable sessions for destructive tests. See [testing](TESTING.md), [security boundaries](SECURITY-REVIEW.md) and [validation results](VALIDATION.md).

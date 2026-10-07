@@ -56,8 +56,8 @@ Designed for the application's charcoal/gray background.
 
 `source-manifest.json` records the original concept PNG Git blob hashes and byte lengths. Original raster concepts remain available for design reference; the production package removes their opaque backdrop and large display margins through separately saved image edits. Generated exports are never used as the source for another resize.
 
-The visible product name is NerdSSHell. Existing BetterSSH settings, package/application identifiers and terminal namespaces remain compatible. Do not rename internal identifiers merely to match visible branding.
+The visible product name is NerdSSHell. Retained legacy data-directory, installer-process detection and remote-session aliases preserve upgrades; see [identity compatibility](../../../docs/IDENTITY-COMPATIBILITY.md). Changes to stored identities require an explicit compatibility design.
 
-## Brand/legal review
+## Branding rights
 
-The concepts intentionally reference Windows and Linux/Tux. Before a public release, review the applicable Microsoft brand/trademark guidance and Tux artwork licensing/attribution requirements. If direct third-party marks are unsuitable for final distribution, preserve the Windows-to-Linux concept with original abstract glyphs rather than discarding the core mascot idea.
+The approved artwork references Windows and Linux/Tux. Third-party names and marks retain their owners' rights; use does not imply endorsement. The project license grants no general right to use NerdSSHell branding for third-party distributions. See [LICENSE](../../../LICENSE).

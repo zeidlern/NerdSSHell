@@ -28,10 +28,4 @@ Color changes preview immediately in existing terminal views. Save keeps them fo
 
 ## Verification
 
-Current coverage includes `test/selection-copy.test.cjs`, `test/clipboard-shortcut.test.cjs`, `test/color-preferences.test.cjs`, and `test/preferences-ui.test.cjs`. The Preferences controller tests cover navigation with retained drafts, shared Save/Cancel, failed saves, serialized writes, stale asynchronous loads, theme-sensitive branding, and defaults that preserve existing connections. `scripts/NerdSSHell-UI-Smoke.cjs` exercises the actual HTML, CSS and xterm UI in Chromium with an in-memory bridge. See [the implementation log](NERDSSHELL-IMPLEMENTATION.md) and [acceptance results](ACCEPTANCE-RESULTS.md) for current validation and its scope.
-
-### Earlier copy-on-selection validation
-
-The original change added 34 Node regression tests covering gesture filtering, deferred-copy cancellation, per-view ownership, clipboard failures, boolean validation, settings migration/roundtrip, palette labels and resource allowlisting. They passed locally against runtime sources extracted from the pinned `09f33f41e09aa7ddb03a277e8248e751d7a3cb62` installer. This is historical evidence for that revision.
-
-At that revision, an offline Chromium fixture using the actual xterm/UI code and synthetic data passed 13 checks: trusted double-click/drag, retained selection and Ctrl+C, programmatic-selection and OSC52 non-copying, second-pane ownership, example-to-color targeting, preview/cancel/save, disabled-copy behavior, reset independence and 900x600 layout. Clipboard and SSH IPC were mocked; no real clipboard contents, user profiles or server sessions were accessed. Those results do not establish native Windows clipboard/installer acceptance or acceptance of later UI revisions.
+Coverage includes `test/selection-copy.test.cjs`, `test/clipboard-shortcut.test.cjs`, `test/color-preferences.test.cjs` and `test/preferences-ui.test.cjs`. These exercise trusted gestures, per-view ownership, cancelled deferred copies, draft retention, shared Save/Cancel, failed saves and preserved connection defaults. The Chromium fixture uses the real HTML/CSS/xterm UI with an in-memory bridge. Native Windows clipboard and exact-package behavior require their own acceptance; see [testing](TESTING.md) and [validation results](VALIDATION.md).

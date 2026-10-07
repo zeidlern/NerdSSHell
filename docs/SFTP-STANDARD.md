@@ -1,6 +1,6 @@
 # File SFTP and mixed SSH sessions
 
-The current UX provides a Local/Remote File SFTP browser per remote terminal and both Persistent and Standard sessions on one verified SSH connection. It preserves the existing terminal, colors, layouts, input-order fixes, host verification and Persistent lifecycle. The original SFTP feature extended `c7aa313dcd7634ba45fa783448ae7374611092ed`; the verification section below explicitly preserves that earlier feature's historical evidence.
+NerdSSHell provides a Local/Remote File SFTP browser per remote terminal and both Persistent and Standard sessions on one verified SSH connection. Browsing and file transfer preserve terminal ownership, host verification and session lifecycle.
 
 ## A File SFTP browser for each remote terminal pane
 
@@ -8,7 +8,7 @@ Every remote terminal view owns its optional SFTP browser. Click **File SFTP** i
 
 Choose **Right** or **Below** within each browser. Drag its divider or focus the divider and use the corresponding arrow keys. Below docking uses a compact two-column layout. Changing a browser's dock or size affects only the space inside its parent pane, not the overall terminal grid. Narrow panes constrain the browser size to retain terminal space; no automatic dock switching occurs. The terminal renderer resizes through its existing ResizeObserver path.
 
-The browser stays with its terminal when tabs/panes are rearranged or hidden by a layout. Focus mode is removed. State is retained for the lifetime of that terminal view in the app, not written to disk. Collapsing retains its folders, filters and size; expanding refreshes listings and revalidates selections. Closing a view disposes its browser and pending listing; re-opening creates a new browser. Cancelling one listing never cancels another pane's listing, even on the same server. On reconnect, file listing waits for its own terminal view to attach.
+The browser stays with its terminal when tabs/panes are rearranged or hidden by a layout. State is retained for the lifetime of that terminal view in the app, not written to disk. Collapsing retains its folders, filters and size; expanding refreshes listings and revalidates selections. Closing a view disposes its browser and pending listing; re-opening creates a new browser. Cancelling one listing never cancels another pane's listing, even on the same server. On reconnect, file listing waits for its own terminal view to attach.
 
 Each browser identifies its source session and actual saved connection: name, username, host and port. It does not follow a nested `ssh`, `sudo` or shell directory change. Use Home, Up, Refresh or an absolute remote path (or ~/). Double-click folders to navigate. Explicit link navigation displays the canonical target directory. The filter applies to the listed subset, not a recursive filesystem search. Copy path copies plain text and does not type or execute anything.
 
@@ -44,20 +44,6 @@ Network loss does not automatically launch replacement Standard shells or replay
 
 Incoming standard-shell output is paused/resumed around renderer acknowledgements, including stderr through natural exit, rather than relying on tmux snapshots. Its input queue preserves whole-message order and has a 256-message/2-MiB budget (1 MiB per paste). Closing/replacing/disconnecting invalidates pending input. A 20-second blocked-write timeout preserves the shell, discards unsubmitted input and reports partial-delivery uncertainty; new writes are blocked until the one submitted chunk (at most 32 KiB) drains. Bytes already submitted cannot be recalled. Local received-output archives remain optional and plaintext; there is no disconnected standard-session recorder.
 
-## Current UX verification
+## Verification
 
-See [UX-INTEGRATION-CHECKPOINT.md](UX-INTEGRATION-CHECKPOINT.md) and [ACCEPTANCE-RESULTS.md](ACCEPTANCE-RESULTS.md) for the exact recovered source/artifact checks and remaining acceptance. The current additions include mixed-provider lifecycle, Local/Remote ownership, selection grants, stale-dialog rejection, exclusive publication and settings-preservation regression coverage. Native UAC/file-picker interaction and clean Windows acceptance remain separate gates. No earlier test count below is a current-candidate result.
-
-## Historical SFTP integration evidence (before the UX revision)
-
-The full integrated Windows regression suite passed **217/217 tests, zero failures or skips**, and `npm run check` passed. Locked dependency installation succeeded with no graph change. Tests cover existing persistence/security/palette/input/layout/keepalive behavior as well as independent same-host browsers, directory/selection/dock state, keyboard focus, hidden selection, request cancellation, stale replies, close/replacement/reconnect ownership, transfer destination capture and main-process IPC.
-
-Self-contained tests use real ephemeral loopback SSH servers with runtime-generated host keys and synthetic credentials: Standard PTY with no exec/tmux request; independent same-transport SFTP cancellation; complete stdout/stderr delivery through delayed acknowledgements and natural exit; and the existing keepalive failure detection. Additional adversarial regressions bound abandoned channel opens, late cleanup and transport listeners; reject final symlink replacement; preserve shells during input backpressure; and release credentials on Standard transport loss.
-
-An offline Chromium fixture loads the real UI and xterm assets with synthetic IPC. It verifies four browsers (three same-host), right/below docking, independent splitters, collapse/reopen, selection, filtered/hidden names, downloads, transfers surviving collapse, delayed-list cancellation, tab reordering, focus mode, active-pane toolbar routing, reconnect ordering, standard-mode selection and a 900x600 viewport. Screenshots contain synthetic data. It does not validate Electron's native dialogs, a Windows installation, SSH auth UX or actual GUI-driven SFTP transfer bytes. Browser navigation is restricted in this environment; the fixture uses local DOM/assets without changing browser policy.
-
-The packaged Windows UI fixture passed 39 checks with actual preload/IPC and real loopback Standard shells/SFTP, including three panes on the same connection, independent state, focus/selection, cancellation, reordering, docks/splitters, all layouts at ordinary/constrained sizes, and disconnect. It uses isolated temporary user data and closes only its own fixture. Native file dialogs and GUI transfer bytes remain separate acceptance gates.
-
-The local OpenSSH/tmux integration command discovered four tests and skipped all four because this Windows environment has no configured disposable OpenSSH fixture. These skips are not passes. The GitHub Linux workflow runs that fixture, and the Windows workflow now includes exact packaged fuse/ASAR containment verification. See [ACCEPTANCE-RESULTS.md](ACCEPTANCE-RESULTS.md) for candidate build/CI evidence and remaining native-dialog gates.
-
-All automated feature fixtures use synthetic data and isolated connections. Existing mission/Hermes work is not a fixture. Standard SSH and the existing unsigned-preview/public-release limitations remain as documented above.
+Use the per-pane, SFTP resource, lifecycle and transfer regressions plus disposable loopback integration. Exact-package tests exercise real preload/IPC and owned SSH/SFTP transports. Native dialogs, GUI-driven transfer bytes and clean-user installation require separate Windows acceptance. See [testing](TESTING.md), [security boundaries](SECURITY-REVIEW.md) and [validation results](VALIDATION.md).

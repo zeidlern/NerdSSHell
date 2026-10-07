@@ -1,13 +1,13 @@
 # Public-release gates
 
-**Current review:** [Publication audit — October 6, 2026](PUBLICATION-AUDIT-2026-10-06.md). For GitHub click-by-click instructions, use the [maintainer checklist](wiki/Maintainer-Publication.md).
+**Current repository:** [clean public migration — October 6, 2026](CLEAN-PUBLIC-MIGRATION-2026-10-06.md). The [earlier publication audit](PUBLICATION-AUDIT-2026-10-06.md) describes the separate private development repository. For GitHub click-by-click instructions, use the [maintainer checklist](wiki/Maintainer-Publication.md).
 
 The owner selected one source-visible NerdSSHell repository and a 1.0.0 source line. This does not itself publish a release, sign an installer, protect a branch or approve disclosure of all historical personal information. Source publication and general consumer binary distribution are separate decisions.
 
 ## 1. Privacy, ownership and access
 
 - [ ] Review current files, all reachable branches/tags and old blobs, commit authors/committers/messages, PR text/comments/attachments, logs and downloadable artifacts. Classify scanner matches rather than calling every match a secret or every clean scan clearance.
-- [ ] Resolve the confirmed personal email in historical commit metadata. Obtain an explicit owner decision to retain reviewed history or authorize backed-up cleanup. No automatic force-push, orphan history replacement or branch deletion as a substitute for sanitization.
+- [x] Owner selected independent clean public history. The parentless reviewed baseline and controlled clean documentation are the only imported source history; old PR/cache/development records remain in the private historical repository. No GitHub Support purge is required to keep those separate records private. Do not push old clones or make the historical repository public.
 - [ ] Review screenshots, original/generated artwork and binary metadata for personal content. Review rights/attribution for recognizable third-party marks and custom-license terms; do not imply endorsement.
 - [ ] Revoke any real exposed credential before removing it from history, and review remote PR references/caches separately where relevant.
 - [ ] Use privacy-preserving commit identity for future work, strong account authentication, minimal collaborator/app write grants and verified recovery procedures.

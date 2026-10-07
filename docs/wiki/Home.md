@@ -4,7 +4,7 @@
 
 NerdSSHell brings SSH connections, persistent remote terminals, local Windows shells, file transfer and notes into one Windows workspace. This manual describes the **1.0.0 source line**, checked against the implemented interface rather than a feature wish list.
 
-> **Release status:** a version number in the source is not a published or signed release. At preparation on October 6, 2026 (US Central), the repository was private and no GitHub Release had been published. Installer candidates were unsigned. Use the project's Releases page to establish what is actually available. Do not turn off Windows security to install this application.
+> **Release status:** the reviewed 1.0.0 source and manual are public in an independent clean repository. The former development repository remains private and its old history/PR records are not imported. The Windows installer is still an unsigned, unpublished draft candidate. Use the project's Releases page to establish what is actually available. Do not turn off Windows security to install this application.
 
 ## Start here
 

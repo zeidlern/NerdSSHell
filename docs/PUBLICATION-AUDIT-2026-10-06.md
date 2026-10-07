@@ -1,5 +1,7 @@
 # NerdSSHell publication audit — October 6, 2026 (US Central)
 
+**Historical scope:** this audit describes the previous development repository, now private `NerdSSHell-Historical`. The owner subsequently chose an independent public repository populated from reviewed clean history. Its current controls and migration/privacy boundary are recorded in [CLEAN-PUBLIC-MIGRATION-2026-10-06.md](CLEAN-PUBLIC-MIGRATION-2026-10-06.md). Findings about old commits, old unprotected settings and skipped private CodeQL are not assertions about the new repository's current configuration.
+
 ## Decision
 
 **Do not treat this review as approval to make all development history public or to recommend an unsigned installer to general users.** The manual and publication checks are prepared; source/privacy decisions, repository administration, actual CodeQL execution, signing and remaining native acceptance are not completed by a documentation commit.

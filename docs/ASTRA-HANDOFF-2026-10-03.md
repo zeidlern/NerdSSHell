@@ -4,7 +4,7 @@ October 3, 2026 Central. The owner explicitly paused development and requested t
 
 ## Repository and installed application
 
-- Continue on `feat/windows-command-workbench`, PR [#9](https://github.com/zeidlern/NerdSSHell/pull/9), draft and unmerged. Do not switch to or merge main.
+- Continue on `feat/windows-command-workbench`, PR [#9](https://github.com/zeidlern/NerdSSHell-Historical/pull/9), draft and unmerged. Do not switch to or merge main.
 - Baseline before this checkpoint: `5c44544b8ab5e4247c979e33b1edb9a87eae7b96`. Main was independently read back as `75b65daedbe2526520bf47ab4ddcc25ba4aa94a8` during this continuation.
 - The installed application remains the earlier `5c44544` build. No installation, source push, production command, global configuration change, release or session termination occurred during the debugging phase. The owner's subsequent upload request authorizes publishing this paused source checkpoint.
 - Existing profiles, private backups, credentials, terminal archives, diagnostic logs and build artifacts are excluded from this commit. They are not missing source work.

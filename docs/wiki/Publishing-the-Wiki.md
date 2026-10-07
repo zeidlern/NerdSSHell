@@ -1,5 +1,7 @@
 # Publish the prepared Wiki pages
 
+**Current publication target:** the independent new public `zeidlern/NerdSSHell` repository. Import the reviewed Markdown pages into its new Wiki; do not push the former Wiki's history or private recovery files. The former development repository remains private. Its earlier Support/privacy checklist is not a prerequisite for this clean public Wiki.
+
 [Manual home](Home.md) · [Publication checklist](Maintainer-Publication.md)
 
 The complete editable manual lives in `docs/wiki/` in the source repository. GitHub's **Wiki tab is a separate Git repository**. Committing `docs/wiki/` does not automatically fill that tab. The connector used to prepare this manual can write the source repository but cannot authenticate and push the native Wiki.

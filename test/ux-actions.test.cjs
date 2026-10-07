@@ -133,7 +133,7 @@ function editorFixture() {
     button: (text, action) => { const node = new Element('button'); node.textContent = text; node.onclick = action; return node; },
     run: promise => Promise.resolve(promise).catch(e => errors.push(e.message)), message: value => errors.push(value) });
   vm.runInContext(fs.readFileSync(require.resolve('../ui/pane-actions.js'), 'utf8'), context);
-  return { $, api, writes, errors, destinations, context, ui: context.window.BetterSSHPanes, emit(event) { for (const handler of eventHandlers) handler(event); }, setConfiguration(value) { configuration = value; } };
+  return { $, api, writes, errors, destinations, context, ui: context.window.NerdSSHellPanes, emit(event) { for (const handler of eventHandlers) handler(event); }, setConfiguration(value) { configuration = value; } };
 }
 function setFavorite(h, checked) { const node = h.$('favoriteConfigList').children[0].children[0]; node.checked = checked; node.onchange(); }
 test('Preferences action draft cancels favorites and leaves persistence to the atomic Save', async () => {
@@ -209,7 +209,7 @@ function paneFixture() {
     terminal: { focus() {}, modes: { bracketedPasteMode: true }, options: {} }, attentionTracker: { captureInput: () => 'attention-token', acceptInput: (data, token) => { assert.equal(token, 'attention-token'); acknowledgements.push(data); } },
     wrapper: { insertBefore() {}, querySelector() { return {}; } } };
   h.context.views.set(view.pane.key, view); h.ui.onView(view); view.ready = true;
-  h.context.window.BetterSSHWorkbench = { open: () => { throw Error('Pane commands must not open the workbench'); } };
+  h.context.window.NerdSSHellWorkbench = { open: () => { throw Error('Pane commands must not open the workbench'); } };
   h.api.paneActions = async () => ({ target: targetId, os: 'Ubuntu', title: 'Fixture A', actions: [
     { id: 'system.disk', title: 'Disk', enabled: true }, { id: 'system.reboot', title: 'Reboot', enabled: true },
     { id: 'services.status', title: 'Inspect service', enabled: true, argument: 'service' },

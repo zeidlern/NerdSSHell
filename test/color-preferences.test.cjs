@@ -46,7 +46,7 @@ test('existing colors and indexed overrides survive the copy-preference addition
   const next = appearance(old); assert.equal(next.copyOnSelect, true); assert.equal(next.palette.red, '#123456'); assert.equal(next.palette.extendedAnsi[0], '#654321');
 });
 test('settings roundtrip retains copy preference, palette, profiles and pins', t => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-preferences-')); t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-preferences-')); t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const store = new StateStore(directory);
   store.putProfile({ id: 'example', name: 'Example', host: 'host.example', username: 'tester', sessionMode: 'standard' });
   store.data.pins['host.example:22'] = 'synthetic-test-pin';
@@ -57,7 +57,7 @@ test('settings roundtrip retains copy preference, palette, profiles and pins', t
   assert.equal(loaded.data.appearance.unexpected, undefined);
 });
 test('old persisted settings without copy preference migrate without changing colors', t => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-old-prefs-')); t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-old-prefs-')); t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const store = new StateStore(directory); delete store.data.appearance.copyOnSelect; store.data.appearance.palette.green = '#abcdef'; store.save();
   const loaded = new StateStore(directory); assert.equal(loaded.data.appearance.copyOnSelect, true); assert.equal(loaded.data.appearance.palette.green, '#abcdef');
 });
@@ -66,8 +66,8 @@ test('every named palette slot has a distinct readable label; bright black is la
   for (const key of Object.keys(exampleRoles)) assert.ok(colorKeys.includes(key));
 });
 test('copy helper is allowlisted without exposing backend files', () => {
-  assert.ok(assetPath('betterssh://app/ui/selection-copy.js', 'betterssh://app', '/app'));
-  assert.equal(assetPath('betterssh://app/src/storage.cjs', 'betterssh://app', '/app'), null);
+  assert.ok(assetPath('nerdsshell://app/ui/selection-copy.js', 'nerdsshell://app', '/app'));
+  assert.equal(assetPath('nerdsshell://app/src/storage.cjs', 'nerdsshell://app', '/app'), null);
 });
 test('HTML labels syntax as an example and keeps advanced slots collapsed', () => {
   const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
@@ -79,7 +79,7 @@ test('HTML labels syntax as an example and keeps advanced slots collapsed', () =
 test('auto-copy integration retains OSC52 blocking and manual-copy behavior', () => {
   const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
   assert.match(js, /registerOscHandler\(52, \(\) => true\)/);
-  assert.match(js, /v\.selectionCopy = BetterSSHSelectionCopy\.attach/);
+  assert.match(js, /v\.selectionCopy = NerdSSHellSelectionCopy\.attach/);
   assert.match(js, /v\.selectionCopy\?\.dispose\(\)/);
   assert.match(js, /terminal\.hasSelection\(\) \|\| e\.shiftKey/);
   assert.match(js, /copyOnSelect: form\.elements\.copyOnSelect\.checked/);

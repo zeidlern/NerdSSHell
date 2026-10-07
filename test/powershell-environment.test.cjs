@@ -72,7 +72,7 @@ test('ordinary launch filters only Windows PowerShell while PS7 and CMD keep the
 
 test('every administrator target filters the fixed Windows PowerShell broker child before launch', async t => {
   inheritedEnvironment(t);
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-ps-env-test-')), sourceFile = path.join(directory, 'fixture.cs');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-ps-env-test-')), sourceFile = path.join(directory, 'fixture.cs');
   fs.writeFileSync(sourceFile, '// inert fixture'); t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   for (const id of ['local:powershell', 'local:pwsh', 'local:cmd']) {
     const child = new EventEmitter(); child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough();

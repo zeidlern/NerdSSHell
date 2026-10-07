@@ -85,7 +85,7 @@ The exported light/dark wordmarks and icon sizes 16–256px were rendered togeth
 
 ## Compatibility during the rebrand
 
-`src/branding.cjs` centralizes the visible name, tagline and icon path. The legacy npm package name `betterssh`, application ID `cc.zeidler.betterssh`, application-data compatibility, IPC/protocol identifiers and remote tmux namespaces stay stable. User-visible strings adopt NerdSSHell without treating old identifiers as cosmetic text to replace.
+`src/branding.cjs` centralizes the visible name, tagline, icon, current `nerdsshell` package, `app.nerdsshell.desktop` app ID and pinned installer GUID. Version 1.0.1 uses NerdSSHell for renderer, IPC/protocol and native bridge naming. [Identity compatibility](IDENTITY-COMPATIBILITY.md) defines retained legacy data-directory, installer-process detection and remote-session aliases.
 
 Changing these internal identities can affect saved profiles, preferences, archives, installer upgrades and taskbar/notification association. Any future change needs an explicit compatibility design, rather than a global search-and-replace.
 

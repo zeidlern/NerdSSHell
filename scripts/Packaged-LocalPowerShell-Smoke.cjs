@@ -39,7 +39,7 @@ async function localPowerShellSmoke({ evaluate, wait, check, screenshot }) {
   result.commandPrompt = await require('./Packaged-LocalCmd-Smoke.cjs').localCmdSmoke({ evaluate, wait, check, screenshot });
   for (const target of targets) {
     const suffix = target.id === 'local:pwsh' ? 'PWSH' : 'WINDOWS';
-    await evaluate(`BetterSSHWorkbench.open({target:${JSON.stringify(target.id)}}); true`);
+    await evaluate(`NerdSSHellWorkbench.open({target:${JSON.stringify(target.id)}}); true`);
     await wait(`$('workbenchDialog').open && $('wbTarget').value===${JSON.stringify(target.id)} && !$('wbOpenLocal').disabled`, 'Local choice unavailable.');
     await evaluate(`$('wbOpenLocal').click(); true`);
     await wait(`!$('workbenchDialog').open && [...views.values()].some(v=>v.pane.local && v.pane.profileId===${JSON.stringify(target.id)} && v.ready)`, 'Native local console failed to open.');
@@ -53,7 +53,7 @@ async function localPowerShellSmoke({ evaluate, wait, check, screenshot }) {
     check(`Phase 2 ${suffix}: local identity, nonpersistent label and no SFTP sidecar`, await evaluate(`(()=>{const v=views.get(${k}),p=v.pane,b=v.wrapper.querySelector('.wb-target-badge');return p.local&&p.sessionType==='local'&&p.shellFamily==='powershell'&&p.shellId===${JSON.stringify(target.id)}&&p.persistent===false&&!p.administrator&&!v.files&&v.wrapper.querySelector('.pane-location-badge').textContent==='LOCAL'&&b?.title.includes('PowerShell')&&b.title.includes('not persistent');})()`));
     check(`Phase 2 ${suffix}: ConPTY compatibility applies only to local consoles`, await evaluate(`views.get(${k}).terminal.options.windowsPty.backend==='conpty' && __smokeKeys.every(key=>views.get(key).terminal.options.windowsPty.backend===undefined)`));
     await output(`Write-Output ('PS_PHASE2_MAJOR_' + $PSVersionTable.PSVersion.Major)`, 'PS_PHASE2_MAJOR_' + (suffix === 'PWSH' ? '7' : '5'));
-    if (suffix === 'PWSH' && process.env.BETTERSSH_SMOKE_NO_PREDICTION === 'true') await output("PSReadLine\\Set-PSReadLineOption -PredictionSource None; Write-Output ('PREDICTION_'+'OFF')", 'PREDICTION_OFF');
+    if (suffix === 'PWSH' && process.env.NERDSSHELL_SMOKE_NO_PREDICTION === 'true') await output("PSReadLine\\Set-PSReadLineOption -PredictionSource None; Write-Output ('PREDICTION_'+'OFF')", 'PREDICTION_OFF');
     for (const [index, command] of PSREADLINE_ASSERTION_COMMANDS.entries()) {
       await output(command + `Write-Output ('PS_FIXTURE_STEP_' + '${suffix}_${index}')`, `PS_FIXTURE_STEP_${suffix}_${index}`);
     }

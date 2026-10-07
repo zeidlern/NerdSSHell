@@ -46,7 +46,7 @@ async function uxActionsSmoke({ evaluate, wait, check, screenshot, key }) {
     await screenshot('ux-per-os-pane-actions');
     check('LOCAL Actions and Favorites preserve all existing SSH terminal contents', await evaluate(`views.size===${before.count}&&__smokeKeys.every((k,i)=>__smokeTerminalText(views.get(k))===${JSON.stringify(before.remote)}[i])`));
   } finally {
-    await evaluate(`if($('workbenchDialog').open)$('wbClose').click(); if($('preferencesDialog').open)$('cancelPreferences').click(); api.actionConfigurationSave(${JSON.stringify(saved)}).then(()=>Promise.all([...views.values()].map(v=>BetterSSHPanes.refresh(v))))`);
+    await evaluate(`if($('workbenchDialog').open)$('wbClose').click(); if($('preferencesDialog').open)$('cancelPreferences').click(); api.actionConfigurationSave(${JSON.stringify(saved)}).then(()=>Promise.all([...views.values()].map(v=>NerdSSHellPanes.refresh(v))))`);
   }
 }
 module.exports = { uxActionsSmoke };

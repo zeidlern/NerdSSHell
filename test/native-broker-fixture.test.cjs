@@ -99,7 +99,7 @@ if (process.platform === 'win32') test('native fixture isolates unsafe ambient T
   const source = path.join(__dirname, '../src/elevated-console.cs'), bytes = fs.readFileSync(source);
   const { bootstrap } = require('../src/elevated-pty.cjs');
   const production = bootstrap(source, createHash('sha256').update(bytes).digest('hex'), 'local:cmd');
-  const boundary = production.indexOf('[BetterSSH.ElevatedConsole]::Broker('); assert.ok(boundary > 0);
+  const boundary = production.indexOf('[NerdSSHell.ElevatedConsole]::Broker('); assert.ok(boundary > 0);
   const quote = value => "'" + value.replaceAll("'", "''") + "'";
   // Only this exclusive inert scratch object's ACL is changed. Compile exact
   // hash-checked source and exercise read-only ancestor validation: no UAC,
@@ -117,7 +117,7 @@ foreach ($allowed in @($sid,[Security.Principal.SecurityIdentifier]::new('S-1-5-
 [IO.Directory]::SetAccessControl(${quote(nested)},$acl)
 $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new('S-1-1-0'),[Security.AccessControl.FileSystemRights]::Modify,[Security.AccessControl.AccessControlType]::Allow))
 [IO.Directory]::SetAccessControl(${quote(ambient)},$acl)
-$type = [BetterSSH.ElevatedConsole].GetNestedType('DirectoryPins',[Reflection.BindingFlags]::NonPublic)
+$type = [NerdSSHell.ElevatedConsole].GetNestedType('DirectoryPins',[Reflection.BindingFlags]::NonPublic)
 $constructor = $type.GetConstructor(@([string],[bool],[string]))
 try {
   $pins = $constructor.Invoke(@(${quote(nested)},$true,$sid.Value))

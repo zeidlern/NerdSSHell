@@ -1,7 +1,7 @@
 /* Command extraction is intentionally non-executing; never joins separate blocks or rewrites prompts. */
 (function (root, factory) {
   const value = factory(); if (typeof module === 'object' && module.exports) module.exports = value;
-  else root.BetterSSHCommandReview = value;
+  else root.NerdSSHellCommandReview = value;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   function extractBlocks(text) {

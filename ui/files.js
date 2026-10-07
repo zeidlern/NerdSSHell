@@ -131,12 +131,12 @@
           row.onclick = event => { event.stopPropagation(); model.select(item.path); };
           row.ondblclick = event => { event.stopPropagation(); if (item.kind === 'directory' || item.kind === 'link') model.load(item.path); };
           row.onkeydown = event => { if (event.key === 'Enter' && (item.kind === 'directory' || item.kind === 'link')) { event.preventDefault(); model.load(item.path); } };
-          if (item.kind === 'file' && root.BetterSSHLocalFiles) {
+          if (item.kind === 'file' && root.NerdSSHellLocalFiles) {
             row.draggable = true;
             row.ondragstart = event => {
               if (!model.visible || !model.connected || model.loading || model.disposed || !model.entries.includes(item)) { event.preventDefault(); return; }
               event.stopPropagation(); event.dataTransfer.effectAllowed = 'copy';
-              event.dataTransfer.setData(root.BetterSSHLocalFiles.TYPE, JSON.stringify({ key: model.key, browserId: model.browserId, side: 'remote', path: item.path, epoch: model.epoch }));
+              event.dataTransfer.setData(root.NerdSSHellLocalFiles.TYPE, JSON.stringify({ key: model.key, browserId: model.browserId, side: 'remote', path: item.path, epoch: model.epoch }));
             };
           }
           list.append(row);
@@ -146,7 +146,7 @@
       local?.changed(); resize(); onStateChange();
     }
     model.changed = render;
-    if (root.BetterSSHLocalFiles && drawer.querySelector('[data-local="panel"]')) local = root.BetterSSHLocalFiles.attach({ api, model, drawer, error: onError });
+    if (root.NerdSSHellLocalFiles && drawer.querySelector('[data-local="panel"]')) local = root.NerdSSHellLocalFiles.attach({ api, model, drawer, error: onError });
     toggle.onclick = () => model.show(!model.visible);
     el('close').onclick = () => { model.show(false); toggle.focus(); };
     el('dock').onchange = () => model.setDock(el('dock').value);
@@ -190,5 +190,5 @@
     render(); return model;
   }
   if (typeof module !== 'undefined') module.exports = { BrowserState, panelSize };
-  else root.BetterSSHFiles = { create, BrowserState, panelSize };
+  else root.NerdSSHellFiles = { create, BrowserState, panelSize };
 })(typeof window === 'undefined' ? globalThis : window);

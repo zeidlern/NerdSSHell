@@ -32,7 +32,7 @@ if (options.has('--exe')) {
 }
 const visibleFixture = options.has('--visible');
 const output = options.has('--output') ? path.resolve(options.get('--output')) : path.join(root, '.local', 'packaged-per-pane');
-const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-per-pane-'));
+const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-per-pane-'));
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const metrics = { logins: 0, shells: 0, closedShells: 0, exec: 0, inspections: 0, unexpectedExec: 0, sftp: 0, closedSftp: 0, directories: [], resize: [] };
 const peers = new Set(), report = { status: 'running', started: new Date().toISOString(), executable: exe, expectedVersion: metadata.version, visibleFixture, appPID: null, checks: [], screenshots: [], metrics, nativeDialogs: 'Unverified: upload/download native dialogs and transfer bytes are covered separately.' };
@@ -98,7 +98,7 @@ async function launch(port) {
   fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2)); console.log(`Owned app PID ${appPID}; debugger port ${port}`);
   const deadline = Date.now() + 20000;
   while (Date.now() < deadline) {
-    try { const pages = await (await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(1500) })).json(); const page = pages.find(p => p.type === 'page' && p.url === 'betterssh://app/ui/index.html'); if (page) return page; } catch {}
+    try { const pages = await (await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(1500) })).json(); const page = pages.find(p => p.type === 'page' && p.url === 'nerdsshell://app/ui/index.html'); if (page) return page; } catch {}
     await delay(100);
   }
   throw new Error('Isolated packaged app did not expose its own page.');
@@ -135,7 +135,7 @@ async function main() {
   check('Packaged renderer CDP evaluates JavaScript', await evaluate('1+1') === 2);
   if (visibleFixture) await send('Page.bringToFront');
   await send('Emulation.setFocusEmulationEnabled', { enabled: true });
-  await wait('typeof BetterSSHFiles !== "undefined" && typeof profiles !== "undefined" && profiles.size===2', 'Packaged renderer/profiles did not initialize.');
+  await wait('typeof NerdSSHellFiles !== "undefined" && typeof profiles !== "undefined" && profiles.size===2', 'Packaged renderer/profiles did not initialize.');
   const saved = await evaluate('api.state()'); assert.equal(path.resolve(saved.dataDirectory), path.resolve(temporary)); assert.deepEqual(saved.profiles.map(p => p.id), ['fixture-a', 'fixture-b']);
   check('Actual packaged app uses only disposable user-data directory and profiles');
   check('Packaged header and About display the expected source version', saved.version === metadata.version && await evaluate(`$('version').textContent===${JSON.stringify('v' + metadata.version)}&&$('aboutVersion').textContent===${JSON.stringify(metadata.version)}`));
@@ -263,7 +263,7 @@ async function cleanup() {
   if (server) await new Promise(resolve => server.close(resolve));
   launcher?.kill(); await delay(300);
   const resolved = path.resolve(temporary), tempRoot = path.resolve(os.tmpdir()) + path.sep;
-  assert.ok(resolved.startsWith(tempRoot) && path.basename(resolved).startsWith('betterssh-per-pane-'));
+  assert.ok(resolved.startsWith(tempRoot) && path.basename(resolved).startsWith('nerdsshell-per-pane-'));
   try { fs.rmSync(resolved, { recursive: true, force: true }); report.temporaryDataRemoved = true; } catch (error) { report.temporaryDataRemoved = false; report.cleanupError = error.message; }
   report.finished = new Date().toISOString(); fs.mkdirSync(output, { recursive: true }); fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2));
 }

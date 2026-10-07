@@ -2,6 +2,14 @@
 
 Versions advance for each meaningful completed user-facing section. The canonical current version is in `package.json`.
 
+## 1.0.1 — Current identity and compatible upgrades
+
+- Use package `nerdsshell`, Windows app ID `app.nerdsshell.desktop`, `nerdsshell` UI/IPC protocol and the NerdSSHell native bridge. Remove the personal-domain namespace from current metadata.
+- Pin the original installer GUID. Resolve existing legacy storage before the single-instance lock; fresh users use the current folder. No saved data is moved, merged or deleted. Explicit isolated profiles remain supported; unsafe paths fail closed.
+- Preserve existing persistent-session tokens/keys; new identities publish current and legacy markers with the same UUID, guarded against conflicts and concurrent assignment. Discovery/reconnect does not launch jobs.
+- Use NerdSSHell in current UI, upload defaults, scripts, fixtures and current documentation. Retain explicit upgrade/data/session aliases and dated historical evidence.
+- Actual source, adversarial, Windows/package/native and integration results are recorded in the implementation log. Installers remain unsigned candidates until separately signed and approved.
+
 ## 1.0.0 — First NerdSSHell release
 
 - Finalize the repository and product identity as **NerdSSHell** while deliberately preserving the legacy `betterssh` package, app ID, IPC/resource scheme, data-directory and remote-session namespaces for upgrade compatibility.

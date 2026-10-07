@@ -98,7 +98,7 @@ function dragHarness(keys = ['a', 'b']) {
   h.target = (index, layoutSlot = true) => {
     const handlers = {}, classes = new Set(), node = { addEventListener: (name, fn) => { handlers[name] = fn; }, classList: { add: value => classes.add(value), remove: value => classes.delete(value) } };
     h.context.dropTarget(node, () => index, layoutSlot);
-    const event = key => ({ preventDefault() {}, stopPropagation() {}, dataTransfer: { types: ['application/x-betterssh-pane'], getData: () => key, files: [] } });
+    const event = key => ({ preventDefault() {}, stopPropagation() {}, dataTransfer: { types: ['application/x-nerdsshell-pane'], getData: () => key, files: [] } });
     return { classes, drop: key => handlers.drop(event(key)), over: types => handlers.dragover({ ...event(''), dataTransfer: { types } }) };
   };
   return h;
@@ -106,7 +106,7 @@ function dragHarness(keys = ['a', 'b']) {
 
 test('drag swaps occupied slots without recreating views or shifting the selected pane', async () => {
   const h = dragHarness(['a', 'b', 'c', 'd']); h.context.layout = 4; h.render();
-  const identities = [...h.views.values()], target = h.target(0); target.over(['application/x-betterssh-pane']);
+  const identities = [...h.views.values()], target = h.target(0); target.over(['application/x-nerdsshell-pane']);
   assert.equal(target.classes.has('drop-target'), true);
   await target.drop('d');
   assert.deepEqual([...h.context.slots], ['d', 'b', 'c', 'a']);

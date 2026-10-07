@@ -34,7 +34,7 @@ function fixture(t, options) {
   return result;
 }
 function sourceFixture(t, bytes = Buffer.from('// isolated, inert helper fixture')) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-admin-test-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-admin-test-'));
   const filename = path.join(directory, 'fixture.cs'); fs.writeFileSync(filename, bytes);
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   return filename;
@@ -74,7 +74,7 @@ test('duplicate ready response terminates the established bridge exactly once', 
 
 test('UAC cancellation is distinguishable, cleans up once and never retries', async t => {
   const h = fixture(t); h.pty.receive(response('X')); const error = await h.ready;
-  assert.equal(error.code, 'BETTERSSH_UAC_CANCELLED');
+  assert.equal(error.code, 'NERDSSHELL_UAC_CANCELLED');
   h.pty.receive(response('R')); h.pty.kill(); h.child.emit('exit', 0);
   assert.equal(h.cleaned, 1); assert.equal(h.child.kills, 0);
   assert.equal(Buffer.concat(h.child.sent).toString('hex'), response('C').toString('hex'));
@@ -369,7 +369,7 @@ if (process.platform === 'win32') {
   const nativePair = path.join(path.dirname(require.resolve('node-pty/package.json')), 'prebuilds', 'win32-x64', 'conpty');
   const nativeNames = ['conpty.dll', 'OpenConsole.exe'];
   function providerFixture(t) {
-    const requested = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-provider-test-'));
+    const requested = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-provider-test-'));
     const directory = fs.realpathSync.native(requested);
     t.diagnostic('Owned native fixture path: ' + JSON.stringify({ requested, canonical: directory }));
     t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -381,7 +381,7 @@ if (process.platform === 'win32') {
     const source = path.join(__dirname, '../src/elevated-console.cs');
     const digest = createHash('sha256').update(fs.readFileSync(source)).digest('hex');
     const script = bootstrap(source, digest, 'local:cmd', native)
-      .replace('[BetterSSH.ElevatedConsole]::Broker(', '[BetterSSH.ElevatedConsole]::BrokerFixture(');
+      .replace('[NerdSSHell.ElevatedConsole]::Broker(', '[NerdSSHell.ElevatedConsole]::BrokerFixture(');
     const executable = require('../src/local-remote.cjs').installedShells().find(shell => shell.id === 'local:powershell')?.executable;
     assert.ok(executable, 'fixed Windows PowerShell is required for native provider rejection');
     const child = spawn(executable, ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')],
@@ -447,14 +447,14 @@ if (process.platform === 'win32') {
     const source = path.join(__dirname, '../src/elevated-console.cs');
     const digest = createHash('sha256').update(fs.readFileSync(source)).digest('hex');
     const production = bootstrap(source, digest, 'local:cmd');
-    const beforeBroker = production.indexOf('[BetterSSH.ElevatedConsole]::Broker(');
+    const beforeBroker = production.indexOf('[NerdSSHell.ElevatedConsole]::Broker(');
     assert.ok(beforeBroker > 0);
     const literal = value => "'" + value.replaceAll("'", "''") + "'";
     // Compile the exact hash-checked source, then exercise only its read-only
     // validation on objects created by this fixture. No broker/UAC/image load.
     const harness = production.slice(0, beforeBroker) + String.raw`
 $binding = [Reflection.BindingFlags]'Static,NonPublic'
-$type = [BetterSSH.ElevatedConsole]
+$type = [NerdSSHell.ElevatedConsole]
 $open = $type.GetMethod('OpenDiskPath',$binding)
 $validate = $type.GetMethod('ValidateProtectedDirectory',$binding)
 $close = $type.GetMethod('CloseHandle',$binding)
@@ -571,11 +571,11 @@ if (process.platform === 'win32') test('native Windows PowerShell bridge uses tr
       const key = Object.keys(options.env).find(name => name.toLowerCase() === 'psmodulepath');
       assert.equal(options.env[key], [winModules, sharedWinModules].join(';'), 'production broker filters only the fixed PS7 search paths');
       const script = Buffer.from(args[4], 'base64').toString('utf16le');
-      assert.match(script, /\[BetterSSH\.ElevatedConsole\]::Broker\(/);
+      assert.match(script, /\[NerdSSHell\.ElevatedConsole\]::Broker\(/);
       copied = /OpenRead\('((?:[^']|'')*)'\)/.exec(script)[1].replaceAll("''", "'");
       assert.deepEqual(fs.readFileSync(copied), fs.readFileSync(path.join(__dirname, '../src/elevated-console.cs')), 'native fixture compiles unchanged protected bootstrap');
       const fixtureArgs = [...args];
-      fixtureArgs[4] = Buffer.from(script.replace('[BetterSSH.ElevatedConsole]::Broker(', '[BetterSSH.ElevatedConsole]::BrokerFixture('), 'utf16le').toString('base64');
+      fixtureArgs[4] = Buffer.from(script.replace('[NerdSSHell.ElevatedConsole]::Broker(', '[NerdSSHell.ElevatedConsole]::BrokerFixture('), 'utf16le').toString('base64');
       child = spawn(file, fixtureArgs, { ...options, env: nativeFixture.environment(options.env) });
       fixtureFrames = observeFixtureFrames(child);
       closedPromise = new Promise(resolve => child.once('close', code => { closed = true; brokerExit = code; resolve(code); }));
@@ -682,7 +682,7 @@ test('spawn cancellation rejects once and removes the copied helper without touc
   await assert.rejects(spawnElevatedPty('local:powershell', { sourceFile, execute: (_exe, args) => {
     attempts++; copy = /OpenRead\('([^']+)'\)/.exec(Buffer.from(args[4], 'base64').toString('utf16le'))[1];
     queueMicrotask(() => child.stdout.write(response('X'))); return child;
-  } }), error => error.code === 'BETTERSSH_UAC_CANCELLED');
+  } }), error => error.code === 'NERDSSHELL_UAC_CANCELLED');
   child.emit('exit', 0);
   assert.equal(attempts, 1); assert.equal(fs.existsSync(copy), false); assert.equal(fs.existsSync(path.dirname(copy)), false);
   assert.equal(fs.existsSync(sourceFile), true);

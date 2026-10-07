@@ -7,20 +7,20 @@ const path = require('node:path');
 const { Remote } = require('../src/remote.cjs');
 const { upload } = require('../src/transfer.cjs');
 const { shellQuote: q } = require('../src/core.cjs');
-const enabled = !!process.env.BETTERSSH_TEST_KEY;
+const enabled = !!process.env.NERDSSHELL_TEST_KEY;
 const delay = ms => new Promise(r => setTimeout(r, ms));
 async function until(fn, timeout = 12000) { const start = Date.now(); while (Date.now() - start < timeout) { if (await fn()) return; await delay(100); } throw new Error('Condition did not become true.'); }
-function fixture(socket, { id = 'ci', port = Number(process.env.BETTERSSH_TEST_PORT || 22222), hostKey = process.env.BETTERSSH_TEST_HOST_KEY } = {}) {
-  const host = process.env.BETTERSSH_TEST_HOST || '127.0.0.1';
+function fixture(socket, { id = 'ci', port = Number(process.env.NERDSSHELL_TEST_PORT || 22222), hostKey = process.env.NERDSSHELL_TEST_HOST_KEY } = {}) {
+  const host = process.env.NERDSSHELL_TEST_HOST || '127.0.0.1';
   if (host !== '127.0.0.1') throw new Error('Integration tests are restricted to the disposable loopback SSH server.');
-  const p = { id, name: 'CI', host, port, username: process.env.BETTERSSH_TEST_USER || os.userInfo().username, auth: 'key', keyPath: process.env.BETTERSSH_TEST_KEY, socket, uploadDirectory: `/tmp/${socket}-uploads` };
+  const p = { id, name: 'CI', host, port, username: process.env.NERDSSHELL_TEST_USER || os.userInfo().username, auth: 'key', keyPath: process.env.NERDSSHELL_TEST_KEY, socket, uploadDirectory: `/tmp/${socket}-uploads` };
   const pub = fs.readFileSync(hostKey + '.pub', 'utf8').trim().split(/\s+/);
   const knownHosts = `[${host}]:${p.port} ${pub[0]} ${pub[1]}\n`;
   return new Remote(p, { knownHosts, pins: {}, ask: async () => { throw new Error('A hermetic test must not prompt for credentials or install software.'); }, trust: async () => { throw new Error('Unexpected untrusted host.'); } });
 }
 
 test('real SSH: create, capture, resize, reattach without restarting, upload, end', { skip: !enabled, timeout: 90000 }, async t => {
-  const socket = `betterssh-ci-${process.pid}`; let r = fixture(socket);
+  const socket = `nerdsshell-ci-${process.pid}`; let r = fixture(socket);
   t.after(async () => { try { if (!r.connected) { r = fixture(socket); await r.connect(); } await r.exec(`${r.prefix} kill-server 2>/dev/null; rm -rf ${q('/tmp/' + socket + '-uploads')} ${q('/tmp/' + socket + '-proof')}`); } finally { r.disconnect(); } });
   await r.connect(); assert.equal(r.panes.length, 0);
   const pane = await r.create('Mission one'); assert.ok(pane.key.includes(pane.sessionToken));
@@ -38,7 +38,7 @@ test('real SSH: create, capture, resize, reattach without restarting, upload, en
   assert.equal(r.panes[0].key, pane.key); assert.equal((await r.checked(`${r.prefix} display-message -p -t ${q(pane.paneId)} ${q('#{pane_pid}')}`)).trim(), pid);
   await r.open(pane.key);
   assert.equal((await r.checked(`cat ${q(proof)}`)).trim(), 'one launch', 'reattachment must not rerun the job');
-  const localDir = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-upload-')); t.after(() => fs.rmSync(localDir, { recursive: true, force: true }));
+  const localDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-upload-')); t.after(() => fs.rmSync(localDir, { recursive: true, force: true }));
   const local = path.join(localDir, "file with 'quotes'.txt"); fs.writeFileSync(local, 'upload-proof 😀\n');
   const paths = await upload(r, [local], { confirmOverwrite: async () => false }); assert.equal(paths.length, 1);
   assert.equal(await r.checked(`cat ${q(paths[0])}`), 'upload-proof 😀\n');
@@ -54,13 +54,13 @@ test('real SSH: create, capture, resize, reattach without restarting, upload, en
 });
 
 test('two real loopback SSH endpoints with different host keys keep overlapping tmux IDs isolated', {
-  skip: !enabled || !process.env.BETTERSSH_TEST_HOST_KEY_2, timeout: 90000
+  skip: !enabled || !process.env.NERDSSHELL_TEST_HOST_KEY_2, timeout: 90000
 }, async t => {
-  const socketA = `betterssh-ci-dual-${process.pid}-a`, socketB = `betterssh-ci-dual-${process.pid}-b`;
-  const aOptions = { id: 'ci-A' }, bOptions = { id: 'ci-B', port: Number(process.env.BETTERSSH_TEST_PORT_2), hostKey: process.env.BETTERSSH_TEST_HOST_KEY_2 };
+  const socketA = `nerdsshell-ci-dual-${process.pid}-a`, socketB = `nerdsshell-ci-dual-${process.pid}-b`;
+  const aOptions = { id: 'ci-A' }, bOptions = { id: 'ci-B', port: Number(process.env.NERDSSHELL_TEST_PORT_2), hostKey: process.env.NERDSSHELL_TEST_HOST_KEY_2 };
   let a = fixture(socketA, aOptions), b = fixture(socketB, bOptions);
-  const keyA = fs.readFileSync(process.env.BETTERSSH_TEST_HOST_KEY + '.pub', 'utf8').split(/\s+/)[1];
-  const keyB = fs.readFileSync(process.env.BETTERSSH_TEST_HOST_KEY_2 + '.pub', 'utf8').split(/\s+/)[1];
+  const keyA = fs.readFileSync(process.env.NERDSSHELL_TEST_HOST_KEY + '.pub', 'utf8').split(/\s+/)[1];
+  const keyB = fs.readFileSync(process.env.NERDSSHELL_TEST_HOST_KEY_2 + '.pub', 'utf8').split(/\s+/)[1];
   assert.notEqual(keyA, keyB, 'independent endpoints need distinct host identities');
   t.after(async () => {
     for (const [current, socket, options] of [[a, socketA, aOptions], [b, socketB, bOptions]]) {

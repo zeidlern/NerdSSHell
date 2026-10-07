@@ -14,7 +14,7 @@ const base = { name: 'Test', host: '127.0.0.1', username: 'runner', auth: 'passw
 const token = '11111111-2222-4333-8444-555555555555';
 const temporaryDirectories = [];
 test.after(() => { for (const p of temporaryDirectories) fs.rmSync(p, { recursive: true, force: true }); });
-function temporary(_t) { const p = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-test-')); temporaryDirectories.push(p); return p; }
+function temporary(_t) { const p = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-test-')); temporaryDirectories.push(p); return p; }
 class Stream extends EventEmitter { constructor() { super(); this.writes = []; } write(s) { this.writes.push(s); return true; } destroy() { this.destroyed = true; } }
 function channel(t, options) { const s = new Stream(); const c = new Control(s, options); t.after(() => c.detach()); c.feed(Buffer.from('%begin 1 1 0\n%end 1 1 0\n')); return { c, s }; }
 const paneLine = `$0\tmission\\ one\t@1\t0\tShell\t%2\t0\t120\t40\t0\t${token}\t1\tbash\n`;
@@ -118,4 +118,4 @@ test('remote view close cannot terminate sessions', () => { const r = new Remote
 test('closing one of two views of a session keeps the shared channel alive', () => { const r = new Remote(base); let detached = 0; for (const k of ['a', 'b']) r.views.set(k, { active: true, pane: { sessionId: '$0' } }); r.controls.set('$0', { detach() { detached++; } }); r.closeView('a'); assert.equal(detached, 0); });
 test('disconnected input is rejected rather than queued', async () => { const r = new Remote(base); await assert.rejects(r.input('missing', 'danger\r'), /not sent/); });
 test('session termination uses an atomic UUID check, not a name', async () => { const r = new Remote(base); const p = { key: 'k', sessionId: '$0', sessionToken: token }; r.panes = [p]; let command; r.checked = async c => { command = c; return ''; }; r.discover = async () => []; await r.endSession('k'); assert.match(command, /if-shell -F/); assert.ok(command.includes(token)); assert.match(command, /kill-session -t \$0/); });
-test('a changed UUID prevents session termination', async () => { const r = new Remote(base); r.panes = [{ key: 'k', sessionId: '$0', sessionToken: token }]; r.checked = async () => 'BETTERSSH_IDENTITY_CHANGED'; await assert.rejects(r.endSession('k'), /not terminated/); });
+test('a changed UUID prevents session termination', async () => { const r = new Remote(base); r.panes = [{ key: 'k', sessionId: '$0', sessionToken: token }]; r.checked = async () => 'NERDSSHELL_IDENTITY_CHANGED'; await assert.rejects(r.endSession('k'), /not terminated/); });

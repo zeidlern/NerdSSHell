@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const vm = require('node:vm');
 const { createRequire } = require('node:module');
@@ -237,8 +238,11 @@ test('a late failed recovery cannot mark a replacement view stale', async t => {
 // Execute the actual main-process wiring without starting Electron or touching a server.
 function mainHarness(t) {
   const main = path.resolve(__dirname, '../src/main.cjs'), localRequire = createRequire(main);
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-main-wiring-'));
+  t.after(() => fs.rmSync(data, { recursive: true, force: true }));
   const events = [], handlers = new Map();
-  const electron = { app: { requestSingleInstanceLock: () => false, quit() {} },
+  const electron = { app: { getPath: () => data, setPath() {}, isPackaged: true,
+      commandLine: { getSwitchValue: () => data }, requestSingleInstanceLock: () => false, quit() {} },
     dialog: {},
     protocol: { registerSchemesAsPrivileged() {} }, ipcMain: { handle: (name, handler) => handlers.set(name, handler) } };
   const context = vm.createContext({ require: name => name === 'electron' ? electron : localRequire(name),

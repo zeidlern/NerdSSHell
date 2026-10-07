@@ -16,7 +16,9 @@ function verify(root = ROOT) {
   for (const name of fs.readdirSync(path.join(root, '.github', 'workflows'))) {
     if (!/\.ya?ml$/.test(name)) continue;
     const text = fs.readFileSync(path.join(root, '.github', 'workflows', name), 'utf8');
-    assert.ok(!text.includes('zeidlern/BetterSSH'), 'Old repository identity in a workflow.');
+    for (const match of text.matchAll(/zeidlern\/[A-Za-z0-9_-]+/g)) {
+      assert.equal(match[0], 'zeidlern/NerdSSHell', 'Workflow must target the canonical repository.');
+    }
   }
   console.log(`Publication configuration and ${files.length} Wiki pages verified.`);
 }

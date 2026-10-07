@@ -31,7 +31,7 @@ test('old profiles default to persistent; unsupported mode is rejected', () => {
   assert.equal(profile(old).sessionMode, 'persistent'); assert.equal(profile(config).sessionMode, 'standard');
   assert.throws(() => profile({ ...old, sessionMode: 'automatic' }), /session mode/);
 });
-test('standard discovery and server-support checks execute no remote command', async () => {
+test('standard discovery and server-support checks execute no remote command', async t => {
   const r = standard(); r.exec = () => { throw new Error('NO EXEC'); };
   await r.ensureSupport(); assert.deepEqual(await r.discover(), []); r.disconnect();
 });
@@ -69,14 +69,14 @@ test('standard renaming is local only and snapshot requests do not launch comman
   assert.equal(p.sessionName, 'After'); assert.equal(s.writes.length, 0);
   await assert.rejects(r.snapshot(p.key), /no retained server snapshot/);
 });
-test('standard disconnect discards input waiting behind a pending write', async () => {
+test('standard disconnect discards input waiting behind a pending write', async t => {
   const r = standard(), p = await r.create('Queue'); await r.open(p.key);
   const s = r.shells.get(p.key).stream; s.write = bytes => { s.writes.push(Buffer.from(bytes)); return false; };
   const first = r.input(p.key, 'a'.repeat(50000)), second = r.input(p.key, '\r');
   const results = Promise.allSettled([first, second]); await tick(); r.disconnect();
   assert.ok((await results).every(x => x.status === 'rejected')); assert.equal(Buffer.concat(s.writes).includes(13), false);
 });
-test('late shell-open callback after disconnect closes only that channel', async () => {
+test('late shell-open callback after disconnect closes only that channel', async t => {
   const r = standard(); let done; r.client.shell = (_opts, cb) => { done = cb; };
   const opening = r.create('Late'); r.disconnect(); const s = new Channel(); done(null, s);
   await assert.rejects(opening, /Console closed while opening/); assert.equal(s.closed, true); assert.equal(r.activeShellCount(), 0);
@@ -107,27 +107,27 @@ class SFTP extends EventEmitter {
   fstat(_handle, cb) { cb(null, attrs(this.data.length)); }
   createReadStream(_path, options) { assert.ok(options.handle); return Readable.from([this.data]); }
 }
-function temp(t) { const p = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-files-test-')); t.after(() => fs.rmSync(p, { recursive: true, force: true })); return p; }
-test('SFTP sidecar lists with handles and resolves home without shell commands', async () => {
+function temp(t) { const p = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-files-test-')); t.after(() => fs.rmSync(p, { recursive: true, force: true })); return p; }
+test('SFTP sidecar lists with handles and resolves home without shell commands', async t => {
   const s = new SFTP(); const result = await listDirectory({ sftp: async () => s }, '~');
   assert.equal(result.directory, '/home/test'); assert.equal(result.entries[0].path, '/home/test/hello.txt'); assert.equal(result.entries[0].kind, 'file'); assert.equal(s.ended, true);
 });
-test('directory listing sorts folders first and rejects hostile entry names', async () => {
+test('directory listing sorts folders first and rejects hostile entry names', async t => {
   const s = new SFTP(); s.pages = [[{ filename: 'z.txt', attrs: attrs() }, { filename: 'folder', attrs: attrs(0, 0o040700) }, { filename: '../escape', attrs: attrs() }, { filename: '<img onerror=x>', attrs: attrs() }, { filename: 'bad\nname', attrs: attrs() }], false];
   const result = await listDirectory({ sftp: async () => s }, '/');
   assert.equal(result.entries[0].name, 'folder'); assert.equal(result.skipped, 2);
   assert.ok(result.entries.some(e => e.name === '<img onerror=x>'), 'ordinary text is not interpreted as HTML');
 });
-test('large SFTP directory listing is bounded and marked truncated', async () => {
+test('large SFTP directory listing is bounded and marked truncated', async t => {
   const s = new SFTP(); s.pages = [[...Array(10)].map((_, i) => ({ filename: `file${i}`, attrs: attrs() })), false];
   const r = await listDirectory({ sftp: async () => s }, '/', { maxEntries: 3 });
   assert.equal(r.entries.length, 3); assert.equal(r.truncated, true);
 });
-test('SFTP directory hangs time out and close their channel', async () => {
+test('SFTP directory hangs time out and close their channel', async t => {
   const s = new SFTP(); s.opendir = () => {};
   await assert.rejects(listDirectory({ sftp: async () => s }, '/', { timeoutMs: 15 }), /timed out/); assert.equal(s.ended, true);
 });
-test('SFTP sidecar cancellation aborts directory requests', async () => {
+test('SFTP sidecar cancellation aborts directory requests', async t => {
   const s = new SFTP(), controller = new AbortController(); s.opendir = () => {};
   const job = listDirectory({ sftp: async () => s }, '/', { signal: controller.signal }); await tick(); controller.abort();
   await assert.rejects(job); assert.equal(s.ended, true);
@@ -170,7 +170,7 @@ test('remote paths reject controls and local default names are Windows-safe', ()
   for (const p of ['abc', '/bad\nfile', '/bad\x00file', '']) assert.throws(() => remotePath(p));
   assert.equal(downloadName('/CON.txt'), 'download-CON.txt'); assert.equal(downloadName('/a:b.txt'), 'a_b.txt');
 });
-test('late SFTP listing cannot populate a different terminal sidecar', async () => {
+test('late SFTP listing cannot populate a different terminal sidecar', async t => {
   const a = deferred(), b = deferred();
   const api = { cancelFileList: async () => {}, listFiles: key => key === 'a/view' ? a.promise : b.promise };
   const first = new BrowserState(api, { key: 'a/view', profileId: 'a' }), second = new BrowserState(api, { key: 'b/view', profileId: 'b' });
@@ -179,14 +179,14 @@ test('late SFTP listing cannot populate a different terminal sidecar', async () 
   a.resolve({ directory: '/A', parent: '/', entries: [{ name: 'A', path: '/A/item' }], truncated: false, skipped: 0 }); await tick();
   assert.equal(second.directory, '/B'); assert.equal(second.entries[0].name, 'B'); assert.equal(first.directory, '~'); second.destroy();
 });
-test('collapsing the sidecar cancels only its own listing but never closes SSH', async () => {
+test('collapsing the sidecar cancels only its own listing but never closes SSH', async t => {
   const wait = deferred(); const cancelled = [];
   const model = new BrowserState({ cancelFileList: async (...args) => { cancelled.push(args); }, listFiles: () => wait.promise }, { key: 'a/view', profileId: 'a' });
   model.context('A', true); model.show(true); model.show(false);
   wait.resolve({ directory: '/late', entries: [] }); await tick();
   assert.equal(model.visible, false); assert.equal(model.directory, '~'); assert.deepEqual(cancelled, [['a/view', model.browserId]]); model.destroy();
 });
-test('per-pane directory state on the same host is remembered without sending cd commands', async () => {
+test('per-pane directory state on the same host is remembered without sending cd commands', async t => {
   const api = { cancelFileList: async () => {}, listFiles: async (_key, _id, directory) => ({ directory, parent: '/', entries: [], skipped: 0, truncated: false }) };
   const a = new BrowserState(api, { key: 'server/a', profileId: 'server' }), b = new BrowserState(api, { key: 'server/b', profileId: 'server' });
   a.context('Server', true); b.context('Server', true); a.show(true); b.show(true); await tick();
@@ -220,11 +220,13 @@ test('real loopback SSH standard mode works on a server that rejects every exec 
   assert.match(output.join(''), /STANDARD_READY/); r.closeView(p.key); await assert.rejects(r.open(p.key), /ended/);
 });
 
-function mainHarness(MixedClass) {
+function mainHarness(t, MixedClass) {
   const vm = require('node:vm'), { createRequire } = require('node:module');
   const handlers = new Map(), events = [], app = new EventEmitter(); let response = 1, quits = 0;
-  Object.assign(app, { requestSingleInstanceLock: () => true, whenReady: () => new Promise(() => {}), quit: () => { quits++; }, getPath: () => os.tmpdir(), getVersion: () => 'test' });
-  const frame = { url: 'betterssh://app/ui/index.html' }, webContents = { mainFrame: frame, send: (_ch, value) => events.push(value) };
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-standard-main-'));
+  t.after(() => fs.rmSync(data, { recursive: true, force: true }));
+  Object.assign(app, { isPackaged: true, setPath() {}, commandLine: { getSwitchValue: () => data }, requestSingleInstanceLock: () => true, whenReady: () => new Promise(() => {}), quit: () => { quits++; }, getPath: () => data, getVersion: () => 'test' });
+  const frame = { url: 'nerdsshell://app/ui/index.html' }, webContents = { mainFrame: frame, send: (_ch, value) => events.push(value) };
   const window = { webContents, isDestroyed: () => false };
   const electron = { app, BrowserWindow() {}, ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
     protocol: { registerSchemesAsPrivileged() {} }, dialog: { showMessageBox: async () => ({ response }) }, clipboard: {}, Menu: {}, shell: {}, net: {} };
@@ -234,10 +236,10 @@ function mainHarness(MixedClass) {
   vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../src/main.cjs'), 'utf8') + '\nmodule.exports={ setup(s,w){store=s;window=w;registerIPC();},connect,connections,output,queueOutput,standardCount};', context);
   const main = mod.exports; main.setup({ data: { profiles: [profile(config)], pins: {} }, save() {} }, window);
   return { main, events, app, respond: value => { response = value; }, quits: () => quits,
-    invoke: (name, ...args) => handlers.get('betterssh:' + name)({ sender: webContents, senderFrame: frame }, ...args) };
+    invoke: (name, ...args) => handlers.get('nerdsshell:' + name)({ sender: webContents, senderFrame: frame }, ...args) };
 }
 test('main requires confirmation before closing a standard shell; Cancel preserves it', async t => {
-  const h = mainHarness(), r = standard(); t.after(() => r.disconnect()); const p = await r.create('Confirm'); await r.open(p.key);
+  const h = mainHarness(t), r = standard(); t.after(() => r.disconnect()); const p = await r.create('Confirm'); await r.open(p.key);
   h.main.connections.set('test', { profile: profile(config), remote: r });
   assert.equal(await h.invoke('close', p.key), false); assert.equal(r.activeShellCount(), 1);
   h.respond(0); assert.equal(await h.invoke('close', p.key), true); assert.equal(r.activeShellCount(), 0);
@@ -252,7 +254,7 @@ test('main Standard transport loss releases credentials and cannot schedule repl
     }
     async connect() { this.connected = true; await this.ensureSupport(); return []; }
   }
-  const h = mainHarness(FixtureRemote);
+  const h = mainHarness(t, FixtureRemote);
   await h.main.connect('test', { password: 'synthetic-only' });
   const r = h.main.connections.get('test'), remote = r.remote;
   t.after(() => remote.disconnect());
@@ -265,22 +267,22 @@ test('main Standard transport loss releases credentials and cannot schedule repl
   await tick(); assert.equal(created, 1);
 });
 test('main requires confirmation on standard disconnect and quit', async t => {
-  const h = mainHarness(), r = standard(); t.after(() => r.disconnect()); await r.create('Confirm');
+  const h = mainHarness(t), r = standard(); t.after(() => r.disconnect()); await r.create('Confirm');
   h.main.connections.set('test', { profile: profile(config), remote: r });
   assert.equal(await h.invoke('disconnect', 'test'), false); assert.equal(r.connected, true);
   h.app.emit('before-quit', { preventDefault() {} }); await tick(); assert.equal(h.quits(), 0); assert.equal(r.connected, true);
   h.respond(0); h.app.emit('before-quit', { preventDefault() {} }); await tick(); assert.equal(h.quits(), 1); assert.equal(r.connected, false);
 });
 test('main standard-output acknowledgement resumes flow without touching another pane', async t => {
-  const h = mainHarness(), r = standard(); t.after(() => r.disconnect()); const p = await r.create('Flow'); await r.open(p.key);
+  const h = mainHarness(t), r = standard(); t.after(() => r.disconnect()); const p = await r.create('Flow'); await r.open(p.key);
   const stream = r.shells.get(p.key).stream; h.main.connections.set('test', { profile: profile(config), remote: r });
   h.main.queueOutput(p.key, Buffer.alloc(40000, 65)); assert.equal(stream.paused, true);
   const event = h.events.find(e => e.type === 'output'); assert.ok(event);
   await h.invoke('ack', p.key, event.epoch, event.sequence); assert.equal(stream.paused, false);
   h.main.output.discard(p.key);
 });
-test('main rejects directory results when the authenticated connection changes', async () => {
-  const h = mainHarness(), s = new SFTP(); let done;
+test('main rejects directory results when the authenticated connection changes', async t => {
+  const h = mainHarness(t), s = new SFTP(); let done;
   s.readdir = (_h, cb) => { done = cb; };
   const view = { active: true };
   const remote = { profile: profile(config), connected: true, views: new Map([['test/view', view]]), pane: () => ({}), sftp: async () => s };

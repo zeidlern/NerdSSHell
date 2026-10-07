@@ -9,7 +9,7 @@ const { bootstrap } = require('../src/elevated-pty.cjs');
 const { tokens } = require('../ui/scratchpad.js');
 const shell = { id: 'local:pwsh', executable: "C:\\Program Files\\PowerShell\\7\\pwsh.exe" };
 function fixture(t, options = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-notes-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-notes-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const handlers = {}, app = {}, calls = [], dialogs = [];
   let open = { canceled: true }, save = { canceled: true }, accepted = false;
@@ -52,7 +52,7 @@ test('scratchpad cancel and dirty replacement cancellation do no file IO', async
   h.open({ canceled: false, filePaths: [path.join(h.root, 'does-not-exist')] });
   assert.equal(await h.handlers.scratchpadRead(), null);
   assert.equal(h.calls.length, 1); assert.equal(h.dialogs.length, 2);
-  assert.equal(h.app.bettersshScratchpadDirty, true); assert.deepEqual(fs.readdirSync(h.root), []);
+  assert.equal(h.app.nerdsshellScratchpadDirty, true); assert.deepEqual(fs.readdirSync(h.root), []);
   assert.throws(() => h.handlers.scratchpadDirty('false'), /Invalid/);
 });
 test('scratchpad paths come only from native dialogs; explicit confirmed load returns bounded content', async t => {
@@ -63,7 +63,7 @@ test('scratchpad paths come only from native dialogs; explicit confirmed load re
   h.save({ canceled: false, filePath: path.join(h.root, 'saved.md') });
   assert.deepEqual(await h.handlers.scratchpadSave('saved text'), { name: 'saved.md' });
   assert.equal(fs.readFileSync(path.join(h.root, 'saved.md'), 'utf8'), 'saved text');
-  assert.equal(h.app.bettersshScratchpadDirty, true, 'Only renderer acknowledgement of the saved revision clears dirty state');
+  assert.equal(h.app.nerdsshellScratchpadDirty, true, 'Only renderer acknowledgement of the saved revision clears dirty state');
 });
 test('scratchpad file dialogs serialize read/save and recover after errors', async t => {
   const h = fixture(t); let resolve;
@@ -198,7 +198,7 @@ test('scratchpad Save acknowledges only its captured revision; new edits stay un
 test('PSReadLine bootstrap uses only the fixed shell module and process-local options', () => {
   const script = syntaxBootstrap();
   assert.match(script, /Combine\(\$PSHOME, 'Modules', 'PSReadLine', 'PSReadLine.psd1'\)/);
-  assert.match(script, /Microsoft.PowerShell.Core\\Import-Module -Name \$bettersshModule/);
+  assert.match(script, /Microsoft.PowerShell.Core\\Import-Module -Name \$nerdsshellModule/);
   assert.match(script, /PSReadLine\\Set-PSReadLineOption -HistorySaveStyle SaveNothing/);
   assert.doesNotMatch(script, /Install-Module|PSModulePath|ExecutionPolicy|Set-Content|PROFILE|Invoke-Expression/i);
   assert.match(script, /catch \{ \}/);
@@ -221,13 +221,13 @@ if (process.platform === 'win32') for (const flavor of ['ordinary', 'embedded ad
     : /const string syntax = @"([\s\S]*?)";/.exec(fs.readFileSync(path.join(__dirname, '../src/elevated-console.cs'), 'utf8'))[1].replaceAll('""', '"').replaceAll('[IO.', '[System.IO.');
   assert.ok(production.includes(trustedPath));
   assert.doesNotMatch(production, /PSModulePath|PROFILE|ExecutionPolicy|Install-Module/i);
-  const trustedImport = 'Microsoft.PowerShell.Core\\Import-Module -Name $bettersshModule -Force -ErrorAction Stop';
+  const trustedImport = 'Microsoft.PowerShell.Core\\Import-Module -Name $nerdsshellModule -Force -ErrorAction Stop';
   assert.ok(production.includes(trustedImport));
   // In-memory fixture avoids changing this PC's module-file execution policy.
   // Observe within the bootstrap scope where its trusted import is loaded.
-  const script = "$bettersshFixtureModule=New-Module -Name PSReadLine -ScriptBlock {" + fixtureModule + "};\n" +
+  const script = "$nerdsshellFixtureModule=New-Module -Name PSReadLine -ScriptBlock {" + fixtureModule + "};\n" +
     production.replace(trustedPath, "'" + manifest.replaceAll("'", "''") + "'")
-    .replace(trustedImport, 'Microsoft.PowerShell.Core\\Import-Module -ModuleInfo $bettersshFixtureModule -Force -ErrorAction Stop')
+    .replace(trustedImport, 'Microsoft.PowerShell.Core\\Import-Module -ModuleInfo $nerdsshellFixtureModule -Force -ErrorAction Stop')
     .replace(/\}\s*$/, "$option=PSReadLine\\Get-PSReadLineOption; $option | ConvertTo-Json -Compress\n}\n");
   const executable = require('../src/local-remote.cjs').installedShells().find(s => s.id === 'local:powershell')?.executable;
   assert.ok(executable, 'Windows PowerShell 5.1 is required for Windows compatibility acceptance');
@@ -257,13 +257,13 @@ if (process.platform === 'win32') for (const flavor of ['ordinary', 'embedded ad
     : /const string syntax = @"([\s\S]*?)";/.exec(fs.readFileSync(path.join(__dirname, '../src/elevated-console.cs'), 'utf8'))[1].replaceAll('""', '"').replaceAll('[IO.', '[System.IO.');
   const bundle = "[System.IO.Path]::Combine($PSHOME, 'Modules', 'PSReadLine', 'PSReadLine.psd1')";
   const fallback = "[System.IO.Path]::Combine([Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFiles), 'WindowsPowerShell', 'Modules', 'PSReadLine')";
-  const importLine = 'Microsoft.PowerShell.Core\\Import-Module -Name $bettersshModule -Force -ErrorAction Stop';
+  const importLine = 'Microsoft.PowerShell.Core\\Import-Module -Name $nerdsshellModule -Force -ErrorAction Stop';
   for (const literal of [bundle, fallback, importLine]) assert.ok(production.includes(literal), literal);
   assert.doesNotMatch(production, /PSModulePath|ExecutionPolicy|PROFILE|Install-Module/i);
   const quote = value => "'" + value.replaceAll("'", "''") + "'";
   const script = "$global:fixtureSelected=$null; $fixtureModule=New-Module -Name PSReadLine -ScriptBlock { $script:history='SaveIncrementally'; function Set-PSReadLineOption {[CmdletBinding()]param([string]$HistorySaveStyle,[hashtable]$Colors);if($HistorySaveStyle){$script:history=$HistorySaveStyle}}; function Get-PSReadLineOption {[pscustomobject]@{HistorySaveStyle=$script:history}} };\n" +
     production.replace(bundle, quote(path.join(h.root, 'missing-bundle.psd1'))).replace(fallback, quote(root))
-      .replace(importLine, '$global:fixtureSelected=$bettersshModule; Microsoft.PowerShell.Core\\Import-Module -ModuleInfo $fixtureModule -Force -ErrorAction Stop') +
+      .replace(importLine, '$global:fixtureSelected=$nerdsshellModule; Microsoft.PowerShell.Core\\Import-Module -ModuleInfo $fixtureModule -Force -ErrorAction Stop') +
     "; @{Selected=$global:fixtureSelected} | ConvertTo-Json -Compress";
   const executable = require('../src/local-remote.cjs').installedShells().find(s => s.id === 'local:powershell').executable;
   const result = spawnSync(executable, ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')],
@@ -286,7 +286,7 @@ test('administrator bootstrap authenticates the copied helper before compiling t
   assert.match(script, /OpenRead/); assert.match(script, /fixture''s-helper.cs/);
   assert.match(script, /New-Object byte\[\] 131073/); assert.doesNotMatch(script, /ReadAllBytes/);
   assert.ok(script.indexOf('Helper integrity failure') < script.indexOf('Add-Type'));
-  assert.match(script, /\[BetterSSH\.ElevatedConsole\]::Broker/);
+  assert.match(script, /\[NerdSSHell\.ElevatedConsole\]::Broker/);
   assert.doesNotMatch(script, /Password|Credential|ExecutionPolicy|Invoke-Expression|sudo|Restart-Computer/);
 });
 

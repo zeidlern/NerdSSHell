@@ -106,7 +106,7 @@ async function download(remote, requested, destination, { signal, progress, time
     // Another actor can still swap it between checks; this is not atomic identity.
     const selected = await req('lstat', target);
     if (!selected.isFile() || selected.isSymbolicLink?.() || selected.size !== opened.size || selected.mtime !== opened.mtime) throw new Error('The remote file changed or became a symbolic link before download. Refresh and try again.');
-    temporary = await fsp.mkdtemp(path.join(path.dirname(destination), '.betterssh-download-'));
+    temporary = await fsp.mkdtemp(path.join(path.dirname(destination), '.nerdsshell-download-'));
     await fsp.chmod(temporary, 0o700);
     const temp = path.join(temporary, 'download.part');
     let received = 0, timer, lastProgress = 0;

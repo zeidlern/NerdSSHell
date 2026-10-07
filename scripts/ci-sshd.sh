@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Hermetic loopback-only service for CI; never targets a user's SSH server.
 set -euo pipefail
-root="${RUNNER_TEMP:-/tmp}/betterssh-ci-sshd"
+root="${RUNNER_TEMP:-/tmp}/nerdsshell-ci-sshd"
 mkdir -p "$root"
 chmod 700 "$root"
 ssh-keygen -q -t ed25519 -N '' -f "$root/client"
@@ -59,11 +59,11 @@ if ! ssh -F /dev/null -o BatchMode=yes -o IdentitiesOnly=yes \
   exit 1
 fi
 {
-  echo 'BETTERSSH_TEST_HOST=127.0.0.1'
-  echo 'BETTERSSH_TEST_PORT=22222'
-  echo "BETTERSSH_TEST_USER=$(id -un)"
-  echo "BETTERSSH_TEST_KEY=$root/client"
-  echo "BETTERSSH_TEST_HOST_KEY=$root/host"
-  echo 'BETTERSSH_TEST_PORT_2=22223'
-  echo "BETTERSSH_TEST_HOST_KEY_2=$root/host2"
+  echo 'NERDSSHELL_TEST_HOST=127.0.0.1'
+  echo 'NERDSSHELL_TEST_PORT=22222'
+  echo "NERDSSHELL_TEST_USER=$(id -un)"
+  echo "NERDSSHELL_TEST_KEY=$root/client"
+  echo "NERDSSHELL_TEST_HOST_KEY=$root/host"
+  echo 'NERDSSHELL_TEST_PORT_2=22223'
+  echo "NERDSSHELL_TEST_HOST_KEY_2=$root/host2"
 } >> "$GITHUB_ENV"

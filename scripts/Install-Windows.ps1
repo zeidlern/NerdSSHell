@@ -28,7 +28,7 @@ try {
     Get-FileHash $installerPath -Algorithm SHA256 | Format-List
     if ($BuildOnly) { Write-Host "Verified build: $installerPath"; return }
     $running = @(Get-Process -Name 'BetterSSH', 'NerdSSHell' -ErrorAction SilentlyContinue)
-    if ($running.Count -gt 0) { throw 'Close NerdSSHell/BetterSSH normally before installing so its local-session and unsaved-note prompts can be handled. The installer has not run. Re-run this script afterward.' }
+    if ($running.Count -gt 0) { throw 'Close the existing application normally before installing so its local-session and unsaved-note prompts can be handled. The installer has not run. Re-run this script afterward.' }
     Write-Host "Installing $productName $($metadata.version) for the current Windows user."
     $process = Start-Process -FilePath $installerPath -ArgumentList @('/S', '/currentuser') -Wait -PassThru
     if ($process.ExitCode -ne 0) { throw "Installer exited with code $($process.ExitCode)." }

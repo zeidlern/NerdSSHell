@@ -32,11 +32,13 @@ test('renderer protocol denies non-UI code, traversal and foreign initiators', (
     `${ORIGIN}/spellcheck-dictionaries/en-us.bdic`,
     'file:///C:/Windows/win.ini',
     'https://app/ui/index.html',
-    'betterssh://other/ui/index.html',
+    'nerdsshell://other/ui/index.html',
+    'betterssh://app/ui/index.html',
     'invalid-url'
   ]) assert.equal(assetPath(url, ORIGIN, root), null, url);
   assert.equal(assetPath(UI_URL, 'https://evil.example', root), null);
   assert.equal(assetPath(UI_URL, 'null', root), null);
+  assert.equal(assetPath(UI_URL, 'betterssh://app', root), null);
   assert.equal(assetPath(`${ORIGIN}/ui/appearance.js`, 'https://evil.example', root), null);
   assert.equal(assetPath(`${ORIGIN}/ui/files.js`, 'https://evil.example', root), null);
 });

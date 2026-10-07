@@ -17,7 +17,7 @@ function bundledNativeDirectory() {
 function bootstrap(source, hash, shell, nativeDirectory = bundledNativeDirectory()) {
   if (!['local:powershell', 'local:pwsh', 'local:cmd'].includes(shell) || !/^[a-f0-9]{64}$/.test(hash) || !path.isAbsolute(source) ||
       typeof nativeDirectory !== 'string' || !path.isAbsolute(nativeDirectory) || nativeDirectory.length > 1024 || /[\x00-\x1f\x7f]/.test(nativeDirectory)) throw new Error('Invalid administrator helper bootstrap.');
-  return `$ErrorActionPreference='Stop'; $f=[IO.File]::OpenRead(${quote(source)}); try {$b=New-Object byte[] 131073; $n=0; while($n -lt $b.Length -and ($r=$f.Read($b,$n,$b.Length-$n)) -gt 0){$n+=$r}} finally {$f.Dispose()}; if($n -eq 0 -or $n -gt 131072){throw 'Helper too large'}; $exact=New-Object byte[] $n; [Buffer]::BlockCopy($b,0,$exact,0,$n); $b=$exact; $h=[BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($b)).Replace('-','').ToLowerInvariant(); if($h -ne ${quote(hash)}){throw 'Helper integrity failure'}; Add-Type -TypeDefinition ([Text.Encoding]::UTF8.GetString($b)); [BetterSSH.ElevatedConsole]::Broker(${quote(source)},${quote(hash)},${quote(nativeDirectory)},${quote(shell)},${process.pid})`;
+  return `$ErrorActionPreference='Stop'; $f=[IO.File]::OpenRead(${quote(source)}); try {$b=New-Object byte[] 131073; $n=0; while($n -lt $b.Length -and ($r=$f.Read($b,$n,$b.Length-$n)) -gt 0){$n+=$r}} finally {$f.Dispose()}; if($n -eq 0 -or $n -gt 131072){throw 'Helper too large'}; $exact=New-Object byte[] $n; [Buffer]::BlockCopy($b,0,$exact,0,$n); $b=$exact; $h=[BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($b)).Replace('-','').ToLowerInvariant(); if($h -ne ${quote(hash)}){throw 'Helper integrity failure'}; Add-Type -TypeDefinition ([Text.Encoding]::UTF8.GetString($b)); [NerdSSHell.ElevatedConsole]::Broker(${quote(source)},${quote(hash)},${quote(nativeDirectory)},${quote(shell)},${process.pid})`;
 }
 function frame(type, payload = Buffer.alloc(0)) {
   if (!['I', 'S', 'C'].includes(type) || !Buffer.isBuffer(payload) || payload.length > MAX_FRAME || (type === 'S' && payload.length !== 4) || (type === 'C' && payload.length)) throw new Error('Invalid administrator input frame.');
@@ -49,7 +49,7 @@ class ElevatedPty {
       if (this.buffer.length < size + 5) return;
       const data = this.buffer.subarray(5, size + 5); this.buffer = this.buffer.subarray(size + 5);
       if (type === 'R') { if (this.started) return this.fail(new Error('Duplicate administrator startup response.')); this.started = true; clearTimeout(this.timer); this.resolve(this); }
-      else if (type === 'X') { const error = new Error('Windows administrator approval was cancelled.'); error.code = 'BETTERSSH_UAC_CANCELLED'; return this.fail(error); }
+      else if (type === 'X') { const error = new Error('Windows administrator approval was cancelled.'); error.code = 'NERDSSHELL_UAC_CANCELLED'; return this.fail(error); }
       else if (type === 'F') return this.fail(new Error('Windows could not open the embedded administrator console. It was not retried.'));
       else if (type === 'E') return this.finish(data.readInt32LE());
       else {
@@ -88,7 +88,7 @@ async function spawnElevatedPty(shellId, { sourceFile = path.join(__dirname, 'el
   try { if (!fs.fstatSync(fd).isFile()) throw new Error('Administrator helper is unavailable.'); let count; while (length < buffer.length && (count = fs.readSync(fd, buffer, length, buffer.length - length, null))) length += count; } finally { fs.closeSync(fd); }
   if (!length || length > 131072) throw new Error('Administrator helper is unavailable.');
   const source = buffer.subarray(0, length);
-  const hash = createHash('sha256').update(source).digest('hex'), directory = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-admin-'));
+  const hash = createHash('sha256').update(source).digest('hex'), directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-admin-'));
   const filename = path.join(directory, 'ElevatedConsole.cs');
   let removed = false; const cleanup = () => { if (!removed) { removed = true; try { fs.unlinkSync(filename); } catch {} try { fs.rmdirSync(directory); } catch {} } };
   try {

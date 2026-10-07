@@ -9,7 +9,7 @@ const { upload } = require('../src/transfer.cjs');
 
 function missing() { const error = new Error('No such file'); error.code = 2; return error; }
 function fixture(t, sftp) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-transfer-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-transfer-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const local = path.join(dir, 'test.txt'); fs.writeFileSync(local, 'synthetic transfer data\n');
   const remote = { profile: { uploadDirectory: '/upload' }, sftp: async () => sftp };

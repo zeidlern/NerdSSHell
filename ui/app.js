@@ -1,10 +1,10 @@
-/* global Terminal, FitAddon, SearchAddon, BetterSSHAppearance, BetterSSHFiles, BetterSSHSelectionCopy */
+/* global Terminal, FitAddon, SearchAddon, NerdSSHellAppearance, NerdSSHellFiles, NerdSSHellSelectionCopy */
 'use strict';
-const api = window.betterssh, $ = id => document.getElementById(id);
+const api = window.nerdsshell, $ = id => document.getElementById(id);
 const profiles = new Map(), panes = new Map(), views = new Map(), statuses = new Map(), opening = new Map(), closing = new Map();
-const { baseColors, colorKeys, presets, presetPalette, paletteLabels, exampleRoles } = BetterSSHAppearance;
-const defaultAppearance = BetterSSHAppearance.appearance();
-let appearance = BetterSSHAppearance.appearance(), preferencePalette = presetPalette();
+const { baseColors, colorKeys, presets, presetPalette, paletteLabels, exampleRoles } = NerdSSHellAppearance;
+const defaultAppearance = NerdSSHellAppearance.appearance();
+let appearance = NerdSSHellAppearance.appearance(), preferencePalette = presetPalette();
 let notifications = { enabled: true, audio: true, desktop: true, visual: true };
 let sessionDefaults = { scrollback: 100000, archiveMB: 256, record: false, startup: 'all', autoConnect: true };
 let preferenceSection = 'copy', preferenceGeneration = 0, preferenceSaving = false, preferenceLoaded = false, attentionActiveKey = '';
@@ -57,19 +57,19 @@ function dragSource(node, key) {
   node.draggable = true;
   node.addEventListener('dragstart', e => {
     if (!panes.has(key)) { e.preventDefault(); return; }
-    e.dataTransfer.setData('application/x-betterssh-pane', key); e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/x-nerdsshell-pane', key); e.dataTransfer.effectAllowed = 'move';
   });
   node.addEventListener('dragend', () => { for (const target of document.querySelectorAll('.drop-target')) target.classList.remove('drop-target'); });
 }
 function dropTarget(node, index, layoutSlot = false) {
   node.addEventListener('dragover', e => {
-    if (![...e.dataTransfer.types].some(type => type === 'application/x-betterssh-pane' || type === 'Files')) return;
+    if (![...e.dataTransfer.types].some(type => type === 'application/x-nerdsshell-pane' || type === 'Files')) return;
     e.preventDefault(); node.classList.add('drop-target');
   });
   node.addEventListener('dragleave', () => node.classList.remove('drop-target'));
   node.addEventListener('drop', async e => {
     e.preventDefault(); e.stopPropagation(); node.classList.remove('drop-target');
-    const key = e.dataTransfer.getData('application/x-betterssh-pane');
+    const key = e.dataTransfer.getData('application/x-nerdsshell-pane');
     if (key && panes.has(key)) {
       const actual = index(), targetKey = layoutSlot ? slots[actual] : order[actual], originalLayout = layout;
       const pane = panes.get(key), targetSlots = [...slots];
@@ -96,7 +96,7 @@ function dropTarget(node, index, layoutSlot = false) {
     const files = Array.from(e.dataTransfer.files);
     if (panes.get(target)?.local) {
       const paths = api.filePaths(files);
-      window.BetterSSHWorkbench?.open({ target: panes.get(target).profileId, code: paths.map(p => "'" + p.replace(/'/g, "''") + "'").join(' ') }); return;
+      window.NerdSSHellWorkbench?.open({ target: panes.get(target).profileId, code: paths.map(p => "'" + p.replace(/'/g, "''") + "'").join(' ') }); return;
     }
     if (views.get(target)?.locked) { message('Input is locked. Unlock the pane before inserting paths.'); return; }
     if (e.shiftKey) { const paths = api.filePaths(files); views.get(target)?.terminal.paste(paths.map(quote).join(' ')); message('Local paths inserted. These files have not been uploaded.'); }
@@ -293,9 +293,9 @@ function createView(pane) {
       v.attention = attention; renderAttentionIndicators();
       api.sessionAttention(pane.key, attention).catch(() => {});
     } });
-  if (!pane.local) v.files = BetterSSHFiles.create({ api, onError: message, container: body, toggle: filesToggle, key: pane.key, profileId: pane.profileId });
+  if (!pane.local) v.files = NerdSSHellFiles.create({ api, onError: message, container: body, toggle: filesToggle, key: pane.key, profileId: pane.profileId });
   terminal.parser.registerOscHandler(52, () => true); // Remote output never writes to the local clipboard.
-  v.selectionCopy = BetterSSHSelectionCopy.attach({ terminal, host, copy: text => api.copy(text),
+  v.selectionCopy = NerdSSHellSelectionCopy.attach({ terminal, host, copy: text => api.copy(text),
     enabled: () => appearance.copyOnSelect, generation: () => v.generation,
     isCurrent: () => views.get(pane.key) === v && !v.wrapper.hidden && !document.querySelector('dialog[open]'),
     onError: error => message(error.message) });
@@ -322,7 +322,7 @@ function createView(pane) {
   wrapper.addEventListener('pointerdown', () => activateVisiblePane(pane.key));
   wrapper.addEventListener('focusin', () => activateVisiblePane(pane.key));
   dropTarget(wrapper, () => slots.indexOf(pane.key), true);
-  v.observer = new ResizeObserver(() => fit(v)); v.observer.observe(host); window.BetterSSHWorkbench?.onView(v); window.BetterSSHPanes?.onView(v); return v;
+  v.observer = new ResizeObserver(() => fit(v)); v.observer.observe(host); window.NerdSSHellWorkbench?.onView(v); window.NerdSSHellPanes?.onView(v); return v;
 }
 async function openPane(key, select = true, place = true) {
   const pane = panes.get(key); if (!pane) return;
@@ -448,7 +448,7 @@ function blockPreferences(saving) {
   preferenceSaving = saving; $('preferencesContent').inert = saving;
   for (const control of document.querySelectorAll('[data-preference-section]')) control.disabled = saving;
   $('savePreferences').disabled = saving || !preferenceLoaded; $('cancelPreferences').disabled = saving; $('resetAppearance').disabled = saving;
-  window.BetterSSHPanes.blockConfiguration(saving);
+  window.NerdSSHellPanes.blockConfiguration(saving);
 }
 async function openPreferences(section = preferenceSection) {
   if (preferenceSaving) return;
@@ -467,7 +467,7 @@ async function openPreferences(section = preferenceSection) {
   $('preferencesStatus').textContent = 'Loading your saved actions and favorites…';
   selectPreferenceSection(section); $('preferencesDialog').showModal(); $('preferenceTab-' + preferenceSection).focus();
   try {
-    await window.BetterSSHPanes.beginConfiguration();
+    await window.NerdSSHellPanes.beginConfiguration();
     if (generation !== preferenceGeneration || !$('preferencesDialog').open) return;
     preferenceLoaded = true; $('savePreferences').disabled = false; $('preferencesStatus').textContent = '';
   } catch (e) {
@@ -477,7 +477,7 @@ async function openPreferences(section = preferenceSection) {
 function closePreferences() {
   if (preferenceSaving) return;
   preferenceGeneration++; preferenceLoaded = false;
-  window.BetterSSHPanes.cancelConfiguration(); $('preferencesDialog').close(); applyAppearance(appearance);
+  window.NerdSSHellPanes.cancelConfiguration(); $('preferencesDialog').close(); applyAppearance(appearance);
 }
 async function savePreferences() {
   if (preferenceSaving || !preferenceLoaded || !$('preferencesDialog').open) return;
@@ -488,12 +488,12 @@ async function savePreferences() {
       appearance: appearanceFields(),
       notifications: { enabled: form.elements.notificationEnabled.checked, audio: form.elements.notificationAudio.checked, desktop: form.elements.notificationDesktop.checked, visual: form.elements.notificationVisual.checked },
       sessionDefaults: { scrollback: Number(form.elements.scrollback.value), archiveMB: Number(form.elements.archiveMB.value), record: form.elements.record.checked, startup: form.elements.startup.value, autoConnect: form.elements.autoConnect.checked },
-      actionConfiguration: window.BetterSSHPanes.stageConfiguration()
+      actionConfiguration: window.NerdSSHellPanes.stageConfiguration()
     };
     blockPreferences(true); $('preferencesStatus').textContent = 'Saving preferences…';
     const saved = await api.savePreferences(request);
-    appearance = BetterSSHAppearance.appearance(saved.appearance); notifications = saved.notifications; sessionDefaults = saved.sessionDefaults;
-    window.BetterSSHPanes.commitConfiguration();
+    appearance = NerdSSHellAppearance.appearance(saved.appearance); notifications = saved.notifications; sessionDefaults = saved.sessionDefaults;
+    window.NerdSSHellPanes.commitConfiguration();
     applyAppearance(appearance);
     for (const view of views.values()) view.attentionTracker?.sample();
     renderAttentionIndicators(); $('preferencesDialog').close();
@@ -508,7 +508,7 @@ api.onEvent(event => {
   else if (event.type === 'status') {
     if (newSessionTarget === event.profileId && event.state !== 'connected') finishNewSession(false);
     statuses.set(event.profileId, event);
-    if (event.state !== 'connected') for (const v of views.values()) if (v.pane.profileId === event.profileId) { v.ready = false; v.filesAttached = false; v.generation++; v.attentionTracker?.reset(); v.state.textContent = event.state; window.BetterSSHPanes?.refresh(v); }
+    if (event.state !== 'connected') for (const v of views.values()) if (v.pane.profileId === event.profileId) { v.ready = false; v.filesAttached = false; v.generation++; v.attentionTracker?.reset(); v.state.textContent = event.state; window.NerdSSHellPanes?.refresh(v); }
     renderConnections(); renderTabs();
     syncFiles();
   } else if (event.type === 'panes') {
@@ -539,7 +539,7 @@ api.onEvent(event => {
       [1, 1000, 1002, 1003, 1006, 2004, 25].forEach((mode, i) => { controls += `\x1b[?${mode}${event.modes[i] ? 'h' : 'l'}`; });
       await write(v.terminal, controls);
       if (views.get(event.key) !== v || v.generation !== generation) return;
-      v.ready = !v.pane.dead; v.state.textContent = v.pane.dead ? 'Ended' : v.pane.administrator ? 'Live · Administrator' : v.pane.local ? 'Live' : v.pane.standard ? 'Live · Standard' : 'Live'; fit(v); renderTabs(); window.BetterSSHPanes?.refresh(v);
+      v.ready = !v.pane.dead; v.state.textContent = v.pane.dead ? 'Ended' : v.pane.administrator ? 'Live · Administrator' : v.pane.local ? 'Live' : v.pane.standard ? 'Live · Standard' : 'Live'; fit(v); renderTabs(); window.NerdSSHellPanes?.refresh(v);
       if (active === event.key) await api.activeSession(event.key);
       v.attentionTracker?.resume();
     }).catch(e => message(e.message));
@@ -549,13 +549,13 @@ api.onEvent(event => {
     v.render = v.render.then(async () => { if (views.get(event.key) === v && v.generation === generation) await write(v.terminal, decode(event.data)); await api.ack(event.key, event.epoch, event.sequence); }).catch(e => message(e.message));
   } else if (event.type === 'recovering' || event.type === 'recovery-failed') {
     const v = views.get(event.key);
-    if (v) { v.ready = false; v.generation++; if (event.type === 'recovering') v.attentionTracker?.suspend(); else v.attentionTracker?.reset(); v.state.textContent = event.type === 'recovering' ? 'Refreshing…' : 'Refresh failed — reopen view'; renderTabs(); window.BetterSSHPanes?.refresh(v); }
+    if (v) { v.ready = false; v.generation++; if (event.type === 'recovering') v.attentionTracker?.suspend(); else v.attentionTracker?.reset(); v.state.textContent = event.type === 'recovering' ? 'Refreshing…' : 'Refresh failed — reopen view'; renderTabs(); window.NerdSSHellPanes?.refresh(v); }
   } else if (event.type === 'standard-ended') {
     panes.delete(event.key); renderConnections();
-    const v = views.get(event.key); if (v) { v.ready = false; v.filesAttached = false; v.pane.dead = true; v.attentionTracker?.reset(); v.state.textContent = 'Ended — open a new shell'; v.files?.context(v.files.label, false, label(v.pane)); renderTabs(); window.BetterSSHPanes?.refresh(v); }
+    const v = views.get(event.key); if (v) { v.ready = false; v.filesAttached = false; v.pane.dead = true; v.attentionTracker?.reset(); v.state.textContent = 'Ended — open a new shell'; v.files?.context(v.files.label, false, label(v.pane)); renderTabs(); window.NerdSSHellPanes?.refresh(v); }
   } else if (event.type === 'ended' || event.type === 'detached') {
     if (event.type === 'ended') { panes.delete(event.key); renderConnections(); }
-    const v = views.get(event.key); if (v) { v.ready = false; v.filesAttached = false; v.generation++; v.attentionTracker?.reset(); v.state.textContent = event.type === 'ended' ? 'Ended' : 'Detached'; v.files?.context(v.files.label, false, label(v.pane)); renderTabs(); window.BetterSSHPanes?.refresh(v); }
+    const v = views.get(event.key); if (v) { v.ready = false; v.filesAttached = false; v.generation++; v.attentionTracker?.reset(); v.state.textContent = event.type === 'ended' ? 'Ended' : 'Detached'; v.files?.context(v.files.label, false, label(v.pane)); renderTabs(); window.NerdSSHellPanes?.refresh(v); }
   } else if (event.type === 'attention-activate') {
     if (views.has(event.key)) activate(event.key);
   } else if (event.type === 'attention-audio') {
@@ -644,7 +644,7 @@ $('themeDark').onclick = () => { for (const key of ['terminalBackground', 'uiBac
 $('themeLight').onclick = () => { const form = $('preferencesForm'); form.elements.terminalBackground.value = '#ffffff'; form.elements.uiBackground.value = '#f3f2f7'; form.elements.text.value = '#26232b'; previewAppearance(); };
 $('cancelPreferences').onclick = closePreferences;
 $('preferencesDialog').addEventListener('cancel', e => { e.preventDefault(); closePreferences(); });
-$('preferencesDialog').addEventListener('close', () => { if (!$('preferencesDialog').open) { preferenceGeneration++; preferenceLoaded = false; window.BetterSSHPanes.cancelConfiguration(); applyAppearance(appearance); } });
+$('preferencesDialog').addEventListener('close', () => { if (!$('preferencesDialog').open) { preferenceGeneration++; preferenceLoaded = false; window.NerdSSHellPanes.cancelConfiguration(); applyAppearance(appearance); } });
 $('help').onclick = () => $('helpDialog').showModal(); $('closeHelp').onclick = () => $('helpDialog').close();
 $('findNext').onclick = () => views.get(active)?.search.findNext($('searchText').value); $('findPrev').onclick = () => views.get(active)?.search.findPrevious($('searchText').value);
 $('searchText').onkeydown = e => { if (e.key === 'Enter') { if (e.shiftKey) $('findPrev').click(); else $('findNext').click(); } };
@@ -689,7 +689,7 @@ document.addEventListener('paste', e => {
 }, true);
 window.addEventListener('beforeunload', () => { clearTimeout(saveTimer); api.workspace({ layout, twoPaneOrientation, order, slots, active, splitX, splitY }).catch(() => {}); });
 run((async () => {
-  const state = await api.state(); appearance = BetterSSHAppearance.appearance(state.appearance); notifications = { ...notifications, ...state.notifications }; sessionDefaults = { ...sessionDefaults, ...state.sessionDefaults }; applyAppearance(appearance); for (const p of state.profiles) profiles.set(p.id, p);
+  const state = await api.state(); appearance = NerdSSHellAppearance.appearance(state.appearance); notifications = { ...notifications, ...state.notifications }; sessionDefaults = { ...sessionDefaults, ...state.sessionDefaults }; applyAppearance(appearance); for (const p of state.profiles) profiles.set(p.id, p);
   savedOrder = state.workspace.order; savedSlots = state.workspace.slots || []; desiredActive = state.workspace.active; layout = state.workspace.layout; twoPaneOrientation = state.workspace.twoPaneOrientation || 'side-by-side'; splitX = state.workspace.splitX; splitY = state.workspace.splitY; $('version').textContent = 'v' + state.version; $('aboutVersion').textContent = state.version;
   render(); for (const p of profiles.values()) if (p.autoConnect) { try { await api.connect(p.id); } catch (e) { message(e.message); } }
 })());

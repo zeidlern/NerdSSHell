@@ -31,10 +31,10 @@ function harness() {
   const context = vm.createContext({ $, api, profiles: new Map(), panes: new Map(), views: new Map(), statuses: new Map(), active: '',
     openPane: async () => {}, render() {}, element: (tag, cls, text) => { const e = new Element(tag); e.textContent = text; return e; },
     button: (text, action) => { const e = new Element('button'); e.textContent = text; e.onclick = action; return e; },
-    message() {}, run: promise => Promise.resolve(promise), TextEncoder, BetterSSHCommandReview: reviewHelpers,
+    message() {}, run: promise => Promise.resolve(promise), TextEncoder, NerdSSHellCommandReview: reviewHelpers,
     document: { addEventListener() {}, querySelector: () => [...nodes.values()].find(n => n.open) }, window: {} });
   vm.runInContext(fs.readFileSync(require.resolve('../ui/workbench.js'), 'utf8'), context);
-  return { $, api, cancelled, reviewed, runs, copies, context, ui: context.window.BetterSSHWorkbench,
+  return { $, api, cancelled, reviewed, runs, copies, context, ui: context.window.NerdSSHellWorkbench,
     event: e => listener(e), setReview(fn) { reviewResponse = fn; }, setRun(fn) { runResponse = fn; } };
 }
 async function ready(h) { await h.ui.open({ target: 'a' }); h.$('wbCode').value = 'printf synthetic'; h.$('wbCode').dispatch('input'); }
@@ -187,7 +187,7 @@ test('workbench favorites revoke review and open explicit per-OS configuration w
     {id:'system.disk',title:'Disk',description:'Inspect',group:'System',risk:'info',enabled:true}
   ]});
   h.api.workbenchPreferences=async p=>{writes.push([...p.favorites]);return p;};
-  h.context.window.BetterSSHPanes={configure(){configured++;}};
+  h.context.window.NerdSSHellPanes={configure(){configured++;}};
   await ready(h);await h.$('wbReview').onclick();
   h.$('wbActionList').children[0].children[1].onclick();
   assert.equal(configured,1);assert.equal(h.$('workbenchDialog').open,false);

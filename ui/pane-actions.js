@@ -228,7 +228,7 @@
     for (const os of Object.keys(config.favoritesByOS)) config.favoritesByOS[os] = config.favoritesByOS[os].filter(id => id !== selected);
     resetEditor(); run(Promise.all([loadActions(), loadFavorites()]));
   };
-  window.BetterSSHPanes = { configure, onView, refresh, beginConfiguration, stageConfiguration, blockConfiguration, commitConfiguration, cancelConfiguration };
+  window.NerdSSHellPanes = { configure, onView, refresh, beginConfiguration, stageConfiguration, blockConfiguration, commitConfiguration, cancelConfiguration };
   api.onEvent?.(event => { if (event.type === 'input-lock') { const v = views.get(event.key); if (v?.actionBar) menuState(v); } });
   for (const v of views.values()) onView(v);
 })();

@@ -66,13 +66,13 @@ test('cancelled host trust is preserved instead of becoming a retryable network 
   let saved = 0;
   const r = new Remote(base, { secrets: { password: 'synthetic' }, knownHosts: '', trust: async () => false,
     savePin: () => { saved++; }, clientFactory: () => new DeniedClient() });
-  await assert.rejects(r.connect(), e => e.code === 'BETTERSSH_HOST_VERIFICATION' && /cancel/i.test(e.message));
+  await assert.rejects(r.connect(), e => e.code === 'NERDSSHELL_HOST_VERIFICATION' && /cancel/i.test(e.message));
   assert.equal(saved, 0); r.disconnect();
 });
 test('changed host identity keeps its non-retryable verification error', async () => {
   const r = new Remote(base, { secrets: { password: 'synthetic' }, knownHosts: '',
     pins: { 'server.example:22': 'SHA256:old-key-for-unit-test' }, clientFactory: () => new DeniedClient() });
-  await assert.rejects(r.connect(), e => e.code === 'BETTERSSH_HOST_VERIFICATION' && /changed/i.test(e.message));
+  await assert.rejects(r.connect(), e => e.code === 'NERDSSHELL_HOST_VERIFICATION' && /changed/i.test(e.message));
   r.disconnect();
 });
 

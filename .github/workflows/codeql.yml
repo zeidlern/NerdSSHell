@@ -13,7 +13,7 @@ jobs:
   analyze:
     # Public repositories run CodeQL automatically. While private, it runs only
     # after GitHub Code Security is enabled and the repository variable is set.
-    if: github.event.repository.visibility == 'public' || vars.NERDSSHELL_CODEQL_ENABLED == 'true' || vars.BETTERSSH_CODEQL_ENABLED == 'true'
+    if: github.event.repository.visibility == 'public' || vars.NERDSSHELL_CODEQL_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

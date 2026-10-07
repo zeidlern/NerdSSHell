@@ -41,7 +41,7 @@ function fixture() {
   const context = vm.createContext({ ...appearanceModule, $, api, appearance: appearanceModule.appearance(), preferencePalette: appearanceModule.presetPalette(),
     notifications: { enabled: true, audio: true, desktop: true, visual: true }, sessionDefaults: { scrollback: 100000, archiveMB: 256, record: false, startup: 'all', autoConnect: true },
     preferenceSection: 'copy', preferenceGeneration: 0, preferenceSaving: false, preferenceLoaded: false, views,
-    BetterSSHAppearance: appearanceModule, window: { BetterSSHPanes: panesUI },
+    NerdSSHellAppearance: appearanceModule, window: { NerdSSHellPanes: panesUI },
     document: { documentElement: root, querySelectorAll: selector => selector === '[data-preference-section]' ? nav : [], createElement: tag => new Node(tag) },
     renderAttentionIndicators() {}, run: value => value, structuredClone, queueMicrotask });
   // Exercise the actual dialog controller, preview code, and close handler.

@@ -6,14 +6,14 @@ const { EventEmitter } = require('node:events');
 const { installDesktopTools } = require('../src/desktop-tools.cjs');
 const { spawnElevatedPty, bootstrap } = require('../src/elevated-pty.cjs');
 async function fixture(t) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'betterssh-ux-security-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-ux-security-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const handlers = new Map(), native = [], app = new EventEmitter(); let window;
-  Object.assign(app, { isPackaged: true, requestSingleInstanceLock: () => true, whenReady: () => Promise.resolve(),
+  Object.assign(app, { isPackaged: true, setPath() {}, commandLine: { getSwitchValue: () => directory }, requestSingleInstanceLock: () => true, whenReady: () => Promise.resolve(),
     getPath: () => directory, getVersion: () => 'synthetic', quit() {}, exit() {} });
   class Window extends EventEmitter {
     constructor() { super(); window = this; this.webContents = new EventEmitter();
-      this.webContents.mainFrame = { url: 'betterssh://app/ui/index.html' }; this.webContents.send = () => {};
+      this.webContents.mainFrame = { url: 'nerdsshell://app/ui/index.html' }; this.webContents.send = () => {};
       this.webContents.setWindowOpenHandler = () => {};
       this.webContents.session = { setPermissionRequestHandler() {}, setPermissionCheckHandler() {} };
     }
@@ -50,15 +50,19 @@ test('all new UX IPC paths reject foreign senders, same-URL subframes and naviga
   ];
   const before = JSON.stringify(h.store.data);
   for (const [name, args] of cases) {
-    const invoke = h.handlers.get('betterssh:' + name); assert.equal(typeof invoke, 'function', name);
+    const invoke = h.handlers.get('nerdsshell:' + name); assert.equal(typeof invoke, 'function', name);
     await assert.rejects(invoke({ ...h.event(), sender: {} }, ...args), /Untrusted request/, name + ' foreign sender');
     await assert.rejects(invoke({ ...h.event(), senderFrame: { url: h.window.webContents.mainFrame.url } }, ...args), /Untrusted request/, name + ' subframe');
     h.window.webContents.mainFrame.url = 'https://untrusted.invalid/';
     try { await assert.rejects(invoke(h.event(), ...args), /Untrusted request/, name + ' navigation'); }
-    finally { h.window.webContents.mainFrame.url = 'betterssh://app/ui/index.html'; }
+    finally { h.window.webContents.mainFrame.url = 'nerdsshell://app/ui/index.html'; }
+    h.window.webContents.mainFrame.url = 'betterssh://app/ui/index.html';
+    try { await assert.rejects(invoke(h.event(), ...args), /Untrusted request/, name + ' retired origin'); }
+    finally { h.window.webContents.mainFrame.url = 'nerdsshell://app/ui/index.html'; }
+    assert.equal(h.handlers.has('betterssh:' + name), false, name + ' retired IPC channel');
   }
-  assert.deepEqual(h.native, []); assert.equal(JSON.stringify(h.store.data), before); assert.equal(h.app.bettersshScratchpadDirty, undefined);
-  const diagnostic = await h.handlers.get('betterssh:workbenchDiagnostics')(h.event());
+  assert.deepEqual(h.native, []); assert.equal(JSON.stringify(h.store.data), before); assert.equal(h.app.nerdsshellScratchpadDirty, undefined);
+  const diagnostic = await h.handlers.get('nerdsshell:workbenchDiagnostics')(h.event());
   assert.equal(diagnostic.connections.length, 0, 'The real application main frame retains its intended API');
 });
 test('UAC helper rejects hostile executable IDs and does not accept renderer command text', async () => {

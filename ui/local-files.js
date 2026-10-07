@@ -1,7 +1,7 @@
 /* global window, document */
 'use strict';
 (function (root) {
-  const TYPE = 'application/x-betterssh-file';
+  const TYPE = 'application/x-nerdsshell-file';
   function parseDrag(raw, { key, browserId, remoteEpoch, localEpoch }, destination) {
     if (typeof raw !== 'string' || !raw || raw.length > 5000) throw new Error('Invalid file drag.');
     const value = JSON.parse(raw);
@@ -91,5 +91,5 @@
     }, destroy() { destroyed = true; serial++; current = selected = null; } };
   }
   if (typeof module !== 'undefined') module.exports = { attach, TYPE, parseDrag };
-  else root.BetterSSHLocalFiles = { attach, TYPE, parseDrag };
+  else root.NerdSSHellLocalFiles = { attach, TYPE, parseDrag };
 })(typeof window === 'undefined' ? globalThis : window);

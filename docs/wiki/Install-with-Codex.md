@@ -19,7 +19,7 @@ First verify that the release and installer asset actually exist. Report the ver
 
 Download to a new working directory. Verify the exact SHA-256 against the release's checksum manifest. Check Authenticode and verify the publisher against the release documentation. Stop for an invalid/mismatched signature, checksum mismatch, security detection or organizational restriction. If it is unsigned, explain that and obtain my explicit decision before any installation; do not disable Windows protections or add exclusions.
 
-Identify any existing NerdSSHell/BetterSSH installation and its actual user-data path without printing personal settings. Have me save notes and finish local/Standard SSH work, then close the app normally. Do not force-kill it or end remote tmux sessions. Make a private verified backup of existing app data after closure; do not upload that backup or its contents.
+Identify any existing installation, including legacy executables, and its actual user-data path without printing personal settings. Have me save notes and finish local/Standard SSH work, then close normally. Do not force-kill the app or end remote tmux sessions. Make a private verified backup after closure; never upload its contents.
 
 Use the verified installer with the normal per-user interactive installation flow. Preserve the existing application ID, data directory and custom install path. After installation, verify the installed version, executable/ASAR identity where practical, and that saved data survived. Launch the app normally. Do not connect to production servers, execute commands in real sessions, test Administrator mode, change server configuration, rewrite code or push to GitHub.
 
@@ -51,7 +51,7 @@ Do not change this repository's code, license, visibility, branches, tags, relea
 Use Prompt A for a published installer or Prompt B for a source candidate, and add:
 
 ```text
-This is an upgrade. Preserve all saved profiles, trust pins, appearance, Favorites, Actions, workspace state and archives. Verify that the backup is complete before changing the installation. Do not interpret an old BetterSSH folder or app ID as a reason to rename or migrate it. Do not overwrite newer data with an old backup automatically if anything goes wrong.
+This is an upgrade. Preserve saved profiles, trust pins, appearance, Favorites, Actions, workspace state and archives. Verify the private backup before changing installation. The current installer preserves its original GUID, and startup retains existing legacy data without copying, renaming, merging or deleting it. Never overwrite newer data with an older backup automatically.
 ```
 
 ## Understanding a blocked attempt

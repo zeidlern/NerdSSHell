@@ -5,7 +5,22 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { Control } = require('./control.cjs');
-const { profile, shellQuote: q, sessionName, tmuxPrefix, PANE_FORMAT, parsePanes, paneKey, fingerprint, knownHostStatus, integer, geometry } = require('./core.cjs');
+const { profile, shellQuote: q, sessionName, tmuxPrefix, PANE_FORMAT, parsePanes, paneKey, fingerprint, knownHostStatus, integer, geometry,
+  SESSION_IDENTITY_OPTION, LEGACY_SESSION_IDENTITY_OPTION, SESSION_IDENTITY_FORMAT, parseSessionIdentity } = require('./core.cjs');
+
+function identityCondition(pane) {
+  // Legacy-only pane records remain usable; never replace their stable token.
+  const observed = pane.sessionIdentityOption || LEGACY_SESSION_IDENTITY_OPTION;
+  if (![SESSION_IDENTITY_OPTION, LEGACY_SESSION_IDENTITY_OPTION].includes(observed)) throw new Error('Invalid session identity marker.');
+  if (!parseSessionIdentity(pane.sessionToken).sessionToken) throw new Error('Invalid session identity.');
+  const other = observed === SESSION_IDENTITY_OPTION ? LEGACY_SESSION_IDENTITY_OPTION : SESSION_IDENTITY_OPTION;
+  return `#{&&:#{==:#{${observed}},${pane.sessionToken}},#{||:#{==:#{${other}},},#{==:#{${other}},${pane.sessionToken}}}}`;
+}
+function identityMatches(value, pane) {
+  const identity = parseSessionIdentity(value.trim());
+  return identity.sessionToken === pane.sessionToken &&
+    (pane.sessionIdentityOption !== SESSION_IDENTITY_OPTION || identity.sessionIdentityOption === SESSION_IDENTITY_OPTION);
+}
 
 /** One authenticated connection; one control channel per opened remote session. */
 class Remote extends EventEmitter {
@@ -37,11 +52,11 @@ class Remote extends EventEmitter {
       tryKeyboard: true, hostVerifier: (key, done) => this.verifyHost(key).then(accepted => {
         if (!accepted) {
           const error = new Error('Server identity verification cancelled. Connection blocked.');
-          error.code = 'BETTERSSH_HOST_VERIFICATION'; this.verificationError = this.lastError = error;
+          error.code = 'NERDSSHELL_HOST_VERIFICATION'; this.verificationError = this.lastError = error;
         }
         done(accepted);
       }, error => {
-        error.code = 'BETTERSSH_HOST_VERIFICATION'; this.verificationError = this.lastError = error; done(false);
+        error.code = 'NERDSSHELL_HOST_VERIFICATION'; this.verificationError = this.lastError = error; done(false);
       }) };
     if (p.auth === 'agent') {
       options.agent = process.platform === 'win32' ? '\\\\.\\pipe\\openssh-ssh-agent' : process.env.SSH_AUTH_SOCK;
@@ -141,17 +156,39 @@ class Remote extends EventEmitter {
     this.discovering = this._discover().finally(() => { this.discovering = null; }); return this.discovering;
   }
   async _discover() {
+    const client = this.client;
+    const current = () => this.connected && !this.closing && this.client === client;
+    const assertCurrent = () => { if (!current()) throw new Error('Connection changed while discovering sessions.'); };
+    assertCurrent();
     const command = `${this.prefix} list-panes -a -F ${q(PANE_FORMAT)}`;
     let r = await this.exec(command);
+    assertCurrent();
     if (r.code !== 0) {
       if (/no server running|No such file or directory|no sessions/i.test(r.stderr)) r = { ...r, stdout: '' };
       else throw new Error(r.stderr.trim() || 'Could not discover persistent sessions.');
     }
     let panes = parsePanes(r.stdout);
-    const missing = [...new Set(panes.filter(x => !x.sessionToken).map(x => x.sessionId))];
-    // -o is atomic: simultaneous BetterSSH instances must not replace each other's identities.
-    for (const sid of missing) await this.checked(`${this.prefix} set-option -o -t ${q(sid)} @betterssh-id ${q(randomUUID())}`);
-    if (missing.length) panes = parsePanes(await this.checked(command));
+    const missing = [...new Map(panes.filter(x => !x.sessionToken).map(x => [x.sessionId, x])).values()];
+    // Metadata only: discovery never creates a session, window, shell or job.
+    // Check both markers inside the server command so a stale response cannot
+    // overwrite a newer identity or downgrade a concurrently migrated session.
+    // Legacy-only sessions are read as-is; reconnect need not migrate their metadata.
+    for (const pane of missing) {
+      assertCurrent();
+      const token = pane.sessionToken || randomUUID();
+      const condition = `#{&&:#{==:#{${SESSION_IDENTITY_OPTION}},},#{==:#{${LEGACY_SESSION_IDENTITY_OPTION}},${pane.sessionToken}}}`;
+      // Publish the compatibility marker first: older clients must see the same
+      // UUID before the new marker becomes visible. Ordinary synchronous tmux
+      // commands drain together, but an owner-configured set-option hook can
+      // yield; recheck before the second write rather than assuming a transaction.
+      const currentCondition = `#{&&:#{==:#{${SESSION_IDENTITY_OPTION}},},#{==:#{${LEGACY_SESSION_IDENTITY_OPTION}},${token}}}`;
+      const publishCurrent = 'if-shell -F -t ' + pane.sessionId + ' ' + q(currentCondition) + ' ' +
+        q('set-option -o -t ' + pane.sessionId + ' ' + SESSION_IDENTITY_OPTION + ' ' + token) + ' ' + q('display-message -p NERDSSHELL_IDENTITY_CHANGED');
+      const assign = 'set-option -o -t ' + pane.sessionId + ' ' + LEGACY_SESSION_IDENTITY_OPTION + ' ' + token + ' ; ' + publishCurrent;
+      await this.checked(`${this.prefix} if-shell -F -t ${q(pane.sessionId)} ${q(condition)} ${q(assign)} ${q('display-message -p NERDSSHELL_IDENTITY_CHANGED')}`);
+      assertCurrent();
+    }
+    if (missing.length) { panes = parsePanes(await this.checked(command)); assertCurrent(); }
     this.panes = panes.map(p => ({ ...p, profileId: this.profile.id, key: paneKey(this.profile.id, p.sessionToken, p.paneId) }));
     for (const [key, view] of this.views) {
       // A mixed connection shares the view registry with ordinary SSH channels.
@@ -177,13 +214,13 @@ class Remote extends EventEmitter {
     const opening = { token, task: null };
     const current = () => this.opening.get(sid) === opening && this.connected && !this.closing;
     const task = (async () => {
-      const identity = (await this.checked(`${this.prefix} show-options -v -t ${q(sid)} @betterssh-id`)).trim();
+      const identity = await this.checked(`${this.prefix} display-message -p -t ${q(sid)} ${q(SESSION_IDENTITY_FORMAT)}`);
       if (!current()) throw new Error('View changed while attaching.');
-      if (identity !== token) throw new Error('The session identity changed. Refresh the session list before attaching.');
+      if (!identityMatches(identity, pane)) throw new Error('The session identity changed. Refresh the session list before attaching.');
       // Targeted safety override only; never write ~/.tmux.conf or change global mouse/key settings.
-      const option = await this.checked(`${this.prefix} if-shell -F -t ${q(sid)} ${q('#{==:#{@betterssh-id},' + token + '}')} ${q('set-option -t ' + sid + ' destroy-unattached off')} ${q('display-message -p BETTERSSH_IDENTITY_CHANGED')}`);
+      const option = await this.checked(`${this.prefix} if-shell -F -t ${q(sid)} ${q(identityCondition(pane))} ${q('set-option -t ' + sid + ' destroy-unattached off')} ${q('display-message -p NERDSSHELL_IDENTITY_CHANGED')}`);
       if (!current()) throw new Error('View changed while attaching.');
-      if (option.includes('BETTERSSH_IDENTITY_CHANGED')) throw new Error('The session identity changed. Refresh the session list before attaching.');
+      if (option.includes('NERDSSHELL_IDENTITY_CHANGED')) throw new Error('The session identity changed. Refresh the session list before attaching.');
       const stream = await new Promise((resolve, reject) => this.client.exec(`${this.prefix} -C attach-session -t ${q(sid)}`, (e, s) => e ? reject(e) : resolve(s)));
       if (!current() || ![...this.views.values()].some(v => v.active && v.pane.sessionId === sid && v.pane.sessionToken === token)) {
         stream.destroy(); throw new Error('View closed while attaching. Remote work was left running.');
@@ -214,9 +251,9 @@ class Remote extends EventEmitter {
         await control.ready;
         await control.request('refresh-client -f pause-after=5');
         if (!current() || this.controls.get(sid) !== control) throw new Error('View changed while attaching.');
-        const attachedIdentity = (await this.checked(`${this.prefix} show-options -v -t ${q(sid)} @betterssh-id`)).trim();
+        const attachedIdentity = await this.checked(`${this.prefix} display-message -p -t ${q(sid)} ${q(SESSION_IDENTITY_FORMAT)}`);
         if (!current() || this.controls.get(sid) !== control) throw new Error('View changed while attaching.');
-        if (attachedIdentity !== token) throw new Error('The session identity changed during attachment. Refresh the session list before opening.');
+        if (!identityMatches(attachedIdentity, pane)) throw new Error('The session identity changed during attachment. Refresh the session list before opening.');
         control.verified = true;
         return control;
       } catch (error) { control.detach(); throw error; }
@@ -333,15 +370,15 @@ class Remote extends EventEmitter {
   }
   async rename(key, name) {
     const p = this.pane(key); sessionName(name);
-    const result = await this.checked(`${this.prefix} if-shell -F -t ${q(p.sessionId)} ${q('#{==:#{@betterssh-id},' + p.sessionToken + '}')} ${q('rename-session -t ' + p.sessionId + ' ' + q(name))} ${q('display-message -p BETTERSSH_IDENTITY_CHANGED')}`);
-    if (result.includes('BETTERSSH_IDENTITY_CHANGED')) throw new Error('The remote session identity changed. It was not renamed.');
+    const result = await this.checked(`${this.prefix} if-shell -F -t ${q(p.sessionId)} ${q(identityCondition(p))} ${q('rename-session -t ' + p.sessionId + ' ' + q(name))} ${q('display-message -p NERDSSHELL_IDENTITY_CHANGED')}`);
+    if (result.includes('NERDSSHELL_IDENTITY_CHANGED')) throw new Error('The remote session identity changed. It was not renamed.');
     return this.discover();
   }
   async endSession(key) {
     const p = this.pane(key);
     // Evaluate the identity and kill within one server command; avoid an ID-reuse race.
-    const result = await this.checked(`${this.prefix} if-shell -F -t ${q(p.sessionId)} ${q('#{==:#{@betterssh-id},' + p.sessionToken + '}')} ${q('kill-session -t ' + p.sessionId)} ${q('display-message -p BETTERSSH_IDENTITY_CHANGED')}`);
-    if (result.includes('BETTERSSH_IDENTITY_CHANGED')) throw new Error('The remote session identity changed. It was not terminated.');
+    const result = await this.checked(`${this.prefix} if-shell -F -t ${q(p.sessionId)} ${q(identityCondition(p))} ${q('kill-session -t ' + p.sessionId)} ${q('display-message -p NERDSSHELL_IDENTITY_CHANGED')}`);
+    if (result.includes('NERDSSHELL_IDENTITY_CHANGED')) throw new Error('The remote session identity changed. It was not terminated.');
     return this.discover();
   }
   sftp() { if (!this.connected) return Promise.reject(new Error('Not connected.')); return new Promise((resolve, reject) => this.client.sftp((e, s) => e ? reject(e) : resolve(s))); }

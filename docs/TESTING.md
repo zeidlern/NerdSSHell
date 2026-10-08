@@ -54,3 +54,9 @@ The shared-confirmation fixture loads the exact unmodified ASAR main/UI/preload 
 Run `node scripts/Startup-Update-Smoke.cjs` for exact-ASAR Windows SDK startup prompts. Its public-release transport, current app identity and installer handoff are controlled fixtures; no real release download, user profile, clipboard or installation is involved. Real pointer Upgrade/Not now and corrupt-download refusal are exercised.
 
 Run `node scripts/Update-Handoff-Smoke.cjs` for owned inert Windows parent/installer/restart processes with explicit registry/process-enumeration fixtures. It must prove actual parent-exit persistence, nonce consent/cancellation, file integrity and conservative cleanup. It never modifies the installed user application or real registry. Source helper changes require a new exact-package receipt; do not infer native Windows passes from synthetic tests.
+
+## Quick Connect acceptance
+
+Run `node --test test/generic-appliance.integration.test.cjs` on Windows or Linux for 300 real loopback appliance cycles, including password refusal, interactive MFA/cancel, transport loss and shell refusal. The fixture asserts zero exec requests, automatic input and unsolicited SFTP, then checks owned resource cleanup. This does not emulate an actual Cisco/Juniper/Arista release or prove renderer-memory behavior.
+
+After a fresh package build, `node scripts/Packaged-Quick-Connect-Smoke.cjs` exercises actual main/preload/renderer pointer/keyboard interactions with generated SSH peers and explicit disposable data. It does not use owner profiles, physical clipboard, real network devices or global security settings. Its JSON receipt preserves actual scope and owned cleanup.

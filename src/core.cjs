@@ -1,6 +1,7 @@
 'use strict';
 const { randomUUID, createHash, createHmac, timingSafeEqual } = require('node:crypto');
 const { MAX_DISCOVERED_PANES, resourceLimitError } = require('./session-limits.cjs');
+const { hostName } = require('./quick-connect.cjs');
 
 function text(value, label, max = 4096) {
   if (typeof value !== 'string' || value.length > max || /[\x00-\x1f\x7f]/.test(value)) throw new Error(`Invalid ${label}.`);
@@ -39,12 +40,14 @@ function sessionName(value) {
 }
 function profile(value) {
   if (!value || typeof value !== 'object') throw new Error('Connection settings are required.');
-  const host = text(value.host, 'host', 253).trim();
+  const host = hostName(text(value.host, 'host', 253).trim());
   const username = text(value.username, 'username', 128).trim();
-  if (!/^[A-Za-z0-9][A-Za-z0-9.:-]*$/.test(host)) throw new Error('Enter a hostname or IP address, not an SSH command.');
   if (!/^[A-Za-z0-9_][A-Za-z0-9_.@-]*$/.test(username)) throw new Error('Invalid username.');
-  const sessionMode = value.sessionMode ?? 'persistent';
-  if (!['persistent', 'standard'].includes(sessionMode)) throw new Error('Invalid session mode.');
+  const terminalType = value.terminalType ?? 'server';
+  if (!['server', 'generic'].includes(terminalType)) throw new Error('Invalid terminal type.');
+  const requestedMode = value.sessionMode ?? 'persistent';
+  if (!['persistent', 'standard'].includes(requestedMode)) throw new Error('Invalid session mode.');
+  const sessionMode = terminalType === 'generic' ? 'standard' : requestedMode;
   const auth = value.auth || 'agent';
   if (!['agent', 'key', 'password'].includes(auth)) throw new Error('Unsupported sign-in method.');
   const remember = value.rememberPassword ?? false;
@@ -59,7 +62,7 @@ function profile(value) {
   const keyPath = text(value.keyPath || '', 'private key path');
   if (auth === 'key' && !keyPath) throw new Error('Choose a private key file.');
   // Deliberate allowlist: plaintext passwords, arbitrary SSH options and renderer-supplied fields are never persisted.
-  return { id: uuid, sessionMode, name: text(value.name || host, 'connection name', 80), host, username,
+  return { id: uuid, sessionMode, terminalType, name: text(value.name || host, 'connection name', 80), host, username,
     port: integer(Number(value.port ?? 22), 1, 65535, 'port'), auth, rememberPassword, keyPath, socket,
     autoConnect: value.autoConnect !== false, startup, record: value.record === true,
     terminalBaud: terminalBaud(value.terminalBaud),

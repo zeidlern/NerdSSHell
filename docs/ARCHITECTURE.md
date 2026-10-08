@@ -42,3 +42,9 @@ Primary documentation used for implementation:
 ## Validation
 
 Source and disposable SSH tests cover protocol and lifecycle behavior. Native consoles, packaging, elevation and desktop interaction need Windows validation for the exact source and artifact. Use [TESTING.md](TESTING.md), preserve the [security boundaries](SECURITY-REVIEW.md), and follow the [release process](PUBLIC-RELEASE.md). Current results are recorded in [validation results](VALIDATION.md).
+
+## Temporary network-device connections
+
+`src/quick-connect.cjs` validates endpoint forms, nonsecret defaults and the bounded recent list. Main owns temporary IDs and their runtime registry separately from stored profiles. Quick requests reserve terminal capacity before login, reuse verified SSH and serialized prompts, and disable remembered-password storage. Normal closure, network loss and stale callbacks retire resources while a bounded ended transcript can remain until final tab closure. Temporary IDs are excluded from persisted workspace restoration. Atomic promotion retains the live identity and generic capability.
+
+Validated `terminalType: generic` uses plain Standard SSH and blocks OS/tmux discovery and task/startup commands at provider and workbench boundaries. The pane Actions UI does not initiate platform detection for generic endpoints. Missing terminalType defaults to existing server behavior; saved Persistent/local flows are unchanged.

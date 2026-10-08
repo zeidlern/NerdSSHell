@@ -8,7 +8,8 @@ function deferred() { let resolve; const promise = new Promise(r => { resolve = 
 function harness() {
   class Element {
     constructor(tag = 'div') { this.tag = tag; this.value = ''; this.textContent = ''; this.children = []; this.hidden = false; this.disabled = false; this.open = false; this.dataset = {}; this.listeners = {}; }
-    append(...nodes) { this.children.push(...nodes); }
+    append(...nodes) { this.children.push(...nodes); if (this.tag === 'select' && !this.value) this.value = nodes[0]?.value || ''; }
+    prepend(...nodes) { this.children.unshift(...nodes); }
     replaceChildren(...nodes) { this.children = nodes; this.value = nodes[0]?.value || ''; }
     addEventListener(name, fn) { (this.listeners[name] ||= []).push(fn); }
     dispatch(name) { this['on'+name]?.({}); for (const fn of this.listeners[name] || []) fn({ preventDefault() {} }); }
@@ -17,7 +18,7 @@ function harness() {
     focus() {} scrollIntoView() {} setAttribute() {}
     querySelectorAll() { return this.children.flatMap(c => [c, ...c.querySelectorAll()]).filter(c => c.tag === 'button'); }
   }
-  const nodes = new Map(), $ = id => { if (!nodes.has(id)) nodes.set(id, new Element()); return nodes.get(id); };
+  const nodes = new Map(), $ = id => { if (!nodes.has(id)) nodes.set(id, new Element(id === 'wbTarget' ? 'select' : 'div')); return nodes.get(id); };
   const cancelled = [], reviewed = [], runs = [], copies = []; let listener, reviewResponse, runResponse = async () => null;
   const api = {
     workbenchContext: async () => ({ targets: [{ id: 'a', title: 'REMOTE A', local: false }, { id: 'b', title: 'REMOTE B', local: false }], preferences: { favorites: [] } }),
@@ -260,4 +261,56 @@ test('output preview captures its own endpoint and does not follow later active-
 test('oversized edited preview does not replace the clipboard',async()=>{
  const h=harness();await h.$('wbDiagnostics').onclick();h.$('wbDiagnosticsText').value='x'.repeat(524289);
  await assert.rejects(h.$('wbDiagnosticsCopy').onclick(),/512 KiB/);assert.equal(h.copies.length,0);
+});
+
+test('explicit unavailable workbench destinations fail closed without a source key or local fallback', async () => {
+  const h = harness(), notices = [], actions = [];
+  h.context.message = text => notices.push(text);
+  h.api.workbenchContext = async () => ({ targets: [{ id: 'local:cmd', title: 'LOCAL CMD', local: true, shell: 'cmd' }, { id: 'a', title: 'REMOTE A', local: false }], preferences: { favorites: [] } });
+  h.api.workbenchActions = async (...args) => { actions.push(args); return { actions: [], platform: { system: 'Windows' } }; };
+  await h.ui.open({ target: 'quick-device', code: 'synthetic-never-execute' });
+  assert.equal(h.$('workbenchDialog').open, false); assert.equal(h.$('wbCode').value, ''); assert.equal(h.$('wbTarget').value, '');
+  assert.deepEqual(actions, []); assert.deepEqual(h.reviewed, []); assert.deepEqual(h.runs, []);
+  assert.match(notices[0], /selected destination.*unavailable/);
+});
+
+test('an unavailable explicit destination revokes an open review and clears staged work rather than retargeting it', async () => {
+  const h = harness(); await ready(h); await h.$('wbReview').onclick();
+  h.api.workbenchContext = async () => ({ targets: [{ id: 'local:cmd', title: 'LOCAL CMD', local: true, shell: 'cmd' }], preferences: { favorites: [] } });
+  await h.ui.open({ target: 'gone-device', code: 'synthetic-never-execute' });
+  assert.ok(h.cancelled.includes('review-1')); assert.equal(h.$('workbenchDialog').open, false);
+  assert.equal(h.$('wbCode').value, ''); assert.equal(h.$('wbTarget').value, ''); assert.equal(h.$('wbRun').disabled, true); assert.deepEqual(h.runs, []);
+});
+
+test('global workbench opening without an explicit destination retains normal local fallback', async () => {
+  const h = harness(), actions = [];
+  h.context.active = 'quick-device/shell'; h.context.panes.set(h.context.active, { profileId: 'quick-device' });
+  h.api.workbenchContext = async () => ({ targets: [{ id: 'local:cmd', title: 'LOCAL CMD', local: true, shell: 'cmd' }], preferences: { favorites: [] } });
+  h.api.workbenchActions = async id => { actions.push(id); return { actions: [], platform: { system: 'Windows' } }; };
+  await h.ui.open();
+  assert.equal(h.$('workbenchDialog').open, true); assert.equal(h.$('wbTarget').value, 'local:cmd'); assert.deepEqual(actions, ['local:cmd']);
+  assert.deepEqual(h.reviewed, []); assert.deepEqual(h.runs, []);
+});
+
+test('generic pane footer keeps deliberate input locking and omits the unavailable command workbench', async () => {
+  for (const metadata of ['profile', 'pane']) {
+    const h = harness(), locks = [], bottom = h.$('fixtureBottom'), key = 'quick-device/shell';
+    h.context.profiles.set('quick-device', { host: 'router.example', username: 'netops', ...(metadata === 'profile' ? { terminalType: 'generic' } : {}) });
+    const view = { ready: true, pane: { key, profileId: 'quick-device', standard: true, ...(metadata === 'pane' ? { terminalType: 'generic' } : {}) },
+      wrapper: { querySelector: selector => { assert.equal(selector, '.pane-bottom'); return bottom; }, classList: { toggle() {} } } };
+    h.api.inputLock = async (requested, locked) => { locks.push([requested, locked]); return locked; };
+    h.ui.onView(view);
+    assert.ok(bottom.children.some(node => node.textContent === 'Lock input')); assert.equal(bottom.children.some(node => node.textContent === 'Review command'), false);
+    await view.lockButton.onclick(); assert.deepEqual(locks, [[key, true]]); assert.equal(view.locked, true); assert.equal(view.lockButton.textContent, 'Unlock input');
+    h.ui.onView(view); assert.equal(bottom.children.filter(node => node.textContent === 'Unlock input').length, 1);
+  }
+});
+
+test('server and local pane footers retain their originating-pane Review command control', () => {
+  for (const local of [false, true]) {
+    const h = harness(), bottom = h.$('fixtureBottom'), profileId = local ? 'local:cmd' : 'a';
+    h.context.profiles.set(profileId, { host: 'server.example', username: 'operator', terminalType: 'server' });
+    const view = { pane: { key: profileId + '/shell', profileId, local, standard: true }, wrapper: { querySelector: () => bottom } };
+    h.ui.onView(view); assert.ok(bottom.children.some(node => node.textContent === 'Review command')); assert.ok(view.lockButton);
+  }
 });

@@ -56,7 +56,14 @@ function applyAppearance(colors) {
 }
 function element(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 function button(text, action, cls, title) { const b = element('button', cls, text); if (title) b.title = title; b.addEventListener('click', e => { e.stopPropagation(); run(action()); }); return b; }
-function label(p) { return p.windowPanes > 1 || [...panes.values()].some(x => x.key !== p.key && x.sessionId === p.sessionId && x.profileId === p.profileId) ? `${p.sessionName} / ${p.windowName} / ${p.paneIndex + 1}` : p.sessionName; }
+function label(p) {
+  const profile = profiles.get(p.profileId);
+  if (profile?.terminalType === 'generic') {
+    const host = profile.host.includes(':') ? '[' + profile.host + ']' : profile.host;
+    return profile.username + '@' + host + (profile.port !== 22 ? ':' + profile.port : '') + (p.sessionName && p.sessionName !== 'Shell' ? ' / ' + p.sessionName : '');
+  }
+  return p.windowPanes > 1 || [...panes.values()].some(x => x.key !== p.key && x.sessionId === p.sessionId && x.profileId === p.profileId) ? `${p.sessionName} / ${p.windowName} / ${p.paneIndex + 1}` : p.sessionName;
+}
 function connected(id) { return statuses.get(id)?.state === 'connected'; }
 async function connectProfile(id) {
   if (profiles.get(id)?.sessionMode !== 'standard' || connected(id)) return api.connect(id);
@@ -155,13 +162,34 @@ function sessionRow(pane) {
   if (pane.local) row.append(element('span', 'session-kind', pane.shellFamily === 'cmd' || pane.shellId === 'local:cmd' ? 'CMD' : 'PS'));
   row.append(element('span', 'session-name', label(pane)), waitingIndicator(pane.key, true));
   row.title = `${label(pane)} — ${pane.local ? 'Local shell on this PC' : pane.command || 'Remote shell'}${pane.administrator ? ' · Administrator' : ''}${attention ? '\nWaiting for input' : ''}\nClick to open; drag into a layout slot.`;
-  const open = () => { selectedProfile = pane.profileId; run(openPane(pane.key)); };
+  const open = () => { selectedProfile = pane.profileId; if (pane.dead && views.has(pane.key)) activate(pane.key); else run(openPane(pane.key)); };
   row.addEventListener('click', open);
   row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
   dragSource(row, pane.key); return row;
 }
 function renderConnections() {
   const root = $('connections'); root.replaceChildren();
+  const temporary = [...profiles.values()].filter(p => p.temporary && !p.local);
+  if (temporary.length) {
+    const group = element('section', 'quick-group'); group.append(element('h3', '', 'Quick connections'));
+    for (const p of temporary) {
+      const box = element('section', 'connection quick-connection'), head = element('div', 'connection-head', p.name);
+      head.append(element('span', 'quick-tag', 'TEMPORARY'));
+      box.append(head, element('div', 'connection-address', `${p.username ? p.username + '@' : ''}${p.host}:${p.port}`));
+      const state = statuses.get(p.id) || { state: 'connecting', detail: 'Connecting…' };
+      const status = element('div', 'connection-status ' + state.state, state.detail || state.state); status.setAttribute('role', 'status'); box.append(status);
+      const actions = element('div', 'connection-actions');
+      if (state.state === 'connected') actions.append(button('Save connection', () => window.NerdSSHellQuick.saveConnection(p.id), 'small'), button('Disconnect', () => api.disconnect(p.id), 'small'));
+      else if (state.state === 'connecting') actions.append(button('Cancel', () => api.disconnect(p.id), 'small'));
+      else actions.append(button('Close transcript', () => window.NerdSSHellQuick.closeConnection(p.id), 'small'));
+      box.append(actions);
+      const current = new Map([...panes].filter(([, pane]) => pane.profileId === p.id));
+      for (const [key, view] of views) if (view.pane.profileId === p.id && !current.has(key)) current.set(key, view.pane);
+      for (const pane of current.values()) box.append(sessionRow(pane));
+      group.append(box);
+    }
+    root.append(group);
+  }
   const localPanes = [...panes.values()].filter(pane => pane.local);
   if (localPanes.length) {
     const local = element('section', 'connection local-connection');
@@ -169,18 +197,21 @@ function renderConnections() {
     for (const pane of localPanes) local.append(sessionRow(pane));
     root.append(local);
   }
-  if (![...profiles.values()].some(p => !p.local)) root.append(element('p', 'hint', 'Add an SSH server to open remote sessions.'));
-  for (const p of profiles.values()) {
-    if (p.local) continue;
+  const saved = [...profiles.values()].filter(p => !p.local && !p.temporary);
+  if (temporary.length && saved.length) root.append(element('h3', 'saved-connections-heading', 'Saved connections'));
+  if (!saved.length && !temporary.length) root.append(element('p', 'hint', 'Enter an address above to connect, or save a connection with +.'));
+  for (const p of saved) {
     const box = element('section', 'connection'), head = element('div', 'connection-head', p.name);
     head.append(button('⋯', () => editConnection(p), 'small', 'Edit connection'));
-    box.append(head, element('div', 'connection-address', `${p.username}@${p.host}:${p.port}`), element('div', 'connection-address', 'Persistence is chosen for each new session'));
+    box.append(head, element('div', 'connection-address', `${p.username}@${p.host}:${p.port}`), element('div', 'connection-address', p.terminalType === 'generic' ? 'Network device · plain SSH' : 'Persistence is chosen for each new session'));
     const state = statuses.get(p.id) || { state: 'disconnected', detail: 'Not connected' };
     const status = element('div', 'connection-status ' + state.state, state.detail || state.state);
     status.setAttribute('role', 'status'); box.append(status);
     const actions = element('div', 'connection-actions');
     if (state.state === 'connected') {
-      actions.append(button('+ New', () => newSession(p.id), 'small'), button('Refresh', () => api.discover(p.id), 'small'), button('Disconnect', () => api.disconnect(p.id), 'small'));
+      actions.append(button('+ New', () => newSession(p.id), 'small'));
+      if (p.terminalType !== 'generic') actions.append(button('Refresh', () => api.discover(p.id), 'small'));
+      actions.append(button('Disconnect', () => api.disconnect(p.id), 'small'));
     } else if (state.state === 'connecting') actions.append(button('Cancel', () => api.disconnect(p.id), 'small'));
     else actions.append(button('Connect', () => { selectedProfile = p.id; return connectProfile(p.id); }, 'small'), button('Remove', async () => { if (await api.deleteProfile(p.id)) { profiles.delete(p.id); renderConnections(); } }, 'small'));
     if (p.auth === 'password') actions.append(button('Forget password', async () => {
@@ -300,7 +331,7 @@ function createView(pane) {
   dragSource(move, pane.key);
   context.append(move, locationBadge, element('span', 'pane-title', label(pane)), waitingBadge, state); head.append(context, controls);
   const filesToggle = element('button', 'pane-files-toggle', 'File SFTP'); filesToggle.type = 'button'; filesToggle.title = 'Show or hide this terminal’s file browser';
-  if (!pane.local) context.append(filesToggle, button('History', () => showHistory(pane.key), '', 'Search recorded output'));
+  if (!pane.local) { context.append(filesToggle); if (!profiles.get(pane.profileId)?.temporary) context.append(button('History', () => showHistory(pane.key), '', 'Search recorded output')); }
   controls.append(button('Rename', () => performSessionAction(pane.key, 'rename'), 'pane-rename'));
   if (!pane.local) controls.append(button('Disconnect', () => performSessionAction(pane.key, 'disconnect'), 'pane-disconnect', pane.standard ? 'Close this nonpersistent console (confirmation required)' : 'Detach this view; leave remote work running'));
   controls.append(button('End Session', () => performSessionAction(pane.key, 'end'), 'pane-end danger', pane.local ? 'Terminate this local shell and its process (confirmation required)' : 'Terminate this session (confirmation required)'));
@@ -393,11 +424,11 @@ function finishEntry(value) { $('entryDialog').close(); const resolve = entryRes
 let newSessionResolve = null, newSessionTarget = null;
 function chooseNewSession(id) {
   if (newSessionResolve) return Promise.reject(new Error('Finish naming the current new session first.'));
-  const local = !!profiles.get(id)?.local;
+  const local = !!profiles.get(id)?.local, generic = profiles.get(id)?.terminalType === 'generic';
   $('newSessionTitle').textContent = `New session on ${profiles.get(id)?.name || id}`;
   $('newSessionName').value = 'Session-' + new Date().toTimeString().slice(0, 8).replace(/:/g, '-');
-  $('newSessionPersistence').hidden = local;
-  $('newSessionPersistent').checked = true;
+  $('newSessionPersistence').hidden = local || generic;
+  $('newSessionPersistent').checked = !generic;
   newSessionTarget = id; $('newSessionBaud').value = ''; updateNewSessionBaud();
   return new Promise(resolve => { newSessionResolve = resolve; $('newSessionDialog').showModal(); $('newSessionName').focus(); $('newSessionName').select(); });
 }
@@ -410,7 +441,7 @@ function updateNewSessionBaud() {
 }
 function finishNewSession(accepted) {
   const resolve = newSessionResolve;
-  const persistent = $('newSessionPersistent').checked, value = $('newSessionBaud').value;
+  const persistent = profiles.get(newSessionTarget)?.terminalType !== 'generic' && $('newSessionPersistent').checked, value = $('newSessionBaud').value;
   const result = accepted ? { name: $('newSessionName').value, persistent,
     terminalBaud: !persistent && !profiles.get(newSessionTarget)?.local && value !== '' ? Number(value) : undefined } : null;
   newSessionResolve = newSessionTarget = null; $('newSessionDialog').close(); resolve?.(result);
@@ -440,10 +471,12 @@ async function performSessionAction(key, action) {
   }
 }
 function showFind() { $('searchbar').hidden = false; $('searchText').focus(); }
-async function showHistory(key = active) { if (!key) return; historyKey = key; $('historyDialog').showModal(); $('archiveQuery').focus(); await searchArchive(); }
+async function showHistory(key = active) { if (!key) return; if (profiles.get(views.get(key)?.pane.profileId)?.temporary) { message('Temporary connections do not record output. Save the connection to configure recording.'); return; } historyKey = key; $('historyDialog').showModal(); $('archiveQuery').focus(); await searchArchive(); }
 async function searchArchive() { $('archiveResults').textContent = 'Searching…'; const rows = await api.history(historyKey, $('archiveQuery').value); $('archiveResults').textContent = rows.length ? rows.map(r => `[${new Date(r.at).toLocaleString()}] ${r.text}`).join('\n') : 'No matching recorded output. Enable “Save searchable output on this PC” in the connection settings to record future output while views are open.'; }
 function editConnection(p = {}) {
   const form = $('connectionForm'); form.reset(); $('connectionError').textContent = '';
+  if (form.elements.terminalType) form.elements.terminalType.value = p.terminalType === 'generic' ? 'generic' : 'server';
+  $('connectionTypeHint').hidden = p.terminalType !== 'generic';
   if (!p.id) for (const [key, value] of Object.entries(sessionDefaults)) if (form.elements[key]) { if (form.elements[key].type === 'checkbox') form.elements[key].checked = value; else form.elements[key].value = value; }
   for (const [key, value] of Object.entries(p)) if (form.elements[key]) { if (form.elements[key].type === 'checkbox') form.elements[key].checked = value; else form.elements[key].value = value; }
   $('connectionTitle').textContent = p.id ? 'Edit connection' : 'Save a connection'; updateAuthenticationFields(); updateSessionMode(); $('connectionDialog').showModal(); form.elements.name.focus();
@@ -577,17 +610,32 @@ function replyCredentialPrompt(cancelled = false, submitter = null) {
   clearCredentialPrompt();
   if (id) run(cancelled ? api.promptReply(id, null) : api.promptReply(id, value, remember));
 }
-function isAppShortcut(e) { return e.key === 'F11' || e.ctrlKey && (e.key === 'Tab' || e.altKey && ['1', '2', '3', '4'].includes(e.key) || e.shiftKey && ['T', 't', 'W', 'w', 'P', 'p'].includes(e.key)); }
+function isAppShortcut(e) { return e.key === 'F11' || e.ctrlKey && (e.key === 'Tab' || e.altKey && ['1', '2', '3', '4', 'q', 'Q'].includes(e.key) || e.shiftKey && ['T', 't', 'W', 'w', 'P', 'p'].includes(e.key)); }
 api.onEvent(event => {
   if (event.type === 'prompt') showCredentialPrompt(event);
   else if (event.type === 'promptCancelled') { if (promptId === event.id) clearCredentialPrompt(); }
+  else if (event.type === 'quick-preferences') { if (typeof window !== 'undefined') window.NerdSSHellQuick?.update(event); }
+  else if (event.type === 'quick-removed') {
+    if (typeof window !== 'undefined') window.NerdSSHellQuick?.removed(event.profileId);
+    if (profiles.get(event.profileId)?.temporary) {
+      profiles.delete(event.profileId); statuses.delete(event.profileId);
+      for (const [key, pane] of panes) if (pane.profileId === event.profileId) panes.delete(key);
+      for (const view of views.values()) if (view.pane.profileId === event.profileId) { view.ready = false; view.filesAttached = false; view.pane.dead = true; view.generation++; view.attentionTracker?.reset(); }
+      renderConnections(); renderTabs(); syncFiles();
+    }
+  }
   else if (event.type === 'profile') {
-    if (profiles.has(event.profile.id)) { profiles.set(event.profile.id, event.profile); renderConnections(); }
+    const acceptsQuick = event.profile.temporary === true && typeof window !== 'undefined' && window.NerdSSHellQuick?.acceptProfile(event.profile);
+    if (profiles.has(event.profile.id) || acceptsQuick) { profiles.set(event.profile.id, event.profile); renderConnections(); }
     if (promptId && promptProfileId === event.profile.id && event.profile.rememberPassword !== true) $('promptRemember').checked = false;
   }
   else if (event.type === 'status') {
     if (newSessionTarget === event.profileId && event.state !== 'connected') finishNewSession(false);
     statuses.set(event.profileId, event);
+    if (event.state === 'disconnected' && profiles.get(event.profileId)?.temporary) {
+      for (const pane of panes.values()) if (pane.profileId === event.profileId) pane.dead = true;
+      for (const view of views.values()) if (view.pane.profileId === event.profileId) view.pane.dead = true;
+    }
     if (event.state !== 'connected') for (const v of views.values()) if (v.pane.profileId === event.profileId) { v.ready = false; v.filesAttached = false; v.generation++; v.attentionTracker?.reset(); v.state.textContent = event.state; window.NerdSSHellPanes?.refresh(v); }
     renderConnections(); renderTabs();
     syncFiles();
@@ -661,7 +709,12 @@ $('connectionForm').addEventListener('submit', e => {
     catch (error) { $('connectionError').textContent = error.message; message(error.message); }
   })());
 });
-function updateSessionMode() { $('startupField').hidden = false; $('sessionModeHint').textContent = 'Choose persistence in New session. Connecting never starts a new persistent job.'; }
+function updateSessionMode() {
+  const generic = $('connectionForm').elements.terminalType?.value === 'generic';
+  if (generic) $('connectionForm').elements.sessionMode.value = 'standard';
+  $('startupField').hidden = generic;
+  $('sessionModeHint').textContent = generic ? 'Plain SSH opens an ordinary terminal without automatic startup commands.' : 'Choose persistence in New session. Connecting never starts a new persistent job.';
+}
 $('connectionForm').elements.auth.addEventListener('change', updateAuthenticationFields);
 $('chooseKey').addEventListener('click', () => run((async () => { const file = await api.chooseKey(); if (file) $('connectionForm').elements.keyPath.value = file; })()));
 $('addConnection').onclick = $('welcomeConnect').onclick = () => editConnection();
@@ -782,10 +835,38 @@ document.addEventListener('paste', e => {
   const view = [...views].find(([, v]) => v.host === host);
   if (view) run(paste(view[0]));
 }, true);
+function hasGenericRuntime(profile) {
+  return profile.terminalType === 'generic' && !!profile.quickState && Array.isArray(profile.quickPanes);
+}
+function initializeProfiles(savedProfiles) {
+  for (const profile of savedProfiles) {
+    profiles.set(profile.id, profile);
+    if (hasGenericRuntime(profile)) {
+      statuses.set(profile.id, { profileId: profile.id, ...profile.quickState });
+      for (const pane of profile.quickPanes) panes.set(pane.key, pane);
+    }
+  }
+}
+async function restoreConnectionViews() {
+  for (const profile of profiles.values()) if (hasGenericRuntime(profile) && connected(profile.id)) {
+    for (const pane of profile.quickPanes) {
+      if (pane.dead || pane.profileId !== profile.id || profiles.get(profile.id) !== profile || panes.get(pane.key) !== pane) continue;
+      try { await openPane(pane.key, false); } catch (error) { message(error.message); }
+    }
+  }
+  if (desiredActive && order.includes(desiredActive)) {
+    active = desiredActive; desiredActive = ''; slots = [...savedSlots]; render();
+  }
+  for (const profile of profiles.values()) if (!profile.temporary && !hasGenericRuntime(profile) && profile.autoConnect) {
+    try { await connectProfile(profile.id); } catch (error) { message(error.message); }
+  }
+}
 window.addEventListener('beforeunload', () => { clearTimeout(saveTimer); api.workspace({ layout, twoPaneOrientation, order, slots, active, splitX, splitY }).catch(() => {}); });
 run((async () => {
-  const state = await api.state(); appearance = NerdSSHellAppearance.appearance(state.appearance); notifications = { ...notifications, ...state.notifications }; sessionDefaults = { ...sessionDefaults, ...state.sessionDefaults }; applyAppearance(appearance); for (const p of state.profiles) profiles.set(p.id, p);
+  const state = await api.state(); appearance = NerdSSHellAppearance.appearance(state.appearance); notifications = { ...notifications, ...state.notifications }; sessionDefaults = { ...sessionDefaults, ...state.sessionDefaults }; applyAppearance(appearance); initializeProfiles(state.profiles);
+  window.NerdSSHellQuick?.initialize(state.quickConnect);
   if (Number.isInteger(state.sessionLimits?.maxOpenViews) && state.sessionLimits.maxOpenViews > 0 && state.sessionLimits.maxOpenViews <= 64) maxOpenViews = state.sessionLimits.maxOpenViews;
   savedOrder = state.workspace.order; savedSlots = state.workspace.slots || []; desiredActive = state.workspace.active; layout = state.workspace.layout; twoPaneOrientation = state.workspace.twoPaneOrientation || 'side-by-side'; splitX = state.workspace.splitX; splitY = state.workspace.splitY; $('version').textContent = 'v' + state.version; $('aboutVersion').textContent = state.version;
-  render(); for (const p of profiles.values()) if (p.autoConnect) { try { await connectProfile(p.id); } catch (e) { message(e.message); } }
+  render();
+  await restoreConnectionViews();
 })());

@@ -28,6 +28,7 @@ NerdSSHell 1.0.2 in dark mode, using disposable demo connections and sample term
 
 | Feature | What it helps you do |
 | --- | --- |
+| Quick Connect | Enter an IP or DNS name and open a temporary SSH terminal for a router, switch or host, using reusable login defaults |
 | Saved SSH connections | Keep server settings and approved host fingerprints together; optionally remember passwords with Windows account protection |
 | Persistent sessions with tmux | Close the client and reconnect to remote work later |
 | Standard SSH | Open an ordinary remote shell without requiring tmux |
@@ -48,6 +49,12 @@ Starting with 1.1.0, packaged Windows launches offer a verified upgrade when a n
 Download Windows installers from [GitHub Releases](https://github.com/zeidlern/NerdSSHell/releases). Each release identifies available assets, checksums, signing status and known limitations. If a release contains only source archives, use the source-build instructions below. Check the exact asset's checksum and publisher status before installing; an unsigned build has no verified publisher identity. See [installation, upgrades and removal](docs/wiki/Installation.md).
 
 Remote connections require a reachable SSH server. Persistent sessions need **tmux 3.2 or newer**; file transfer needs the server's SFTP subsystem. Local consoles work without a server.
+
+## Quick Connect
+
+Use **Quick Connect** above the saved connections. Enter an IP address or DNS name and press Enter or Connect. Set a default username, port and password/key/agent authentication through its settings button. **Ctrl+Alt+Q** focuses the address box. Examples include `core-r1`, `netops@router.example:2222` and `[2001:db8::10]:2222`.
+
+Quick connections use plain SSH network-device mode without automatic Linux/tmux commands. They are temporary until **Save connection** is chosen. Host verification and Standard SSH close confirmations still apply. Recent destinations can be cleared or disabled; temporary passwords are not saved. See [Quick Connect and trust](docs/wiki/Connections-and-Trust.md).
 
 ## First connection
 

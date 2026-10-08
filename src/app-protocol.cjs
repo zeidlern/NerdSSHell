@@ -9,6 +9,8 @@ const ASSETS = new Set([
   '/ui/compact-ui.css',
   '/ui/preferences.css',
   '/ui/app.js',
+  '/ui/quick-connect.js',
+  '/ui/quick-connect.css',
   '/ui/session-attention.js',
   '/ui/branding/app-dark-64.png',
   '/ui/branding/app-light-64.png',

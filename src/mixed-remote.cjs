@@ -35,7 +35,16 @@ class MixedRemote extends Remote {
       this.standard.client = null;
     });
   }
+  generic() { return this.profile.terminalType === 'generic'; }
+  assertServerAutomation() {
+    if (this.generic()) throw new Error('Network-device connections use a plain SSH shell. Linux actions, task commands and persistence are unavailable.');
+  }
+  exec(command, options) {
+    if (this.generic()) return Promise.reject(new Error('Network-device connections never execute server probes or task commands. Use the interactive terminal.'));
+    return super.exec(command, options);
+  }
   async enablePersistence() {
+    this.assertServerAutomation();
     if (this.persistenceReady) return;
     if (this.supportTask) return this.supportTask;
     const client = this.client;
@@ -48,7 +57,7 @@ class MixedRemote extends Remote {
   }
   async discover() {
     if (!this.connected || this.closing) throw new Error('Not connected.');
-    if (!this.allowDiscovery) { this.emit('panes', []); return this.panes; }
+    if (this.generic() || !this.allowDiscovery) { this.emit('panes', []); return this.panes; }
     if (!this.persistenceReady) {
       // Read-only check; do not ask for sudo merely because the connection was opened.
       let probe;
@@ -65,15 +74,17 @@ class MixedRemote extends Remote {
   }
   isStandard(key) { return typeof key === 'string' && key.startsWith(this.profile.id + '/standard-'); }
   activeShellCount() { return this.standard.activeShellCount(); }
-  async createSession(name, persistent = true, baud) {
+  async createSession(name, persistent = !this.generic(), baud) {
+    if (persistent) this.assertServerAutomation();
     if (persistent && baud !== undefined) throw new Error('Terminal baud overrides apply only to new Standard SSH shells.');
     if (typeof persistent !== 'boolean') throw new Error('Choose whether the session is persistent.');
     if (!persistent) return this.standard.create(name, undefined, baud);
     await this.enablePersistence(); return Remote.prototype.create.call(this, name);
   }
-  async create(name, command) { await this.enablePersistence(); return Remote.prototype.create.call(this, name, command); }
+  async create(name, command) { this.assertServerAutomation(); await this.enablePersistence(); return Remote.prototype.create.call(this, name, command); }
   async createTask(name, code) { return this.createTaskFor(name, code, this.profile.sessionMode !== 'standard'); }
   async createTaskFor(name, code, persistent = true) {
+    this.assertServerAutomation();
     if (typeof persistent !== 'boolean') throw new Error('Choose whether the task is persistent.');
     const command = require('./action-catalog.cjs').taskCommand(code);
     if (!persistent) return this.standard.create(name, command);

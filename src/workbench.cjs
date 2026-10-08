@@ -36,6 +36,11 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
       confirmWord: runtime.profile.host,
       validate() { if (connections.get(id) !== runtime || runtime.remote !== remote || !remote.connected || remote.closing) throw new Error('Destination connection changed. Nothing was run; review again.'); } }, key);
   }
+  function generic(o) { return !o.local && (o.profile?.terminalType === 'generic' || o.remote?.profile?.terminalType === 'generic'); }
+  function assertAutomation(o) {
+    if (generic(o)) throw new Error('Linux Actions, Favorites, platform detection and command workbench tasks are unavailable on network-device connections. Use the interactive terminal.');
+  }
+  function capabilities(o) { return { terminalType: generic(o) ? 'generic' : 'server', automaticDetection: !generic(o), paneActions: !generic(o), workbench: !generic(o) }; }
   function bindPane(o, key) {
     if (key === undefined) return o;
     if (typeof key !== 'string' || key.length > 240 || !key.startsWith(o.id + '/')) throw new Error('The source pane does not belong to this destination.');
@@ -48,11 +53,11 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
   }
   function configuration() { return validateSettings(getStore().data.actionConfiguration || {}); }
   function favorites(settings, os) { return favoriteIds(settings, os, preferences(getStore().data.workbench).favorites); }
-  function platform(o) { return o.local ? { system: 'Windows', caps: [], shell: o.shell.family || shellFamily(o.shell.baseId || o.shell.id) } : facts.get(o.remote) || { system: 'unknown', caps: [] }; }
+  function platform(o) { return generic(o) ? { system: 'network-device', caps: [] } : o.local ? { system: 'Windows', caps: [], shell: o.shell.family || shellFamily(o.shell.baseId || o.shell.id) } : facts.get(o.remote) || { system: 'unknown', caps: [] }; }
   function context() {
     const targets = shellProvider().map(s => ({ id: s.id, title: `LOCAL · This PC / ${s.name}`, local: true, administrator: false, system: 'Windows', shell: s.family || shellFamily(s.id), shellId: s.id }));
     for (const [id, r] of connections) if (r.profile.local && r.remote.shell?.administrator && r.remote.connected && !r.remote.closing) targets.push({ id, title: `LOCAL · Administrator / ${r.remote.shell.name}`, local: true, administrator: true, system: 'Windows', shell: r.profile.shellFamily || shellFamily(r.remote.shell.baseId || r.remote.shell.id), shellId: r.profile.shellId || r.remote.shell.baseId });
-    for (const [id, r] of connections) if (!r.profile.local && r.remote?.connected && !r.remote.closing) targets.push({ id, title: `REMOTE · ${r.profile.name} · ${r.profile.username}@${r.profile.host}:${r.profile.port}`, local: false, system: facts.get(r.remote)?.system || 'unknown', mode: r.profile.sessionMode });
+    for (const [id, r] of connections) if (!r.profile.local && r.profile.terminalType !== 'generic' && r.remote?.profile?.terminalType !== 'generic' && r.remote?.connected && !r.remote.closing) targets.push({ id, title: `REMOTE · ${r.profile.name} · ${r.profile.username}@${r.profile.host}:${r.profile.port}`, local: false, system: facts.get(r.remote)?.system || 'unknown', mode: r.profile.sessionMode });
     return { targets, preferences: preferences(getStore().data.workbench) };
   }
   async function getLocal(s, cwd) {
@@ -77,9 +82,9 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
     if (launches >= 4) throw new Error('Wait for a console launch to finish.');
     launches++;
     try { return await withViewSlot(o.local ? connections.get(o.id)?.remote : o.remote, undefined, async bind => {
-      o.validate();
+      o.validate(); assertAutomation(o);
       const r = o.local ? await getLocal(o.shell, cwd) : connections.get(o.id);
-      o.validate(); validateReview(); // Last check before submitting creation; no await before create/createTask.
+      o.validate(); assertAutomation(o); validateReview(); // Last check before submitting creation; no await before create/createTask.
       const family = o.local ? (o.shell.family || shellFamily(o.shell.baseId || o.shell.id)) : '';
       if (o.local && code === undefined) localConsoleSequence.set(family, (localConsoleSequence.get(family) || 0) + 1);
       const name = o.local && code === undefined ? `${family === 'cmd' ? 'Command Prompt' : 'PowerShell'} ${localConsoleSequence.get(family)}` : (code === undefined ? 'Shell-' : 'Task-') + randomUUID().slice(0, 8);
@@ -87,7 +92,7 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
       const oldHome = o.local ? r.remote.home : undefined;
       const beforeShells = new Set(r.remote.shells?.keys() || []);
       let pending;
-      try { if (o.local && cwd !== undefined) r.remote.home = cwd; const guard = { validate: () => { o.validate(); validateReview(); } }; pending = code === undefined ? r.remote.create(name, undefined, guard) : !o.local && r.remote.createTaskFor ? r.remote.createTaskFor(name, code, o.persistent) : r.remote.createTask(name, code, guard); }
+      try { if (o.local && cwd !== undefined) r.remote.home = cwd; const guard = { validate: () => { o.validate(); assertAutomation(o); validateReview(); } }; pending = code === undefined ? r.remote.create(name, undefined, guard) : !o.local && r.remote.createTaskFor ? r.remote.createTaskFor(name, code, o.persistent) : r.remote.createTask(name, code, guard); }
       finally { if (o.local) r.remote.home = oldHome; }
       const createdShell = [...(r.remote.shells?.keys() || [])].find(key => !beforeShells.has(key));
       if (createdShell !== undefined) bind?.(r.remote, createdShell);
@@ -111,7 +116,9 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
   handle('actionPreview', (os, id, argument, shell) => compileConfigured(id, previewFacts(os, shell), argument, configuration()));
   handle('paneActions', key => {
     const r = forKey(key), o = owner(r.profile.id, key), settings = configuration(), info = platform(o), os = osType(info);
-    o.validate(); return { title: o.title, os, platform: info, target: actionTarget(key), actions: configuredActions(info, settings), favorites: favorites(settings, os) };
+    o.validate();
+    if (generic(o)) return { title: o.title, os: 'Network device', platform: info, capabilities: capabilities(o), target: null, actions: [], favorites: [] };
+    return { title: o.title, os, platform: info, capabilities: capabilities(o), target: actionTarget(key), actions: configuredActions(info, settings), favorites: favorites(settings, os) };
   });
   handle('workbenchPreferences', value => { const p = preferences(value); getStore().data.workbench = p; getStore().save(); return p; });
   handle('localOpen', async (id, chooseFolder = false) => {
@@ -121,9 +128,9 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
     else if (chooseFolder !== false) throw new Error('Invalid folder choice.');
     return launch(o, o.shell.name, undefined, cwd);
   });
-  handle('workbenchActions', (id, key) => { const o = owner(id, key), settings = configuration(), info = platform(o); return { title: o.title, platform: info, actions: configuredActions(info, settings), favorites: favorites(settings, osType(info)) }; });
+  handle('workbenchActions', (id, key) => { const o = owner(id, key), settings = configuration(), info = platform(o); return { title: o.title, platform: info, capabilities: capabilities(o), actions: generic(o) ? [] : configuredActions(info, settings), favorites: generic(o) ? [] : favorites(settings, osType(info)) }; });
   handle('workbenchDetect', async (id, key) => {
-    const o = owner(id, key); if (o.local) return platform(o);
+    const o = owner(id, key); assertAutomation(o); if (o.local) return platform(o);
     if (probes.has(o.remote)) return probes.get(o.remote);
     if (activeProbes >= 2) throw new Error('Wait for another platform inspection to finish.');
     facts.delete(o.remote);
@@ -133,10 +140,10 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
     } finally { activeProbes--; probes.delete(o.remote); } })();
     probes.set(o.remote, task); return task;
   });
-  handle('workbenchTemplate', (id, actionId, argument, key) => compileConfigured(actionId, platform(owner(id, key)), argument, configuration()));
+  handle('workbenchTemplate', (id, actionId, argument, key) => { const o = owner(id, key); assertAutomation(o); return compileConfigured(actionId, platform(o), argument, configuration()); });
   handle('workbenchReview', (id, request) => {
     if (!request || typeof request !== 'object' || Array.isArray(request)) throw new Error('Review a command first.');
-    const o = owner(id, request.key);
+    const o = owner(id, request.key); assertAutomation(o);
     const code = scriptText(request.code);
     if (o.local && Buffer.byteLength(code) > 8192) throw new Error('Local reviewed commands are limited to 8 KiB.');
     let plan = { code, title: 'Reviewed command', shell: o.local ? platform(o).shell : 'posix', risk: 'custom', note: '' };
@@ -153,6 +160,7 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
     const item = reviews.take(token), { plan, owner: o } = item;
     confirmations++;
     try {
+      o.validate(); assertAutomation(o);
       if (plan.risk === 'disruptive' && typedHost !== o.confirmWord) throw new Error('Type the exact remote hostname before running this disruptive action.');
       const response = await dialog.showMessageBox(getWindow(), { type: 'warning', title: 'Run reviewed command', message: `${plan.title}\n${o.title}`,
         detail: `A NEW console will run the reviewed command. Existing panes will not receive keystrokes.\n\n${plan.description || ''}\n${plan.note || ''}\n\n${plan.code.slice(0, 8192)}${plan.code.length > 8192 ? '\n[Preview shortened here; full text was shown in command review.]' : ''}\n\nCommands have the selected account’s permissions. Credentials are entered in the task console, not stored by Quick Actions.`,
@@ -176,7 +184,7 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
   return {
     resolvePaneAction(key, actionId, argument) {
       const r = forKey(key), o = owner(r.profile.id, key);
-      o.validate();
+      o.validate(); assertAutomation(o);
       return compileConfigured(actionId, platform(o), argument, configuration());
     },
     async openAdministrator(id) {

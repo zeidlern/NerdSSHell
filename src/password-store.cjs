@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
+const { hostName } = require('./quick-connect.cjs');
 const { randomUUID } = require('node:crypto');
 
 const MAX_PASSWORD_BYTES = 16 * 1024;
@@ -30,10 +31,11 @@ function profileId(value) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(value)) throw failure('PASSWORD_STORAGE_INVALID_PROFILE');
   return value;
 }
+function validHost(value) { try { hostName(value.trim()); return true; } catch { return false; } }
 function identity(profile) {
   if (!profile || typeof profile !== 'object' || Array.isArray(profile) || profile.auth !== 'password') throw failure('PASSWORD_STORAGE_INVALID_PROFILE');
   const id = profileId(profile.id);
-  if (typeof profile.host !== 'string' || profile.host.length > 253 || /[\x00-\x1f\x7f]/.test(profile.host) || !/^[A-Za-z0-9][A-Za-z0-9.:-]*$/.test(profile.host.trim()) ||
+  if (typeof profile.host !== 'string' || profile.host.length > 253 || /[\x00-\x1f\x7f]/.test(profile.host) || !validHost(profile.host) ||
       typeof profile.username !== 'string' || profile.username.length > 128 || /[\x00-\x1f\x7f]/.test(profile.username) || !/^[A-Za-z0-9_][A-Za-z0-9_.@-]*$/.test(profile.username.trim()) ||
       !Number.isInteger(profile.port) || profile.port < 1 || profile.port > 65535) throw failure('PASSWORD_STORAGE_INVALID_PROFILE');
   return { profileId: id, host: profile.host.trim().toLowerCase(), port: profile.port, username: profile.username.trim() };

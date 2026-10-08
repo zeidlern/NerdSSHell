@@ -67,6 +67,8 @@ jobs:
       - run: npm run check
       - run: npm test
         timeout-minutes: 5
+      - name: Real appliance SSH lifecycle stress
+        run: node --test test/generic-appliance.integration.test.cjs
       - name: Parse Windows installation helper
         shell: pwsh
         run: |
@@ -78,6 +80,8 @@ jobs:
       - run: npm run dist
       - id: verify_package
         run: npm run verify:package
+      - name: Packaged Quick Connect and network-device acceptance
+        run: node scripts/Packaged-Quick-Connect-Smoke.cjs
       - name: Windows-protected remembered passwords and packaged restart acceptance
         run: node scripts/Packaged-Password-Smoke.cjs
       - name: Exact-ASAR shared confirmation and memory-clipboard acceptance
@@ -105,6 +109,8 @@ jobs:
           include-hidden-files: true
           retention-days: 14
           path: |
+            .local/packaged-quick-connect/results.json
+            .local/packaged-quick-connect/*.png
             .local/packaged-password/results.json
             .local/packaged-confirmation/results.json
             .local/startup-update-ui/*.json
@@ -128,6 +134,8 @@ jobs:
             docs/SBOM-runtime.spdx.json
             docs/THIRD-PARTY-NOTICES.md
             package-lock.json
+            .local/packaged-quick-connect/results.json
+            .local/packaged-quick-connect/*.png
             .local/packaged-password/results.json
             .local/packaged-confirmation/results.json
             .local/startup-update-ui/*.json

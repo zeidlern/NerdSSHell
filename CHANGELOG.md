@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0 — Quick Connect for network devices
+
+- Add an inline Quick Connect bar above saved connections, Enter/Connect and Ctrl+Alt+Q, reusable nonsecret login defaults, IP/DNS/IPv6 and account/port overrides.
+- Open temporary Standard SSH terminals without saved profiles. Keep a bounded successful-destination history with clear/disable controls; promote a live connection to saved without replacing its terminal.
+- Preserve host fingerprint approval and changed/revoked-key blocking. Temporary passwords/challenge answers stay in transport memory and never create remembered-password records.
+- Add explicit generic/network-device mode that suppresses automatic Linux/tmux inspection, startup/task commands and persistence, including after Save and reload. SFTP remains an explicit user action.
+- Bound pending attempts and live/retained views; retire temporary transport, secrets, prompts and workspace metadata safely on cancellation, loss and final closure. Preserve normal Standard close confirmations.
+- Add appliance and lifecycle regressions, 300-cycle stress, and exact Windows pointer/keyboard acceptance. Actual measured results are recorded in the development progress and PR.
+
 ## 1.1.0 — Approved startup upgrades
 
 - Check the official latest published stable Windows release at startup and offer Upgrade or Not now. No installer is fetched or launched until approval.

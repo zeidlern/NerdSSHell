@@ -11,7 +11,7 @@ if (metadata.name !== PACKAGE_NAME || lock.name !== PACKAGE_NAME || lock.package
 require('./Verify-Branding.cjs').verifySourceBranding();
 const html = fs.readFileSync('ui/index.html', 'utf8');
 for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) if (!match[1].includes('node_modules') && !fs.existsSync(path.join('ui', match[1]))) throw new Error('Missing UI resource: ' + match[1]);
-for (const uiFile of ['ui/app.js', 'ui/workbench.js', 'ui/pane-actions.js', 'ui/desktop-ux.js', 'ui/scratchpad.js']) for (const match of fs.readFileSync(uiFile, 'utf8').matchAll(/\$\('([^']+)'\)/g)) if (!html.includes(`id="${match[1]}"`)) throw new Error('Missing UI element: ' + match[1]);
+for (const uiFile of ['ui/app.js', 'ui/quick-connect.js', 'ui/workbench.js', 'ui/pane-actions.js', 'ui/desktop-ux.js', 'ui/scratchpad.js']) for (const match of fs.readFileSync(uiFile, 'utf8').matchAll(/\$\('([^']+)'\)/g)) if (!html.includes(`id="${match[1]}"`)) throw new Error('Missing UI element: ' + match[1]);
 console.log('JavaScript syntax, synchronized version/branding and static UI references passed.');
 
 require('./Verify-Publication.cjs').verify();

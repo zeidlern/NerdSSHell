@@ -168,6 +168,7 @@ class Remote extends EventEmitter {
     this.pins[target] = fp; await this.savePin?.(target, fp); return true;
   }
   exec(command, { timeout = 20000, input, maxBytes = 8 * 1024 * 1024 } = {}) {
+    if (this.profile.terminalType === 'generic') return Promise.reject(new Error('Network-device connections never execute server probes or task commands. Use the interactive terminal.'));
     if (!this.connected || this.closing) return Promise.reject(new Error('Not connected.'));
     const client = this.client;
     return new Promise((resolve, reject) => {

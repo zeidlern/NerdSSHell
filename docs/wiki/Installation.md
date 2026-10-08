@@ -96,3 +96,11 @@ For rollback, stop and retain both the old backup and current data. Install only
 ## Uninstall
 
 Use **Windows Settings > Apps > Installed apps > NerdSSHell > Uninstall**. Save notes and close local work first. The configured uninstaller preserves application data. That is useful for reinstalling, but it is not a privacy wipe. Review and remove retained data/backups separately after confirming you no longer need them. Uninstalling the Windows app does not itself delete server-side tmux sessions; never terminate remote jobs merely to remove a local installation.
+
+## Startup upgrades (1.1.0 and later)
+
+Packaged Windows x64 launches check the latest published stable release on the official GitHub repository. If newer, choose **Upgrade** or **Not now**. Not now downloads nothing; the next startup can check again. Source, SDK and debugging acceptance launches do not run this check.
+
+Upgrade downloads the matching installer, verifies its size and published SHA-256, then uses normal quitting. Unsaved notes and Standard/local console consequences still require their existing confirmations; canceling them cancels the upgrade. Persistent remote work remains running. The helper waits for the app to exit, refuses reopened/other app instances, installs into the exact registered current directory and reopens the new version. Separate custom data directories are retained; ambiguous registrations or unsafe data/install overlaps require a manual upgrade.
+
+Windows security or UAC prompts still apply, and unsigned packages have no verified publisher identity. A failed check/download leaves the app usable. Version1.0.4 has no startup checker: install the first release containing this feature once before it can offer future upgrades.

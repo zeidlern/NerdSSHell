@@ -20,10 +20,12 @@ const { installWorkbench } = require('./workbench.cjs');
 const { installDesktopTools } = require('./desktop-tools.cjs');
 const { installLocalFiles } = require('./local-files.cjs');
 const { installPublicLinks } = require('./public-links.cjs');
+const { StartupUpdater, eligibleStartup } = require('./release-updater.cjs');
+const { armUpdate } = require('./update-handoff.cjs');
 const { installSessionCommands } = require('./session-commands.cjs');
 const { createSessionNotifications } = require('./session-notifications.cjs');
 const { configureScratchpadSpelling, installScratchpadSpelling } = require('./scratchpad-spelling.cjs');
-let workbench, sessionCommands, sessionNotifications;
+let workbench, sessionCommands, sessionNotifications, startupUpdater;
 const { upload } = require('./transfer.cjs');
 const { profile, integer, pasteText } = require('./core.cjs');
 const { MAX_OPEN_VIEWS, ViewBudget } = require('./session-limits.cjs');
@@ -66,16 +68,17 @@ function queuePrompt(options) {
   promptChain = task.catch(() => {}); return task;
 }
 function requestPrompt(options, generation) {
-  const { valid = () => true, onRemember, ...publicOptions } = options;
-  if (quitting || rendererReloading || !valid() || !window || window.isDestroyed() || window.webContents.isDestroyed?.()) return null;
+  const { valid = () => true, onRemember, signal, ...publicOptions } = options;
+  if (quitting || rendererReloading || signal?.aborted || !valid() || !window || window.isDestroyed() || window.webContents.isDestroyed?.()) return null;
   publicOptions.rememberPasswordAvailable = options.kind !== 'confirmation' && options.rememberPasswordAvailable === true;
   publicOptions.rememberPassword = publicOptions.rememberPasswordAvailable && options.rememberPassword === true;
   return new Promise(resolve => {
     const id = randomUUID();
-    const timer = setTimeout(() => { prompts.delete(id); try { emit('promptCancelled', { id }); } catch {} resolve(null); }, 180000);
+    const abort = () => { if (!prompts.has(id)) return; done(null); try { emit('promptCancelled', { id }); } catch {} };
+    const timer = setTimeout(abort, 180000);
     const done = (value, remember) => {
       if (!prompts.has(id)) return;
-      clearTimeout(timer); prompts.delete(id);
+      clearTimeout(timer); signal?.removeEventListener('abort', abort); prompts.delete(id);
       if (quitting || rendererReloading || generation !== promptGeneration || !valid() || !window || window.isDestroyed() || window.webContents.isDestroyed?.()) { resolve(null); return; }
       if (publicOptions.kind === 'confirmation' && value !== null && (!/^choice:[0-7]$/.test(value) || Number(value.slice(7)) >= publicOptions.buttons.length)) value = null;
       if (value !== null && publicOptions.rememberPasswordAvailable) onRemember?.(remember ?? publicOptions.rememberPassword);
@@ -83,7 +86,9 @@ function requestPrompt(options, generation) {
     };
     done.profileId = options.profileId; done.rememberPasswordAvailable = publicOptions.rememberPasswordAvailable;
     prompts.set(id, done);
-    try { emit('prompt', { id, ...publicOptions }); } catch { clearTimeout(timer); prompts.delete(id); resolve(null); }
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) { abort(); return; }
+    try { emit('prompt', { id, ...publicOptions }); } catch { done(null); }
   });
 }
 function cancelAllPrompts() {
@@ -290,6 +295,7 @@ function disconnect(id) { workbench?.disconnect(id); sessionCommands?.disconnect
 function handle(name, fn) {
   ipcMain.handle(`nerdsshell:${name}`, async (event, ...args) => {
     if (event.sender !== window?.webContents || event.senderFrame !== window.webContents.mainFrame || event.senderFrame.url !== uiURL) throw new Error('Untrusted request.');
+    if (quitting) throw new Error('NerdSSHell is closing.');
     return fn(...args);
   });
 }
@@ -406,27 +412,42 @@ else {
     window.webContents.on('will-navigate', e => e.preventDefault());
     window.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     window.webContents.session.setPermissionCheckHandler(() => false);
-    window.webContents.on('did-start-loading', () => { rendererReloading = rendererHasLoaded; cancelAllPrompts(); });
+    window.webContents.on('did-start-loading', () => { rendererReloading = rendererHasLoaded; if (rendererHasLoaded && !quitting) startupUpdater?.cancel().catch(() => {}); cancelAllPrompts(); });
     window.webContents.on('did-finish-load', () => { rendererHasLoaded = true; rendererReloading = false; });
-    window.webContents.on('destroyed', cancelAllPrompts);
-    window.webContents.on('render-process-gone', () => { rendererReloading = true; cancelAllPrompts(); });
-    return window.loadURL(uiURL);
+    window.webContents.on('destroyed', () => { if (!quitting) startupUpdater?.cancel().catch(() => {}); cancelAllPrompts(); });
+    window.webContents.on('render-process-gone', () => { rendererReloading = true; if (!quitting) startupUpdater?.cancel().catch(() => {}); cancelAllPrompts(); });
+    return window.loadURL(uiURL).then(() => {
+      const currentVersion = app.getVersion(), debugging = !!app.commandLine?.getSwitchValue?.('remote-debugging-port');
+      if (!eligibleStartup({ packaged: app.isPackaged, platform: process.platform, arch: process.arch, executablePath: process.execPath, debugging, currentVersion })) return;
+      startupUpdater = new StartupUpdater({ currentVersion, fetch: (url, options) => net.fetch(url, options),
+        offer: async (release, signal) => {
+          const choice = await queuePrompt({ kind: 'confirmation', title: 'NerdSSHell update available', message: 'NerdSSHell ' + release.version + ' is available. Upgrade now?',
+            detail: 'Published on the official GitHub repository. The Windows installer will be downloaded and checked against its published checksum. It may be unsigned; Windows security and permission prompts still apply. The app will restart, preserving saved connections and Persistent work. Standard/local consoles and unsaved notes receive their normal quit confirmations.',
+            buttons: ['Upgrade', 'Not now'], cancelId: 1, defaultId: 1, signal, valid: () => !signal.aborted });
+          return choice === 'choice:0';
+        }, notice: message => emit('notice', { message }), requestQuit: () => app.quit(), armUpdate,
+        executablePath: process.execPath, userDataDirectory: app.commandLine?.getSwitchValue?.('user-data-dir') || undefined });
+      startupUpdater.start().catch(() => {});
+    });
   }).catch(e => { console.error('NerdSSHell startup failed:', e); dialog.showErrorBox('NerdSSHell could not start', e.message); app.exit(1); });
   app.on('window-all-closed', () => app.quit());
   app.on('before-quit', event => {
     if (quitting) return;
-    event.preventDefault(); if (quitPending) return; quitPending = true;
+    event.preventDefault(); if (quitPending) return; quitPending = true; startupUpdater?.quitAttempt();
     Promise.resolve().then(async () => {
       const scratchRevision = app.nerdsshellScratchpadRevision || 0;
       if (app.nerdsshellScratchpadDirty && !await confirm('Discard unsaved scratchpad?', 'Quit without saving your scratchpad?', 'Cancel to keep editing or use Save As. Notes are not stored automatically.')) return;
-      const approved = await approveDisconnect(); if (!approved) return; approved();
+      const approved = await approveDisconnect(); if (!approved) return;
+      await startupUpdater?.prepareQuit();
+      approved();
       if (app.nerdsshellScratchpadDirty && (app.nerdsshellScratchpadRevision || 0) !== scratchRevision) throw new Error('Scratchpad changed during confirmation. Save it or review quitting again.');
       quitting = true; sessionNotifications?.dispose();
       for (const id of connections.keys()) disconnect(id);
       for (const done of prompts.values()) done(null);
       for (const t of transfers.values()) t.abort();
       await Promise.allSettled([...archives.values()].map(a => a.close()));
+      if (startupUpdater?.handoff) await startupUpdater.release();
       app.quit();
-    }).catch(e => { emit('notice', { message: e.message }); }).finally(() => { quitPending = false; });
+    }).catch(async e => { if (startupUpdater?.handoff) { await startupUpdater.cancel(true).catch(() => {}); quitting = false; } emit('notice', { message: e.message }); }).finally(async () => { if (!quitting) await startupUpdater?.cancel().catch(() => {}); quitPending = false; });
   });
 }

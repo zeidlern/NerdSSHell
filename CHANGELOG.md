@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 — Approved startup upgrades
+
+- Check the official latest published stable Windows release at startup and offer Upgrade or Not now. No installer is fetched or launched until approval.
+- Verify fixed repository/asset identity, bounded HTTPS downloads, declared size and SHA-256 before using a hidden, cancellable parent-exit handoff. Preserve normal Standard/local work and unsaved-note quit confirmations, exact install directory, data identity and Windows permission controls.
+- Refuse ambiguous install registrations, canceled/stale approvals, corrupt downloads and reopened apps. New installers and uninstallers refuse running apps instead of terminating them.
+- Existing 1.0.4 installations need the new version installed once before startup checks are available. Published 1.0.4 remains unchanged.
+- This feature does not establish publisher signing or suppress Windows security/UAC policy.
+
+
 ## 1.0.4 — Interactive confirmations and connection recovery
 
 - Add an advanced saved Standard SSH terminal baud rate and independent new-window override. Request both SSH PTY speed modes only when creating the terminal; preserve the server default, existing profiles and inherited task settings. Explain tmux/local restrictions and new-terminal/reconnect requirements.

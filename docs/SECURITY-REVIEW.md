@@ -57,3 +57,11 @@ Coverage: `test/packaging.test.cjs`, `test/branding.test.cjs`, `scripts/Verify-P
 Clean-user Windows install/upgrade/uninstall, actual UAC approval/cancellation and alternate-account launches, native dialogs and GUI transfer bytes, physical notifications/audio, profile ACLs, clipboard, IME/accessibility and display conditions require Windows evidence for the exact artifact. Linux and synthetic renderer results must retain their narrower scope.
 
 Primary implementation references: [Electron security](https://www.electronjs.org/docs/latest/tutorial/security), [Electron fuses](https://www.electronjs.org/docs/latest/tutorial/fuses), [ASAR integrity](https://www.electronjs.org/docs/latest/tutorial/asar-integrity), [tmux control mode](https://github.com/tmux/tmux/wiki/Control-Mode), [ssh2](https://github.com/mscdex/ssh2) and [GitHub Actions security](https://docs.github.com/en/actions/reference/security/secure-use).
+
+## Consented release upgrades
+
+The main-process updater uses a fixed official release endpoint and exact stable-version Windows asset URL, bounded credentialless HTTPS streams and a captured SHA-256/size. It ignores release-body markup and accepts only allowlisted GitHub release-asset redirects. It uses the existing serialized renderer confirmation and normal quit/revalidation path; no renderer feed, file path or command is accepted.
+
+A fixed checksum-bound Windows runner owns its stage/files and real parent process identity, requires explicit nonce-bound release, waits for exit, rejects conflicting registrations/reopened apps, uses an exact registered target and verifies the new version before reopening. Cancellation cannot trigger a later unrelated install. New NSIS installer and uninstaller running-app guards abort instead of killing work. The first manual upgrade from1.0.4 retains that older uninstaller's narrower acceptance limits; automatic upgrades start from the new guarded version.
+
+Coverage: test/release-updater.test.cjs, test/update-main.test.cjs, test/update-handoff.test.cjs and isolated Windows SDK/native startup/handoff acceptance. The controlled-transport/inert-installer fixtures do not certify live future releases, real UAC or every user-install scenario.

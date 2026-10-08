@@ -38,3 +38,7 @@ Closing a view is not the same as **End**. Ending persistent work uses the expli
 The About dialog also closes on a completed backdrop click, its Close button or Escape. Inside clicks and text-selection drags keep it open; dismissal returns focus and does not activate the control beneath the backdrop. Security trust prompts require their explicit Trust button or cancellation.
 
 Multiline paste and other app-owned confirmations use the same themed in-app dialog. Continue and Cancel support mouse and keyboard input; Cancel starts focused. Clicking outside a consequence confirmation keeps it pending and cannot activate a control underneath. OS file and UAC pickers retain their native interfaces.
+
+## Quick Connect
+
+**Ctrl+Alt+Q** expands the sidebar and focuses/selects the Quick Connect address. **Enter** in the address opens its destination. These actions do not submit a command to the active terminal. An open dialog keeps keyboard ownership.

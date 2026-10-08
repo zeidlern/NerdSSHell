@@ -21,6 +21,7 @@ class StandardRemote extends Remote {
   }
   activeShellCount() { return [...this.shells.values()].filter(s => !s.dead).length; }
   async create(name, launchCommand, baud = this.profile.terminalBaud) {
+    if (this.profile.terminalType === 'generic' && launchCommand !== undefined) throw new Error('Network-device connections open plain SSH shells without startup commands.');
     const rate = terminalBaud(baud);
     sessionName(name);
     if (!this.connected || this.closing) throw new Error('Not connected.');
@@ -30,6 +31,7 @@ class StandardRemote extends Remote {
       sessionName: name, windowId: uuid, windowName: 'Shell', windowPanes: 1,
       paneId: uuid, paneIndex: 0, windowIndex: 0, cols: 120, rows: 36,
       command: 'SSH shell', standard: true, dead: false,
+      ...(this.profile.terminalType === 'generic' ? { terminalType: 'generic' } : {}),
       ...(this.profile.local ? {} : { terminalBaud: rate }) };
     const record = { pane, dead: false, channelClosed: false, stream: null, paused: true, serial: 0, pendingWrite: null, pendingBytes: 0, pendingCount: 0, tail: Promise.resolve() };
     const client = this.client; this.shells.set(key, record);

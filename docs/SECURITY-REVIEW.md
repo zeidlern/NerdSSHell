@@ -65,3 +65,11 @@ The main-process updater uses a fixed official release endpoint and exact stable
 A fixed checksum-bound Windows runner owns its stage/files and real parent process identity, requires explicit nonce-bound release, waits for exit, rejects conflicting registrations/reopened apps, uses an exact registered target and verifies the new version before reopening. Cancellation cannot trigger a later unrelated install. New NSIS installer and uninstaller running-app guards abort instead of killing work. The first manual upgrade from1.0.4 retains that older uninstaller's narrower acceptance limits; automatic upgrades start from the new guarded version.
 
 Coverage: test/release-updater.test.cjs, test/update-main.test.cjs, test/update-handoff.test.cjs and isolated Windows SDK/native startup/handoff acceptance. The controlled-transport/inert-installer fixtures do not certify live future releases, real UAC or every user-install scenario.
+
+## Quick Connect boundaries
+
+Quick destination parsing runs in main and accepts bounded IP/DNS/account/port forms, never arbitrary SSH options or shell commands. Renderer IDs and credential fields cannot create temporary identities or persist secrets. Temporary sign-in uses the same host gate, pins and trusted serialized prompts; remembered-password lookup, consent and writes are disabled. Recent entries contain only host/port/username and remain bounded.
+
+Generic/network-device capabilities block provider exec, persistence and task creation plus workbench OS probing and Linux automation, including after save/reload. User terminal input remains ordinary VT input and is never replayed after loss. Lifecycle callbacks bind captured entry/transport identity; failed/canceled attempts and final closures release temporary state. Promotion atomically persists immutable endpoint/auth/type and retains live pane identity; failed saving keeps the temporary original.
+
+Coverage includes strict input/credential binding tests, temporary main lifecycle races/caps/promotion, generic provider/workbench/UI guards, real appliance-like loopback SSH and production Windows Quick Connect acceptance. Synthetic peers do not establish vendor-specific interoperability.

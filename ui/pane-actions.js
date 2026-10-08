@@ -25,8 +25,8 @@
   }
   function menuState(v) {
     const own = v.actionBar;
-    own.all.disabled = own.loading || own.busy || !current(v) || !own.target;
-    for (const [id, favorite] of own.favoriteButtons) favorite.disabled = own.loading || own.busy || !current(v) || !own.target || v.locked || !own.actions.get(id)?.enabled;
+    own.all.disabled = own.unsupported || own.loading || own.busy || !current(v) || !own.target;
+    for (const [id, favorite] of own.favoriteButtons) favorite.disabled = own.unsupported || own.loading || own.busy || !current(v) || !own.target || v.locked || !own.actions.get(id)?.enabled;
   }
   function onView(v, refreshReady = true) {
     if (v.actionBar) return;
@@ -37,11 +37,12 @@
     favorites.setAttribute('role', 'group'); favorites.tabIndex = 0;
     const hint = element('option', '', 'Actions · detecting…'); hint.value = ''; all.append(hint);
     bar.append(all, favorites, configureFavorites); v.wrapper.insertBefore(bar, v.wrapper.querySelector('.pane-body'));
-    v.actionBar = { bar, all, favorites, configureFavorites, favoriteButtons: new Map(), actions: new Map(), generation: 0, target: null, loading: true, busy: false, cancelArgument: null };
+    bar.hidden = v.pane.terminalType === 'generic';
+    v.actionBar = { unsupported: v.pane.terminalType === 'generic', bar, all, favorites, configureFavorites, favoriteButtons: new Map(), actions: new Map(), generation: 0, target: null, loading: true, busy: false, cancelArgument: null };
     favoriteButtons(v); menuState(v);
     all.onchange = () => {
       const value = all.value; all.value = '';
-      if (value === '__detect' && current(v) && !all.disabled) return run(api.workbenchDetect(v.pane.profileId, v.pane.key).then(() => refresh(v)));
+      if (value === '__detect' && !v.actionBar.unsupported && current(v) && !all.disabled) return run(api.workbenchDetect(v.pane.profileId, v.pane.key).then(() => refresh(v)));
       if (value) return run(launch(v, value));
     };
     if (v.ready && refreshReady) run(refresh(v));
@@ -51,11 +52,18 @@
     const own = v.actionBar, generation = ++own.generation;
     own.cancelArgument?.(); own.busy = false; own.target = null; own.loading = true; own.actions.clear(); favoriteButtons(v); menuState(v);
     if (!current(v)) { own.loading = false; return; }
+    const unsupported = data => {
+      if (v.pane.terminalType !== 'generic' && data.capabilities?.automaticDetection !== false) return false;
+      own.unsupported = true; own.bar.hidden = true; own.loading = false; own.actions.clear(); favoriteButtons(v); menuState(v); return true;
+    };
     try {
       let data = await api.paneActions(v.pane.key);
       if (own.generation !== generation || !current(v)) return;
+      if (unsupported(data)) return;
+      own.unsupported = false; own.bar.hidden = false;
       if (data.os === 'Unknown') { await api.workbenchDetect(v.pane.profileId, v.pane.key); data = await api.paneActions(v.pane.key); }
       if (own.generation !== generation || !current(v)) return;
+      if (unsupported(data)) return;
       own.actions = new Map(data.actions.map(action => [action.id, action])); own.target = data.target;
       const os = data.os === 'Windows' && data.platform?.shell === 'cmd' ? 'Command Prompt' : data.os;
       const hint = element('option', '', `Actions · ${os}`); hint.value = ''; own.all.replaceChildren(hint);
@@ -67,7 +75,7 @@
       favoriteButtons(v, data); own.all.title = `${data.title}\nRuns the selected command in this session.`;
       own.loading = false; menuState(v);
     } catch (error) {
-      if (own.generation === generation && current(v)) {
+      if (own.generation === generation && current(v) && !own.unsupported) {
         own.all.replaceChildren(); const hint = element('option', '', 'Actions unavailable · retry'); hint.value = '';
         const retry = element('option', '', 'Detect system again'); retry.value = '__detect'; own.all.append(hint, retry);
         own.all.disabled = false; own.all.title = error.message; own.loading = false;

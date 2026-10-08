@@ -2,7 +2,7 @@
 
 **Built for Windows nerds with Linux problems.**
 
-NerdSSHell brings SSH connections, persistent remote terminals, local Windows shells, file transfer and notes into one Windows workspace. This manual covers the **1.0.x** interface. Check **Help and about** and the release notes when using a different version.
+NerdSSHell brings SSH connections, persistent remote terminals, local Windows shells, file transfer and notes into one Windows workspace. This manual covers the **1.x** interface. Check **Help and about** and the release notes when using a different version.
 
 ## Start here
 
@@ -55,3 +55,5 @@ The supported desktop target is **Windows 11 x64**. Remote servers may run other
 Use [Releases](https://github.com/zeidlern/NerdSSHell/releases) for exact asset availability, signing status and known limitations. Source archives are source downloads, rather than Windows installers.
 
 The [repository](https://github.com/zeidlern/NerdSSHell) contains the manual sources in `docs/wiki/`. The project uses a custom [source-available license](https://github.com/zeidlern/NerdSSHell/blob/main/LICENSE). Public bugs, feature requests and focused pull requests are welcome; the owner controls official acceptance and releases. See [support](https://github.com/zeidlern/NerdSSHell/blob/main/SUPPORT.md) and [contributing](https://github.com/zeidlern/NerdSSHell/blob/main/CONTRIBUTING.md).
+
+Quick Connect opens temporary network-device SSH terminals by IP/DNS, with reusable login defaults and optional Save connection. See [connections and trust](Connections-and-Trust.md).

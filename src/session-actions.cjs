@@ -4,7 +4,7 @@ const { terminalBaud } = require('./core.cjs');
 function isStandardSession(remote, key) {
   return !!(remote?.profile?.local || remote?.isStandard?.(key) || remote?.shells?.has(key));
 }
-function installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow, forget, withViewSlot = (_remote, _key, operation) => operation() }) {
+function installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow, forget, afterClose = () => {}, withViewSlot = (_remote, _key, operation) => operation() }) {
   const pending = new Set();
   function capture(key) {
     const r = forKey(key), remote = r.remote, pane = remote.pane(key), token = pane.sessionToken;
@@ -34,13 +34,13 @@ function installSessionActions({ handle, runtime, connections, forKey, dialog, g
   handle('close', async key => {
     if (typeof key !== 'string' || key.length > 240) throw new Error('Invalid session.');
     const remote = connections.get(key.split('/')[0])?.remote;
-    if (!remote?.shells?.has(key)) { forget(key); remote?.closeView(key); return true; }
+    if (!remote?.shells?.has(key)) { forget(key); remote?.closeView(key); afterClose(key); return true; }
     const owner = capture(key), view = remote.views.get(key);
     return askOnce(key, { type: 'question', title: remote.profile.local ? 'End local session?' : 'Close standard SSH shell?',
       message: remote.profile.local ? 'Closing this tab terminates its local shell and running processes.' : 'Closing this tab closes its console.', detail: 'This session is not persistent and cannot be reattached.', buttons: [remote.profile.local ? 'End session' : 'Disconnect', 'Cancel'] }, () => {
       owner.validate();
       if (remote.views.get(key) !== view) throw new Error('The session view changed. Nothing was closed.');
-      forget(key); remote.closeView(key); return true;
+      forget(key); remote.closeView(key); afterClose(key); return true;
     });
   });
   handle('end', async key => {
@@ -49,7 +49,7 @@ function installSessionActions({ handle, runtime, connections, forKey, dialog, g
     return askOnce(key, { type: 'warning', title: 'End session',
       message: `Are you sure you want to end “${pane.sessionName}” on ${r.profile.name}?`,
       detail: `This terminates all ${count} terminal pane(s) in this session, including their running work.`, buttons: ['End session', 'Cancel'] }, async () => {
-      owner.validate(); await remote.endSession(key); forget(key); return true;
+      owner.validate(); await remote.endSession(key); forget(key); afterClose(key); return true;
     });
   });
 }

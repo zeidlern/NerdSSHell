@@ -28,9 +28,11 @@ const { configureScratchpadSpelling, installScratchpadSpelling } = require('./sc
 let workbench, sessionCommands, sessionNotifications, startupUpdater;
 const { upload } = require('./transfer.cjs');
 const { profile, integer, pasteText } = require('./core.cjs');
-const { MAX_OPEN_VIEWS, ViewBudget } = require('./session-limits.cjs');
+const { parseAddress } = require('./quick-connect.cjs');
+const { MAX_OPEN_VIEWS, ViewBudget, resourceLimitError } = require('./session-limits.cjs');
 let window, store, passwords, quitting = false, quitPending = false, promptChain = Promise.resolve(), queuedPrompts = 0, promptGeneration = 0, rendererHasLoaded = false, rendererReloading = false;
 const credentialVersions = new Map();
+const quickEntries = new Map(), quickViewReservations = new Set(); let pendingQuick = 0;
 const connections = new Map(), archives = new Map(), prompts = new Map(), transfers = new Map(), fileListings = new FileListings();
 const viewBudget = new ViewBudget(connections);
 const output = new OutputBuffer({ emit: (type, data) => { emit(type, data); if (type === 'output') standardBackpressure(data.key); }, recover: key => forKey(key).remote.snapshot(key) });
@@ -159,7 +161,7 @@ function archive(p) {
   if (!archives.has(p.id)) archives.set(p.id, new Archive(app.getPath('userData'), p.id, p.archiveMB));
   const a = archives.get(p.id); a.limit = p.archiveMB * 1024 * 1024; a.segmentBytes = Math.min(4 * 1024 * 1024, a.limit); return a;
 }
-function publishStatus(r, state, detail = '') { r.state = state; emit('status', { profileId: r.profile.id, state, detail }); }
+function publishStatus(r, state, detail = '') { r.state = state; r.detail = detail; emit('status', { profileId: r.profile.id, state, detail }); }
 function discardOutput(key) { output.discard(key); }
 function standardBackpressure(key) {
   const remote = connections.get(String(key).split('/')[0])?.remote, state = output.states.get(key);
@@ -226,8 +228,142 @@ async function sendFiles(id, remote, directory, files, key = '', validateOwner =
       progress: data => emit('transfer', { id: transferId, profileId: id, key, status: 'running', ...data }) });
   } finally { transfers.delete(transferId); emit('transfer', { id: transferId, profileId: id, key, status: 'finished' }); }
 }
-async function connect(id, secrets) {
-  const p = saved(id); let r = connections.get(id);
+
+function reserveQuickView() {
+  const retained = [...quickEntries.values()].reduce((count, entry) => count + entry.panes.size, 0);
+  if (retained + quickViewReservations.size >= MAX_OPEN_VIEWS) throw resourceLimitError('Close an unused Quick Connect tab before opening more (limit 64 including ended transcripts).');
+  const token = {}; quickViewReservations.add(token); return token;
+}
+async function withViewSlot(remote, key, operation) {
+  const token = key === undefined && quickEntries.has(remote?.profile?.id) ? reserveQuickView() : null;
+  try { return await viewBudget.run(remote, key, operation); }
+  finally { if (token) quickViewReservations.delete(token); }
+}
+function rendererProfile(p) {
+  const r = connections.get(p.id), remote = r?.remote;
+  if (p.terminalType !== 'generic' || !remote?.connected || remote.closing) return p;
+  return { ...p, quickPanes: remote.panes.map(pane => ({ ...pane })), quickState: { state: r.state, detail: r.detail || '' } };
+}
+function prepareGenericRendererReload() {
+  for (const [id, r] of connections) {
+    const remote = r.remote;
+    if (r.profile.terminalType !== 'generic' || !remote?.connected || remote.closing) continue;
+    for (const [key, view] of remote.views) {
+      const shell = remote.shells?.get(key);
+      if (!view.active || !view.initialized || !shell || shell.dead) continue;
+      remote.setOutputPaused?.(key, true);
+      // A new identity invalidates old queued input and file-browser ownership.
+      // The next open resumes this shell with an honest empty Standard snapshot.
+      remote.views.set(key, { ...view, initialized: false });
+      fileListings.cancelView(key); sessionCommands?.forget(key); sessionNotifications?.forget(key); discardOutput(key);
+    }
+  }
+}
+function quickPublic(entry) {
+  const r = connections.get(entry.id);
+  return { ...entry.profile, temporary: true, quick: true, quickPanes: [...entry.panes.values()],
+    quickState: { state: r?.state || (entry.pending ? 'connecting' : 'disconnected'), detail: r?.detail || '' } };
+}
+function quickMetadata(p) {
+  return { id: p.id, name: p.name, host: p.host, port: p.port, username: p.username,
+    terminalType: 'generic', sessionMode: 'standard', scrollback: p.scrollback,
+    autoConnect: false, startup: 'none', rememberPassword: false, record: false };
+}
+function releaseQuickTransport(entry, discard = false) {
+  const id = entry.id, r = connections.get(id);
+  entry.controller?.abort(); cancelProfilePrompts(id); cancelRemoteFiles(id);
+  workbench?.disconnect(id); sessionCommands?.disconnect(id); sessionNotifications?.clearProfile(id);
+  if (r) {
+    r.wanted = false; r.promptToken = randomUUID(); clearTimeout(r.timer); r.timer = undefined;
+    r.remote?.disconnect(); r.remote?.removeAllListeners(); r.secrets = {}; r.remote = null;
+    connections.delete(id);
+  }
+  credentialVersions.delete(id);
+  if (discard) for (const key of output.keys()) if (key.startsWith(id + '/')) discardOutput(key);
+  entry.profile = quickMetadata(entry.profile);
+}
+function removeQuick(entry) {
+  if (quickEntries.get(entry.id) !== entry) return;
+  releaseQuickTransport(entry, true); quickEntries.delete(entry.id); entry.panes.clear();
+  emit('quick-removed', { profileId: entry.id });
+}
+function retainQuick(entry, key) {
+  if (quickEntries.get(entry.id) !== entry) return;
+  const pane = entry.panes.get(key);
+  if (pane) entry.panes.set(key, { ...pane, dead: true });
+  Promise.resolve().then(() => {
+    if (quickEntries.get(entry.id) !== entry || entry.pending) return;
+    const r = connections.get(entry.id);
+    if (!r?.remote?.activeShellCount?.()) {
+      if (r) publishStatus(r, 'disconnected', 'This temporary SSH shell ended. Enter the address again to start a new connection.');
+      releaseQuickTransport(entry);
+      if (!entry.panes.size) removeQuick(entry);
+    }
+  });
+}
+function closeQuickView(key) {
+  const entry = quickEntries.get(String(key).split('/')[0]); if (!entry) return;
+  entry.panes.delete(key);
+  const r = connections.get(entry.id);
+  if (!r?.remote?.activeShellCount?.() && !entry.pending) releaseQuickTransport(entry);
+  if (!entry.panes.size && !entry.pending) removeQuick(entry);
+}
+function cancelPendingQuick() {
+  for (const entry of [...quickEntries.values()]) if (entry.pending) { entry.cancelled = true; removeQuick(entry); }
+}
+async function quickConnect(address) {
+  if (pendingQuick >= 4) throw new Error('Finish or cancel a Quick Connect attempt first (limit four at once).');
+  if (quickEntries.size >= MAX_OPEN_VIEWS) throw new Error('Close an unused Quick Connect tab before opening more.');
+  const defaults = store.data.quickConnect.defaults, target = parseAddress(address, defaults);
+  const id = 'quick-' + randomUUID();
+  const entry = { id, profile: { id, name: target.host.slice(0, 80), ...target, auth: defaults.auth, keyPath: defaults.keyPath,
+    terminalType: 'generic', sessionMode: 'standard', autoConnect: false, startup: 'none', record: false, rememberPassword: false,
+    scrollback: 100000 }, panes: new Map(), controller: new AbortController(), pending: true, cancelled: false };
+  const reservation = reserveQuickView();
+  pendingQuick++;
+  try {
+    return await viewBudget.run(null, undefined, async bind => {
+      quickEntries.set(id, entry); emit('profile', { profile: quickPublic(entry) });
+      let username = target.username;
+      if (!username) username = await ask({ title: 'Quick Connect username', message: 'Username for ' + target.host,
+        secret: false, profileId: id, signal: entry.controller.signal,
+        valid: () => quickEntries.get(id) === entry && !entry.cancelled && !quitting });
+      if (username === null || entry.cancelled || quickEntries.get(id) !== entry || quitting) throw new Error('Quick Connect cancelled.');
+      entry.profile = profile({ ...entry.profile, username });
+      emit('profile', { profile: quickPublic(entry) });
+      const panes = await connect(id, undefined, bind);
+      if (entry.cancelled || quickEntries.get(id) !== entry || !connections.get(id)?.remote?.connected || !connections.get(id)?.remote?.activeShellCount?.() || !panes?.length) throw entry.failure || new Error('Quick Connect cancelled.');
+      entry.pending = false;
+      try { emit('quick-preferences', store.rememberQuickConnect({ host: entry.profile.host, port: entry.profile.port, username: entry.profile.username })); }
+      catch { emit('notice', { message: 'Connected, but the Quick Connect recent destination could not be saved.' }); }
+      return { profile: quickPublic(entry), pane: panes[0] };
+    });
+  } catch (error) { removeQuick(entry); throw error; }
+  finally { quickViewReservations.delete(reservation); pendingQuick--; entry.pending = false; }
+}
+function saveQuickConnect(id, name) {
+  const entry = quickEntries.get(id), r = connections.get(id), remote = r?.remote;
+  if (!entry || entry.pending || r?.busy || r?.authPrompts || !remote?.connected || remote.closing || !remote.activeShellCount?.()) throw new Error('Only a connected Quick Connect shell can be saved.');
+  if (typeof name !== 'string' || !name.trim()) throw new Error('Enter a connection name.');
+  const next = profile({ ...r.profile, name: name.trim(), terminalType: 'generic', sessionMode: 'standard', autoConnect: false, startup: 'none', record: false, rememberPassword: false });
+  const savedProfile = putProfile(next); // Atomic failure retains the temporary entry and its live shell.
+  r.profile = savedProfile; remote.profile = savedProfile;
+  if (remote.standard) remote.standard.profile = savedProfile;
+  entry.promoted = true; quickEntries.delete(id); entry.controller = null; entry.panes.clear();
+  emit('profile', { profile: savedProfile }); return savedProfile;
+}
+function persistedWorkspace(value) {
+  const persistentIds = new Set(store.data.profiles.map(p => p.id));
+  for (const [id, r] of connections) if (r.profile.local) persistentIds.add(id);
+  const valid = key => typeof key === 'string' && (persistentIds.has(key.split('/')[0]) || /^local:(?:cmd|powershell|pwsh)(?:-admin)?$/.test(key.split('/')[0]));
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid workspace.');
+  return { ...value, order: Array.isArray(value.order) ? value.order.filter(valid) : [],
+    slots: Array.isArray(value.slots) ? value.slots.map(key => valid(key) ? key : null) : [], active: valid(value.active) ? value.active : '' };
+}
+
+async function connect(id, secrets, quickSlot) {
+  const temporary = quickEntries.get(id);
+  const p = temporary?.profile || saved(id); let r = connections.get(id);
   if (r?.busy) return;
   if (r?.remote?.connected) return r.remote.panes;
   if (!r) { r = { profile: p, wanted: true, attempts: 0, secrets: {}, state: 'disconnected' }; connections.set(id, r); }
@@ -235,55 +371,62 @@ async function connect(id, secrets) {
   r.remote?.disconnect();
   r.secrets = secrets || r.secrets; publishStatus(r, 'connecting', 'Signing in…');
   const token = r.promptToken = randomUUID();
-  const passwordVersion = credentialVersion(id); let rememberChoice;
-  const active = () => r.remote === remote && r.wanted && r.promptToken === token && r.state !== 'disconnected';
+  const passwordVersion = temporary ? null : credentialVersion(id); let rememberChoice;
+  const active = () => connections.get(id) === r && r.remote === remote && r.wanted && r.promptToken === token && r.state !== 'disconnected' && (!temporary || temporary.promoted || quickEntries.get(id) === temporary && !temporary.cancelled);
   const RemoteClass = MixedRemote;
   const remote = r.remote = new RemoteClass(p, { ask: options => {
-    const eligible = p.auth === 'password' && options.credentialKind === 'ssh-password' && options.secret === true;
-    return ask({ ...options, profileId: id, valid: active,
+    const eligible = !temporary && p.auth === 'password' && options.credentialKind === 'ssh-password' && options.secret === true;
+    if (temporary) r.authPrompts = (r.authPrompts || 0) + 1;
+    const task = ask({ ...options, profileId: id, valid: active, signal: temporary?.controller?.signal,
       rememberPasswordAvailable: eligible && passwords?.isAvailable() === true, rememberPassword: p.rememberPassword,
       onRemember: choice => { if (eligible && credentialVersion(id) === passwordVersion) rememberChoice = choice; } });
+    return temporary ? task.finally(() => { r.authPrompts--; }) : task;
   }, secrets: r.secrets, pins: store.data.pins,
     savePin: (target, fp) => { if (active()) { store.data.pins[target] = fp; store.save(); } },
     trust: async v => {
       if (!active()) return false;
-      const accepted = await ask({ kind: 'host-trust', title: 'Verify server identity', profileId: id, valid: active,
+      const accepted = await ask({ kind: 'host-trust', title: 'Verify server identity', profileId: id, valid: active, signal: temporary?.controller?.signal,
         message: `First connection to ${v.host}:${v.port}\n\nFingerprint: ${v.fingerprint}\n\nCompare this fingerprint with a trusted source before continuing. Trusting the key saves this server identity on this PC.` });
       return active() && accepted === 'trust';
     } });
   remote.allowDiscovery = p.sessionMode !== 'standard'; // Legacy Standard profiles stay probe-free until explicitly enabled.
-  remote.on('panes', panes => { if (active()) emit('panes', { profileId: id, panes }); });
+  remote.on('panes', panes => { if (!active()) return; if (temporary && !temporary.promoted) for (const pane of panes) temporary.panes.set(pane.key, { ...pane }); emit('panes', { profileId: id, panes }); });
   remote.on('snapshot', (key, snapshot) => { if (!active()) return; discardOutput(key); emit('snapshot', { key, ...snapshot }); });
   remote.on('output', (key, bytes) => { if (!active()) return; if (p.record) { const a = archive(p); a.append(key, bytes); if (a.error && !a.reported) { a.reported = true; emit('notice', { message: 'History recording stopped: ' + a.error.message }); } } queueOutput(key, bytes); });
   remote.on('notice', message => { if (active()) emit('notice', { message }); });
-  remote.on('ended', key => { if (!active()) return; fileListings.cancelView(key); if (isStandardSession(remote, key)) { output.flush(key); emit('standard-ended', { key }); } else { discardOutput(key); emit('ended', { key }); } });
+  remote.on('ended', key => { if (!active()) return; fileListings.cancelView(key); if (isStandardSession(remote, key)) { output.flush(key); emit('standard-ended', { key }); if (temporary) retainQuick(temporary, key); } else { discardOutput(key); emit('ended', { key }); } });
   remote.on('detached', key => { if (!active()) return; fileListings.cancelView(key); discardOutput(key); emit('detached', { key }); });
   remote.on('disconnected', error => {
     if (!active() || quitting) return;
-    rejectRememberedPassword(p, error, passwordVersion, remote);
+    if (!temporary) rejectRememberedPassword(p, error, passwordVersion, remote);
     cancelRemoteFiles(id); cancelProfilePrompts(id);
     workbench?.disconnect(id); sessionCommands?.disconnect(id);
     for (const key of output.keys()) if (key.startsWith(id + '/')) discardOutput(key);
     remote.disconnect();
     publishStatus(r, 'disconnected', error.message);
+    if (temporary && !temporary.promoted) { if (temporary.pending && !temporary.cancelled) temporary.failure = error; for (const key of temporary.panes.keys()) retainQuick(temporary, key); releaseQuickTransport(temporary, true); if (!temporary.panes.size && !temporary.pending) removeQuick(temporary); return; }
     // Auth/trust failures require an explicit user action; network loss uses bounded backoff.
     if (p.sessionMode === 'standard' || error.code === 'NERDSSHELL_HOST_VERIFICATION' || error.level === 'client-authentication') { r.wanted = false; r.secrets = {}; return; }
     retryConnection(id, r);
   });
   try {
-    if (p.auth === 'password' && p.rememberPassword && r.secrets.password === undefined) {
+    if (!temporary && p.auth === 'password' && p.rememberPassword && r.secrets.password === undefined) {
       const remembered = passwords.get(p); if (remembered !== null) r.secrets.password = remembered;
     }
     let panes = await remote.connect();
     if (!r.wanted || r.remote !== remote) { remote.disconnect(); return []; }
-    if (remote.passwordRejected === true) rejectRememberedPassword(p, { level: 'client-authentication' }, passwordVersion, remote, true);
-    if (p.sessionMode === 'standard') { await viewBudget.run(remote, undefined, () => remote.createSession('Shell', false)); panes = remote.panes; }
+    if (!temporary && remote.passwordRejected === true) rejectRememberedPassword(p, { level: 'client-authentication' }, passwordVersion, remote, true);
+    if (p.sessionMode === 'standard') {
+      if (quickSlot) { const task = remote.createSession('Shell', false); const key = [...(remote.shells?.keys() || [])][0]; if (key) quickSlot(remote, key); await task; }
+      else await viewBudget.run(remote, undefined, () => remote.createSession('Shell', false));
+      panes = remote.panes;
+    }
     if (!active()) { remote.disconnect(); return []; }
-    rememberSuccessfulPassword(p, r, remote, rememberChoice, passwordVersion);
+    if (!temporary) rememberSuccessfulPassword(p, r, remote, rememberChoice, passwordVersion);
     r.attempts = 0; publishStatus(r, 'connected', `${p.username}@${p.host}`); emit('connected', { profileId: id, panes }); return panes;
   } catch (e) {
     if (!active()) { remote.disconnect(); return []; }
-    rejectRememberedPassword(p, e, passwordVersion, remote);
+    if (!temporary) rejectRememberedPassword(p, e, passwordVersion, remote);
     cancelProfilePrompts(id);
     remote.disconnect(); publishStatus(r, 'disconnected', e.message);
     if (p.sessionMode === 'standard' || e.level === 'client-authentication' || String(e.code).startsWith('PASSWORD_STORAGE_') || ['NERDSSHELL_HOST_VERIFICATION', 'NERDSSHELL_RESOURCE_LIMIT'].includes(e.code) || /auth|identity|key|cancel|support|passphrase|agent|permission|known_hosts/i.test(e.message)) { r.wanted = false; r.secrets = {}; }
@@ -291,7 +434,10 @@ async function connect(id, secrets) {
     throw e;
   } finally { r.busy = false; }
 }
-function disconnect(id) { workbench?.disconnect(id); sessionCommands?.disconnect(id); sessionNotifications?.clearProfile(id); cancelRemoteFiles(id); const r = connections.get(id); if (!r) return; r.promptToken = randomUUID(); cancelProfilePrompts(id); r.wanted = false; clearTimeout(r.timer); r.timer = undefined; for (const key of output.keys()) if (key.startsWith(`${id}/`)) discardOutput(key); r.remote?.disconnect(); r.secrets = {}; publishStatus(r, 'disconnected', r.profile.sessionMode === 'standard' ? 'Disconnected. Standard shells are not restorable; connect to start a new shell.' : 'Disconnected. Persistent work was left running; Standard shells are not restorable.'); }
+function disconnect(id) {
+  const quick = quickEntries.get(id);
+  if (quick) { quick.cancelled = true; const r = connections.get(id); if (!r && !quick.pending) { removeQuick(quick); return; } if (r) publishStatus(r, 'disconnected', 'Temporary SSH connection closed. Enter the address again to start a new connection.'); for (const key of quick.panes.keys()) quick.panes.set(key, { ...quick.panes.get(key), dead: true }); releaseQuickTransport(quick, true); if (quick.pending || !quick.panes.size) removeQuick(quick); return; }
+  workbench?.disconnect(id); sessionCommands?.disconnect(id); sessionNotifications?.clearProfile(id); cancelRemoteFiles(id); const r = connections.get(id); if (!r) return; r.promptToken = randomUUID(); cancelProfilePrompts(id); r.wanted = false; clearTimeout(r.timer); r.timer = undefined; for (const key of output.keys()) if (key.startsWith(`${id}/`)) discardOutput(key); r.remote?.disconnect(); r.secrets = {}; publishStatus(r, 'disconnected', r.profile.sessionMode === 'standard' ? 'Disconnected. Standard shells are not restorable; connect to start a new shell.' : 'Disconnected. Persistent work was left running; Standard shells are not restorable.'); }
 function handle(name, fn) {
   ipcMain.handle(`nerdsshell:${name}`, async (event, ...args) => {
     if (event.sender !== window?.webContents || event.senderFrame !== window.webContents.mainFrame || event.senderFrame.url !== uiURL) throw new Error('Untrusted request.');
@@ -303,26 +449,30 @@ function registerIPC() {
   passwords ||= new PasswordStore(app.getPath('userData'), safeStorage, { platform: process.platform });
   installDesktopTools({ handle, app, dialog, getWindow: () => window, confirm, adminLaunch: id => workbench.openAdministrator(id) });
   const localFiles = installLocalFiles({ handle, fileOwner, dialog, getWindow: () => window, confirm, sendFiles, beginTransfer, transfers, emit });
-  handle('state', () => ({ profiles: store.data.profiles, workspace: store.data.workspace, appearance: store.data.appearance, notifications: store.data.notifications, sessionDefaults: store.data.sessionDefaults, sessionLimits: { maxOpenViews: MAX_OPEN_VIEWS }, version: app.getVersion(), dataDirectory: app.getPath('userData') }));
+  handle('state', () => ({ profiles: [...store.data.profiles.map(rendererProfile), ...[...quickEntries.values()].map(quickPublic)], quickConnect: store.data.quickConnect, workspace: store.data.workspace, appearance: store.data.appearance, notifications: store.data.notifications, sessionDefaults: store.data.sessionDefaults, sessionLimits: { maxOpenViews: MAX_OPEN_VIEWS }, version: app.getVersion(), dataDirectory: app.getPath('userData') }));
   handle('saveAppearance', value => store.setAppearance(value));
   handle('savePreferences', value => { const saved = store.setPreferences(value); sessionNotifications?.refreshPreferences(); return saved; });
   handle('sessionAttention', (key, state) => sessionNotifications?.update(key, state));
   handle('activeSession', key => sessionNotifications?.setActive(key));
-  handle('saveProfile', async p => { p = profile(p); const prior = store.data.profiles.find(x => x.id === p.id), approved = await approveDisconnect(p.id); if (!approved) throw new Error('Connection edit cancelled.'); approved(); if (store.data.profiles.find(x => x.id === p.id) !== prior) throw new Error('Connection settings changed during confirmation. Review them again.');
+  handle('quickConnect', quickConnect);
+  handle('quickConnectDefaults', value => { const next = store.setQuickConnectDefaults(value); emit('quick-preferences', next); return next; });
+  handle('quickConnectClearHistory', () => { const next = store.clearQuickConnectHistory(); emit('quick-preferences', next); return next; });
+  handle('quickConnectSave', saveQuickConnect);
+  handle('saveProfile', async p => { if (quickEntries.has(p?.id)) throw new Error('Use Save connection to preserve this temporary shell.'); p = profile(p); const prior = store.data.profiles.find(x => x.id === p.id), approved = await approveDisconnect(p.id); if (!approved) throw new Error('Connection edit cancelled.'); approved(); if (store.data.profiles.find(x => x.id === p.id) !== prior) throw new Error('Connection settings changed during confirmation. Review them again.');
     if (prior && (!samePasswordTarget(prior, p) || !p.rememberPassword)) { invalidatePassword(p.id); passwords.delete(p.id); }
     if (connections.has(p.id)) { disconnect(p.id); connections.delete(p.id); } return putProfile(p); });
   handle('deleteProfile', async id => { const p = saved(id), consent = disconnectConsent(id); if (!await confirm('Remove saved connection', `Remove ${p.name}?`, 'Persistent sessions and local history files will not be deleted. Any standard SSH shells on this connection will close; their running work may stop.')) return false; consent.validate(); if (saved(id) !== p) throw new Error('Connection settings changed during confirmation. Review them again.'); invalidatePassword(id); passwords.delete(id); disconnect(id); connections.delete(id); store.data.profiles = store.data.profiles.filter(x => x.id !== id); store.save(); credentialVersions.delete(id); return true; });
   handle('forgetPassword', id => forgetPassword(id));
-  handle('connect', id => connect(id)); handle('disconnect', async id => { const approved = await approveDisconnect(id); if (!approved) return false; approved(); disconnect(id); return true; });
+  handle('connect', id => { saved(id); return connect(id); }); handle('disconnect', async id => { const approved = await approveDisconnect(id); if (!approved) return false; approved(); disconnect(id); return true; });
   handle('discover', id => runtime(id).remote.discover());
-  handle('open', key => { const { remote } = forKey(key); return viewBudget.run(remote, key, () => remote.open(key)); });
-  installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow: () => window, withViewSlot: (remote, key, operation) => viewBudget.run(remote, key, operation),
+  handle('open', key => { const { remote } = forKey(key); if (rendererReloading && remote.profile.terminalType === 'generic') throw new Error('Wait for the app view to finish reloading.'); return viewBudget.run(remote, key, () => remote.open(key)); });
+  installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow: () => window, withViewSlot, afterClose: closeQuickView,
     forget: key => { workbench?.forget(key); sessionCommands?.forget(key); sessionNotifications?.forget(key); fileListings.cancelView(key); discardOutput(key); } });
   handle('input', (key, data) => { workbench?.assertInput(key); return forKey(key).remote.input(key, data); });
   handle('resize', (key, cols, rows) => { integer(cols, 20, 1000, 'columns'); integer(rows, 5, 500, 'rows'); return forKey(key).remote.resize(key, cols, rows); });
   handle('rename', (key, name) => forKey(key).remote.rename(key, name));
   handle('snapshot', key => forKey(key).remote.snapshot(key));
-  handle('workspace', w => store.setWorkspace(w));
+  handle('workspace', w => store.setWorkspace(persistedWorkspace(w)));
   handle('promptReply', (id, value, remember) => {
     if (value !== null && (typeof value !== 'string' || value.length > 4096) || remember !== undefined && typeof remember !== 'boolean') throw new Error('Invalid response.');
     const done = prompts.get(id); if (remember === true && done && !done.rememberPasswordAvailable) throw new Error('This prompt cannot remember a password.');
@@ -368,7 +518,7 @@ function registerIPC() {
   handle('cancelTransfer', id => transfers.get(id)?.abort());
   handle('dataFolder', () => shell.openPath(app.getPath('userData')));
   installPublicLinks({ handle, shell });
-  workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key), withViewSlot: (remote, key, operation) => viewBudget.run(remote, key, operation), pendingPromptCount: () => prompts.size });
+  workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key), withViewSlot, pendingPromptCount: () => prompts.size });
   sessionCommands = installSessionCommands({ handle, connections, forKey, assertInput: key => workbench.assertInput(key), resolveAction: (key, id, argument) => workbench.resolvePaneAction(key, id, argument) });
 }
 // Resolve storage before the single-instance lock so upgrades share the same
@@ -412,10 +562,10 @@ else {
     window.webContents.on('will-navigate', e => e.preventDefault());
     window.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     window.webContents.session.setPermissionCheckHandler(() => false);
-    window.webContents.on('did-start-loading', () => { rendererReloading = rendererHasLoaded; if (rendererHasLoaded && !quitting) startupUpdater?.cancel().catch(() => {}); cancelAllPrompts(); });
+    window.webContents.on('did-start-loading', () => { rendererReloading = rendererHasLoaded; if (rendererHasLoaded && !quitting) { prepareGenericRendererReload(); startupUpdater?.cancel().catch(() => {}); } cancelPendingQuick(); cancelAllPrompts(); });
     window.webContents.on('did-finish-load', () => { rendererHasLoaded = true; rendererReloading = false; });
-    window.webContents.on('destroyed', () => { if (!quitting) startupUpdater?.cancel().catch(() => {}); cancelAllPrompts(); });
-    window.webContents.on('render-process-gone', () => { rendererReloading = true; if (!quitting) startupUpdater?.cancel().catch(() => {}); cancelAllPrompts(); });
+    window.webContents.on('destroyed', () => { if (!quitting) startupUpdater?.cancel().catch(() => {}); cancelPendingQuick(); cancelAllPrompts(); });
+    window.webContents.on('render-process-gone', () => { rendererReloading = true; if (!quitting) { prepareGenericRendererReload(); startupUpdater?.cancel().catch(() => {}); } cancelPendingQuick(); cancelAllPrompts(); });
     return window.loadURL(uiURL).then(() => {
       const currentVersion = app.getVersion(), debugging = !!app.commandLine?.getSwitchValue?.('remote-debugging-port');
       if (!eligibleStartup({ packaged: app.isPackaged, platform: process.platform, arch: process.arch, executablePath: process.execPath, debugging, currentVersion })) return;
@@ -442,6 +592,7 @@ else {
       approved();
       if (app.nerdsshellScratchpadDirty && (app.nerdsshellScratchpadRevision || 0) !== scratchRevision) throw new Error('Scratchpad changed during confirmation. Save it or review quitting again.');
       quitting = true; sessionNotifications?.dispose();
+      cancelPendingQuick();
       for (const id of connections.keys()) disconnect(id);
       for (const done of prompts.values()) done(null);
       for (const t of transfers.values()) t.abort();

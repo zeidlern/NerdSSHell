@@ -34,11 +34,15 @@
     const generation = serial;
     try {
       const context = await api.workbenchContext(); if (generation !== serial) return;
+      if ((options.key || Object.prototype.hasOwnProperty.call(options, 'target')) && !context.targets.some(t => t.id === options.target)) {
+        sourceKey = undefined; template = null; code.value = ''; target.replaceChildren();
+        if (dialog.open) dialog.close();
+        throw new Error('The selected destination is unavailable for the command workbench.');
+      }
       targets = context.targets; favorites = context.preferences.favorites;
       target.replaceChildren();
       for (const t of targets) { const option = element('option', '', t.title); option.value = t.id; target.append(option); }
       const preferred = options.target || panes.get(active)?.profileId;
-      if (options.key && !targets.some(t => t.id === options.target)) throw new Error('The selected pane destination is no longer connected.');
       sourceKey = options.key; target.disabled = !!sourceKey;
       if (targets.some(t => t.id === preferred)) target.value = preferred;
       if (!targets.length) { const option = element('option', '', 'Connect to an SSH server first'); option.value = ''; target.append(option); }
@@ -143,8 +147,8 @@
     const badge = element('span', 'wb-target-badge', v.pane.local ? 'LOCAL · This PC' : `REMOTE · ${profile?.username || ''}@${profile?.host || ''}`);
     badge.title = v.pane.local ? `${v.pane.shellFamily === 'cmd' ? 'Command Prompt' : 'PowerShell'} running on this PC; not persistent across closing/reboot.` : `Actual SSH endpoint. Nested ssh or sudo in the terminal does not change this connection identity. ${v.pane.standard ? 'Not persistent.' : 'Server-side persistent session.'}`;
     const lock = button('Lock input', async () => { if (!v.ready) return message('This console is not ready.'); v.locked = await api.inputLock(v.pane.key, !v.locked); updateLock(v); }, 'wb-lock', 'Prevent accidental typing or paste; not a server-permission restriction');
-    const more = button('Review command', () => open({ target: v.pane.profileId, key: v.pane.key }), 'small');
-    bottom.prepend(badge); bottom.append(lock, more); v.lockButton = lock;
+    bottom.prepend(badge); bottom.append(lock); v.lockButton = lock;
+    if (profile?.terminalType !== 'generic' && v.pane.terminalType !== 'generic') bottom.append(button('Review command', () => open({ target: v.pane.profileId, key: v.pane.key }), 'small'));
   }
   function updateLock(v) {
     v.wrapper.classList.toggle('input-locked', !!v.locked); if (v.lockButton) { v.lockButton.textContent = v.locked ? 'Unlock input' : 'Lock input'; v.lockButton.setAttribute('aria-pressed', String(!!v.locked)); }

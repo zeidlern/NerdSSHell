@@ -1,0 +1,16 @@
+/* Quick Connect remains reachable above the scrolling connection list. */
+#quickConnectArea{flex:none;margin:0 8px 6px;padding:9px 0 5px;border-bottom:1px solid var(--line)}
+#quickConnectArea h2{font-size:12px;font-weight:650;margin:0 0 7px}
+.quick-entry{display:flex;gap:5px;align-items:center}
+.quick-entry input{font-size:12px;padding:7px 6px;flex:1;min-width:0}
+.quick-entry button{font-size:11px;padding:6px}
+#quickSettings{font-size:16px;padding:2px 5px;min-width:28px}
+#quickSummary,#quickStatus{margin:6px 0 0;font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+#quickSummary{color:var(--muted)}
+#quickStatus:empty{display:none}
+#quickCancel{margin-top:6px;font-size:11px;padding:4px 7px}
+#connectionSidebar.collapsed #quickConnectArea{display:none}
+.quick-group>h3,.saved-connections-heading{font-size:11px;color:var(--muted);margin:7px 4px;letter-spacing:.3px}
+.quick-connection .connection-head{font-size:12px;overflow-wrap:anywhere}
+.quick-connection .connection-head>.quick-tag{font-size:9px;color:var(--accent);margin-left:5px}
+#quickSettingsDialog .hint{margin-top:5px}

@@ -71,3 +71,15 @@ There are three separate concepts: saved connection settings, a live SSH transpo
 ## First safe test
 
 Create a disposable persistent session named `persistence-test`, run a harmless command, disconnect through the UI and reconnect. Confirm that you reattach to the same session rather than a newly launched shell. Then use **End** on that disposable session and confirm it disappears. Never use a production task to learn the difference between Disconnect and End.
+
+## Quick Connect (1.2.0 and later)
+
+The bar above saved connections opens a temporary Standard SSH terminal. Enter an IP or DNS name and press Enter or Connect. Ctrl+Alt+Q expands the sidebar and focuses the bar. Use its settings button to keep a username, port (22 by default), sign-in method and optional key path; a missing username is prompted. Passwords and interactive MFA answers are entered in the existing trusted dialogs and stay in memory for that transport.
+
+Accepted forms include `192.0.2.10`, `core-r1.site.example`, `netops@core-r1:2222`, bare IPv6 and `[2001:db8::10]:2222`. A port embedded in the address overrides the default. Commands, multiline destinations and passwords embedded in URLs are rejected.
+
+Quick connections appear separately from saved entries. The last 50 successful destinations can autocomplete addresses; history contains host, port and username, can be cleared, and can be disabled. Host pins are separate from recent history: first-use approval saves the verified endpoint identity, while changed/revoked keys still block connection. No saved profile is required for this trust.
+
+Quick Connect opens plain interactive network-device SSH without Linux/tmux discovery, automatic startup commands or OS inspection. Linux Actions/Favorites and Persistent/task launch controls are unavailable for this mode. SFTP is contacted only when explicitly opened. Save connection retains this mode, endpoint and live terminal; passwords are not implicitly saved by promotion.
+
+Closing or disconnecting a live Standard shell keeps the existing consequence confirmation. Network loss never silently replaces it. Ended output remains readable until its tab is closed; transports and secrets are released, and temporary connections are excluded from app-restart restoration. Pending attempts and terminal tabs are bounded so hundreds of sequential devices do not accumulate connections.

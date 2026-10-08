@@ -4,6 +4,11 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { StringDecoder } = require('node:string_decoder');
 const { profile } = require('./core.cjs');
+const { settings: quickSettings, recent: quickRecent, addRecent } = require('./quick-connect.cjs');
+function quickPreferences(value = {}) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid Quick Connect preferences.');
+  return { defaults: quickSettings(value.defaults), recent: quickRecent(value.recent ?? []) };
+}
 const { appearance } = require('../ui/appearance.js');
 const { validateSettings } = require('./action-settings.cjs');
 const { notifications, sessionDefaults, preferences } = require('./preferences.cjs');
@@ -14,7 +19,7 @@ function workbenchPreferences(value = {}) {
   if (!Array.isArray(favorites) || favorites.length > 3 || favorites.some(id => typeof id !== 'string' || !/^[a-z]+\.[a-z]+$/.test(id) || id.length > 64)) throw new Error('Invalid Quick Actions favorites.');
   return { favorites: [...new Set(favorites)] };
 }
-function initialState() { return { version: 1, profiles: [], pins: {}, appearance: appearance(), notifications: notifications(), sessionDefaults: sessionDefaults(), workspace: workspace(), workbench: workbenchPreferences(), actionConfiguration: validateSettings() }; }
+function initialState() { return { version: 1, profiles: [], pins: {}, quickConnect: quickPreferences(), appearance: appearance(), notifications: notifications(), sessionDefaults: sessionDefaults(), workspace: workspace(), workbench: workbenchPreferences(), actionConfiguration: validateSettings() }; }
 function workspace(w = {}) {
   const layout = [1, 2, 4].includes(w.layout) ? w.layout : 1;
   const order = Array.isArray(w.order) ? [...new Set(w.order.filter(x => typeof x === 'string' && x.length < 240))].slice(0, 256) : [];
@@ -41,7 +46,7 @@ class StateStore {
         if (v.version !== 1 || !Array.isArray(v.profiles) || typeof v.pins !== 'object' || !v.pins) throw new Error('Unsupported settings format.');
         const legacy = workbenchPreferences(v.workbench);
         const actionConfiguration = validateSettings(v.actionConfiguration ?? { favoritesByOS: Object.fromEntries(require('./action-settings.cjs').OS_TYPES.map(os => [os, legacy.favorites])) });
-        this.data = { version: 1, profiles: v.profiles.map(profile), pins: { ...v.pins }, appearance: appearance(v.appearance), notifications: notifications(v.notifications), sessionDefaults: sessionDefaults(v.sessionDefaults), workspace: workspace(v.workspace), workbench: legacy, actionConfiguration };
+        this.data = { version: 1, profiles: v.profiles.map(profile), pins: { ...v.pins }, quickConnect: quickPreferences(v.quickConnect), appearance: appearance(v.appearance), notifications: notifications(v.notifications), sessionDefaults: sessionDefaults(v.sessionDefaults), workspace: workspace(v.workspace), workbench: legacy, actionConfiguration };
       } catch (e) {
         // Preserve corrupt data and fail explicitly, rather than silently losing connections or trust pins.
         throw new Error(`Cannot read ${this.file}. The file has not been changed. ${e.message}`);
@@ -56,7 +61,24 @@ class StateStore {
     if (fs.existsSync(this.file)) fs.copyFileSync(this.file, this.file + '.backup');
     fs.renameSync(temp, this.file);
   }
-  putProfile(p) { p = profile(p); this.data.profiles = this.data.profiles.filter(x => x.id !== p.id).concat(p); this.save(); return p; }
+  putProfile(p) {
+    p = profile(p); const prior = this.data.profiles;
+    this.data.profiles = prior.filter(x => x.id !== p.id).concat(p);
+    try { this.save(); } catch (error) { this.data.profiles = prior; throw error; } return p;
+  }
+  setQuickConnectDefaults(value) {
+    const defaults = quickSettings(value), prior = this.data.quickConnect;
+    return this.putQuickConnect({ defaults, recent: defaults.historyEnabled ? prior.recent : [] });
+  }
+  clearQuickConnectHistory() { return this.putQuickConnect({ ...this.data.quickConnect, recent: [] }); }
+  rememberQuickConnect(target) {
+    const prior = this.data.quickConnect;
+    return prior.defaults.historyEnabled ? this.putQuickConnect({ ...prior, recent: addRecent(prior.recent, target) }) : prior;
+  }
+  putQuickConnect(value) {
+    const next = quickPreferences(value), prior = this.data.quickConnect; this.data.quickConnect = next;
+    try { this.save(); } catch (error) { this.data.quickConnect = prior; throw error; } return next;
+  }
   setAppearance(value) { this.data.appearance = appearance(value); this.save(); return this.data.appearance; }
   setPreferences(value) {
     const next = preferences(value, this.data), prior = this.data;
@@ -64,7 +86,7 @@ class StateStore {
     try { this.save(); } catch (error) { this.data = prior; throw error; }
     return next;
   }
-  setWorkspace(w) { this.data.workspace = workspace(w); this.save(); }
+  setWorkspace(w) { const prior = this.data.workspace; this.data.workspace = workspace(w); try { this.save(); } catch (error) { this.data.workspace = prior; throw error; } }
 }
 function publishExport(source, destination) {
   // Both paths are in the chosen directory. Hardlink creation is exclusive, so a

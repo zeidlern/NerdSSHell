@@ -110,6 +110,7 @@ jobs:
           retention-days: 14
           path: |
             .local/packaged-quick-connect/results.json
+            .local/packaged-quick-connect/*.png
             .local/packaged-password/results.json
             .local/packaged-confirmation/results.json
             .local/startup-update-ui/*.json
@@ -134,6 +135,7 @@ jobs:
             docs/THIRD-PARTY-NOTICES.md
             package-lock.json
             .local/packaged-quick-connect/results.json
+            .local/packaged-quick-connect/*.png
             .local/packaged-password/results.json
             .local/packaged-confirmation/results.json
             .local/startup-update-ui/*.json

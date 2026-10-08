@@ -52,7 +52,7 @@ async function fixture(t, options = {}) {
   class FixturePasswords { constructor() {} isAvailable() { return true; } get(...args) { passwords.push(['get', ...args]); return null; } set(...args) { passwords.push(['set', ...args]); } delete(...args) { passwords.push(['delete', ...args]); } }
   const electron = { app, BrowserWindow: Window, ipcMain: { handle: (name, fn) => handlers.set(name, fn) }, dialog: { showErrorBox: (_title, message) => failures.push(message) }, clipboard: {}, Menu: { setApplicationMenu() {} }, shell: {}, protocol: { registerSchemesAsPrivileged() {}, handle() {} }, net: {}, safeStorage: {} };
   const filename = path.resolve(__dirname, '../src/main.cjs'), actual = createRequire(filename), module = { exports: {} };
-  vm.runInNewContext(fs.readFileSync(filename, 'utf8') + '\nmodule.exports={get:()=>({store,connections,quickEntries,quickViewReservations,pendingQuick,prompts,viewBudget,credentialVersions,output})};', { require: name => name === 'electron' ? electron : name === './mixed-remote.cjs' ? { MixedRemote: FixtureRemote } : name === './password-store.cjs' ? { PasswordStore: FixturePasswords } : actual(name), module, __dirname: path.dirname(filename), process, Buffer, console, setTimeout, clearTimeout, AbortController, Response, URL });
+  vm.runInNewContext(fs.readFileSync(filename, 'utf8') + '\nmodule.exports={get:()=>({store,connections,quickEntries,quickViewReservations,genericOpenWaits,genericWaitTransports,pendingQuick,prompts,viewBudget,credentialVersions,output,startQuitting:()=>{quitting=true;finishGenericOpenWaits(new Error("NerdSSHell is closing."))}})};', { require: name => name === 'electron' ? electron : name === './mixed-remote.cjs' ? { MixedRemote: FixtureRemote } : name === './password-store.cjs' ? { PasswordStore: FixturePasswords } : actual(name), module, __dirname: path.dirname(filename), process, Buffer, console, setTimeout: (fn, ms, ...args) => setTimeout(fn, options.fastReloadTimeout && ms === 15000 ? 20 : ms, ...args), clearTimeout, AbortController, Response, URL });
   await until(() => window && handlers.has('nerdsshell:state')); assert.deepEqual(failures, []);
   const event = () => ({ sender: window.webContents, senderFrame: window.webContents.mainFrame });
   const invoke = (name, ...args) => handlers.get('nerdsshell:' + name)(event(), ...args);
@@ -198,9 +198,9 @@ test('active generic renderer reload preserves its shell, resets only view ident
   const gate = deferred(); record.tail = gate.promise; const staleInput = h.invoke('input', result.pane.key, 'never replay'); staleInput.catch(() => {});
   h.window.webContents.emit('did-start-loading'); assert.equal(remote.connected, true); assert.equal(remote.disconnects, 0); assert.equal(remote.shells.get(result.pane.key), record); assert.equal(record.paused, true); assert.equal(record.stream.pauses, 1);
   assert.notEqual(remote.views.get(result.pane.key), originalView); assert.equal(remote.views.get(result.pane.key).initialized, false); assert.equal(h.get().output.states.has(result.pane.key), false);
-  await assert.rejects(h.invoke('open', result.pane.key), /finish reloading/); gate.resolve(); await assert.rejects(staleInput, /Queued input was discarded/); assert.deepEqual(record.stream.writes, []);
+  const duringLoad = h.invoke('open', result.pane.key); let opened = false; duringLoad.then(() => { opened = true; }); await tick(); assert.equal(opened, false); assert.equal(h.events.filter(e => e.type === 'snapshot').length, oldSnapshots); gate.resolve(); await assert.rejects(staleInput, /Queued input was discarded/); assert.deepEqual(record.stream.writes, []);
   h.window.webContents.emit('did-finish-load'); const state = await h.invoke('state'), current = state.profiles.find(p => p.id === result.profile.id); assert.equal(current.quickState.state, 'connected'); assert.equal(current.quickPanes[0].key, result.pane.key);
-  await h.invoke('open', result.pane.key); assert.equal(h.events.filter(e => e.type === 'snapshot').length, oldSnapshots + 1); assert.equal(h.events.filter(e => e.type === 'snapshot').at(-1).data, ''); assert.equal(record.paused, false); assert.equal(remote.shells.get(result.pane.key), record); assert.equal(h.remotes.length, 1);
+  await duringLoad; assert.equal(h.events.filter(e => e.type === 'snapshot').length, oldSnapshots + 1); assert.equal(h.events.filter(e => e.type === 'snapshot').at(-1).data, ''); assert.equal(record.paused, false); assert.equal(remote.shells.get(result.pane.key), record); assert.equal(h.remotes.length, 1);
   remote.emit('output', result.pane.key, Buffer.from('fresh page data')); h.get().output.flush(result.pane.key); const fresh = h.get().output.states.get(result.pane.key); assert.notEqual(fresh.epoch, oldState.epoch); await h.invoke('ack', result.pane.key, oldState.epoch, oldState.sequence); assert.equal(fresh.inflight, true);
   const view = remote.views.get(result.pane.key), snapshots = h.events.filter(e => e.type === 'snapshot').length; await h.invoke('open', result.pane.key); assert.equal(remote.views.get(result.pane.key), view); assert.equal(h.events.filter(e => e.type === 'snapshot').length, snapshots);
   await h.invoke('input', result.pane.key, 'fresh input'); assert.deepEqual(record.stream.writes, ['fresh input']); assert.equal(h.get().quickEntries.size, 1); assert.equal(h.get().quickViewReservations.size, 0); assert.equal(h.get().viewBudget.pending.size, 0);
@@ -211,6 +211,49 @@ test('saved generic promotion exposes runtime-only reload metadata without persi
   assert.equal(record.paused, true); assert.equal(h.get().quickEntries.size, 0); h.window.webContents.emit('did-finish-load'); const state = await h.invoke('state'), published = state.profiles.find(p => p.id === saved.id);
   assert.equal(published.temporary, undefined); assert.equal(published.quickState.state, 'connected'); assert.equal(published.quickPanes[0].key, result.pane.key); assert.equal('quickPanes' in h.get().store.data.profiles[0], false); assert.equal('quickState' in JSON.parse(fs.readFileSync(h.get().store.file)).profiles[0], false);
   await h.invoke('open', result.pane.key); assert.equal(record.paused, false); assert.equal(remote.shells.get(result.pane.key), record); assert.equal(h.remotes.length, 1); assert.equal(remote.disconnects, 0);
+});
+
+
+test('generic opening before did-finish-load waits once, joins duplicates and cleans every wait resource', async t => {
+  const h = await fixture(t, { realStandardViews: true }), result = await h.start(), remote = h.remotes[0]; await h.invoke('open', result.pane.key);
+  const shell = remote.shells.get(result.pane.key), before = { close: remote.client.listenerCount('close'), disconnected: remote.listenerCount('disconnected'), ended: remote.listenerCount('ended') };
+  h.window.webContents.emit('did-start-loading'); const snapshots = h.events.filter(e => e.type === 'snapshot').length;
+  const first = h.invoke('open', result.pane.key), second = h.invoke('open', result.pane.key); let resolved = 0; first.then(() => { resolved++; }); second.then(() => { resolved++; });
+  await tick(); assert.equal(resolved, 0); assert.equal(h.events.filter(e => e.type === 'snapshot').length, snapshots); assert.equal(h.get().genericOpenWaits.size, 1); assert.equal(h.get().genericWaitTransports.size, 1);
+  h.window.webContents.emit('did-finish-load'); await Promise.all([first, second]); assert.equal(resolved, 2); assert.equal(h.events.filter(e => e.type === 'snapshot').length, snapshots + 1); assert.equal(remote.shells.get(result.pane.key), shell); assert.equal(remote.disconnects, 0); assert.equal(h.remotes.length, 1);
+  assert.equal(h.get().genericOpenWaits.size, 0); assert.equal(h.get().genericWaitTransports.size, 0); assert.equal(remote.client.listenerCount('close'), before.close); assert.equal(remote.listenerCount('disconnected'), before.disconnected); assert.equal(remote.listenerCount('ended'), before.ended);
+});
+test('pending generic opening has a bounded timeout and later finished-load cannot revive it', async t => {
+  const h = await fixture(t, { realStandardViews: true, fastReloadTimeout: true }), result = await h.start(); await h.invoke('open', result.pane.key); h.window.webContents.emit('did-start-loading');
+  const pending = h.invoke('open', result.pane.key); await assert.rejects(pending, /too long to reload/); const snapshots = h.events.filter(e => e.type === 'snapshot').length; h.window.webContents.emit('did-finish-load'); await tick(); assert.equal(h.events.filter(e => e.type === 'snapshot').length, snapshots); assert.equal(h.get().genericOpenWaits.size, 0); assert.equal(h.get().genericWaitTransports.size, 0); assert.equal(h.remotes[0].connected, true);
+});
+test('later navigation, renderer exit and destruction invalidate a pending generic open', async t => {
+  for (const event of ['did-start-loading', 'render-process-gone', 'destroyed']) {
+    const h = await fixture(t, { realStandardViews: true }), result = await h.start(); await h.invoke('open', result.pane.key); h.window.webContents.emit('did-start-loading'); const pending = h.invoke('open', result.pane.key); pending.catch(() => {}); const snapshots = h.events.filter(e => e.type === 'snapshot').length;
+    h.window.webContents.emit(event); await assert.rejects(pending, /navigation|process exited|destroyed/); h.window.webContents.emit('did-finish-load'); await tick(); assert.equal(h.events.filter(e => e.type === 'snapshot').length, snapshots); assert.equal(h.get().genericOpenWaits.size, 0); assert.equal(h.get().genericWaitTransports.size, 0); assert.equal(h.remotes[0].connected, true);
+  }
+});
+test('pending generic open binds its runtime, client, shell, view and current main frame', async t => {
+  for (const kind of ['client-close', 'shell-end', 'runtime', 'client', 'shell', 'view', 'frame', 'url', 'quitting']) {
+    const h = await fixture(t, { realStandardViews: true }), result = await h.start(), remote = h.remotes[0]; await h.invoke('open', result.pane.key); h.window.webContents.emit('did-start-loading'); const pending = h.invoke('open', result.pane.key); pending.catch(() => {}); const snapshots = h.events.filter(e => e.type === 'snapshot').length;
+    if (kind === 'client-close') remote.client.emit('close');
+    else if (kind === 'shell-end') remote.closeView(result.pane.key);
+    else if (kind === 'runtime') h.get().connections.set(result.profile.id, { ...h.get().connections.get(result.profile.id) });
+    else if (kind === 'client') remote.client = new EventEmitter();
+    else if (kind === 'shell') remote.shells.set(result.pane.key, { ...remote.shells.get(result.pane.key) });
+    else if (kind === 'view') remote.views.set(result.pane.key, { ...remote.views.get(result.pane.key) });
+    else if (kind === 'frame') h.window.webContents.mainFrame = { url: 'nerdsshell://app/ui/index.html' };
+    else if (kind === 'url') h.window.webContents.mainFrame.url = 'https://untrusted.invalid/';
+    else if (kind === 'quitting') h.get().startQuitting();
+    h.window.webContents.emit('did-finish-load'); await assert.rejects(pending, /closed|ended|changed|disconnected|view changed|closing/); await tick(); assert.equal(h.events.filter(e => e.type === 'snapshot').length, snapshots); assert.equal(h.get().genericOpenWaits.size, 0); assert.equal(h.get().genericWaitTransports.size, 0);
+  }
+});
+
+
+test('a new navigation between finished-load and its open microtask prevents reopening a stale view', async t => {
+  const h = await fixture(t, { realStandardViews: true }), result = await h.start(); await h.invoke('open', result.pane.key); h.window.webContents.emit('did-start-loading');
+  const pending = h.invoke('open', result.pane.key); pending.catch(() => {}); const snapshots = h.events.filter(e => e.type === 'snapshot').length;
+  h.window.webContents.emit('did-finish-load'); h.window.webContents.emit('did-start-loading'); await assert.rejects(pending, /view changed|loading again/); assert.equal(h.events.filter(e => e.type === 'snapshot').length, snapshots); assert.equal(h.get().genericOpenWaits.size, 0); assert.equal(h.get().genericWaitTransports.size, 0);
 });
 
 test('300 sequential temporary lifecycles return main registries and credentials to baseline', async t => {

@@ -30,9 +30,9 @@ const { upload } = require('./transfer.cjs');
 const { profile, integer, pasteText } = require('./core.cjs');
 const { parseAddress } = require('./quick-connect.cjs');
 const { MAX_OPEN_VIEWS, ViewBudget, resourceLimitError } = require('./session-limits.cjs');
-let window, store, passwords, quitting = false, quitPending = false, promptChain = Promise.resolve(), queuedPrompts = 0, promptGeneration = 0, rendererHasLoaded = false, rendererReloading = false;
+let window, store, passwords, quitting = false, quitPending = false, promptChain = Promise.resolve(), queuedPrompts = 0, promptGeneration = 0, rendererHasLoaded = false, rendererReloading = false, rendererLoadGeneration = 0;
 const credentialVersions = new Map();
-const quickEntries = new Map(), quickViewReservations = new Set(); let pendingQuick = 0;
+const quickEntries = new Map(), quickViewReservations = new Set(), genericOpenWaits = new Map(), genericWaitTransports = new Map(); let pendingQuick = 0;
 const connections = new Map(), archives = new Map(), prompts = new Map(), transfers = new Map(), fileListings = new FileListings();
 const viewBudget = new ViewBudget(connections);
 const output = new OutputBuffer({ emit: (type, data) => { emit(type, data); if (type === 'output') standardBackpressure(data.key); }, recover: key => forKey(key).remote.snapshot(key) });
@@ -239,6 +239,51 @@ async function withViewSlot(remote, key, operation) {
   try { return await viewBudget.run(remote, key, operation); }
   finally { if (token) quickViewReservations.delete(token); }
 }
+function finishGenericOpenWaits(error) {
+  for (const job of [...genericOpenWaits.values()]) job.finish(error);
+}
+function deferredGenericOpen(key, r, remote) {
+  const existing = genericOpenWaits.get(key);
+  if (existing) { existing.validate(); return existing.task; }
+  const client = remote.client, shell = remote.shells?.get(key), view = remote.views.get(key);
+  const ownerWindow = window, contents = ownerWindow?.webContents, frame = contents?.mainFrame, generation = rendererLoadGeneration;
+  const job = { key, remote, client, shell, view, openedView: null, done: false, timer: null, task: null, finish: null, validate() {
+    if (quitting) throw new Error('NerdSSHell is closing.');
+    if (window !== ownerWindow || !ownerWindow || ownerWindow.isDestroyed() || contents?.isDestroyed?.() || contents !== window.webContents || contents.mainFrame !== frame || frame?.url !== uiURL || rendererLoadGeneration !== generation) throw new Error('The app view changed while opening this shell. Try again after it loads.');
+    if (connections.get(r.profile.id) !== r || r.remote !== remote || remote.client !== client || !remote.connected || remote.closing || remote.shells?.get(key) !== shell || !shell || shell.dead || !remote.views.get(key)?.active || remote.views.get(key) !== view && remote.views.get(key) !== job.openedView) throw new Error('This SSH shell changed or disconnected while the app view was reloading.');
+  } };
+  job.validate();
+  const wait = new Promise((resolve, reject) => {
+    job.finish = error => {
+      if (job.done) return; job.done = true; clearTimeout(job.timer);
+      const watched = genericWaitTransports.get(remote);
+      watched?.jobs.delete(job);
+      if (watched && !watched.jobs.size) {
+        watched.client?.off?.('close', watched.closed); remote.off('disconnected', watched.closed); remote.off('ended', watched.ended); remote.off('detached', watched.ended); genericWaitTransports.delete(remote);
+      }
+      if (!error) { try { job.validate(); } catch (changed) { error = changed; } }
+      if (error) { if (genericOpenWaits.get(key) === job) genericOpenWaits.delete(key); reject(error); } else resolve();
+    };
+  });
+  job.task = wait.then(() => {
+    job.validate();
+    if (rendererReloading) throw new Error('The app view started loading again. Try opening this shell after it finishes.');
+    return viewBudget.run(remote, key, () => { const task = remote.open(key); job.openedView = remote.views.get(key); return task; });
+  }).finally(() => { if (genericOpenWaits.get(key) === job) genericOpenWaits.delete(key); });
+  genericOpenWaits.set(key, job);
+  let watched = genericWaitTransports.get(remote);
+  if (watched && watched.client !== client) { watched.closed(); watched = genericWaitTransports.get(remote); }
+  if (!watched) {
+    watched = { client, jobs: new Set(), closed: null, ended: null };
+    watched.closed = () => { for (const pending of [...watched.jobs]) pending.finish(new Error('This SSH connection closed while the app view was reloading.')); };
+    watched.ended = endedKey => { for (const pending of [...watched.jobs]) if (pending.key === endedKey) pending.finish(new Error('This SSH shell ended while the app view was reloading.')); };
+    genericWaitTransports.set(remote, watched); client?.once?.('close', watched.closed); remote.on('disconnected', watched.closed); remote.on('ended', watched.ended); remote.on('detached', watched.ended);
+  }
+  watched.jobs.add(job);
+  job.timer = setTimeout(() => job.finish(new Error('The app view took too long to reload. Try opening this shell again.')), 15000);
+  return job.task;
+}
+
 function rendererProfile(p) {
   const r = connections.get(p.id), remote = r?.remote;
   if (p.terminalType !== 'generic' || !remote?.connected || remote.closing) return p;
@@ -465,7 +510,7 @@ function registerIPC() {
   handle('forgetPassword', id => forgetPassword(id));
   handle('connect', id => { saved(id); return connect(id); }); handle('disconnect', async id => { const approved = await approveDisconnect(id); if (!approved) return false; approved(); disconnect(id); return true; });
   handle('discover', id => runtime(id).remote.discover());
-  handle('open', key => { const { remote } = forKey(key); if (rendererReloading && remote.profile.terminalType === 'generic') throw new Error('Wait for the app view to finish reloading.'); return viewBudget.run(remote, key, () => remote.open(key)); });
+  handle('open', key => { const { remote } = forKey(key); if (remote.profile.terminalType === 'generic' && (rendererReloading || genericOpenWaits.has(key))) return deferredGenericOpen(key, connections.get(remote.profile.id), remote); return viewBudget.run(remote, key, () => remote.open(key)); });
   installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow: () => window, withViewSlot, afterClose: closeQuickView,
     forget: key => { workbench?.forget(key); sessionCommands?.forget(key); sessionNotifications?.forget(key); fileListings.cancelView(key); discardOutput(key); } });
   handle('input', (key, data) => { workbench?.assertInput(key); return forKey(key).remote.input(key, data); });
@@ -562,10 +607,10 @@ else {
     window.webContents.on('will-navigate', e => e.preventDefault());
     window.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     window.webContents.session.setPermissionCheckHandler(() => false);
-    window.webContents.on('did-start-loading', () => { rendererReloading = rendererHasLoaded; if (rendererHasLoaded && !quitting) { prepareGenericRendererReload(); startupUpdater?.cancel().catch(() => {}); } cancelPendingQuick(); cancelAllPrompts(); });
-    window.webContents.on('did-finish-load', () => { rendererHasLoaded = true; rendererReloading = false; });
-    window.webContents.on('destroyed', () => { if (!quitting) startupUpdater?.cancel().catch(() => {}); cancelPendingQuick(); cancelAllPrompts(); });
-    window.webContents.on('render-process-gone', () => { rendererReloading = true; if (!quitting) { prepareGenericRendererReload(); startupUpdater?.cancel().catch(() => {}); } cancelPendingQuick(); cancelAllPrompts(); });
+    window.webContents.on('did-start-loading', () => { rendererLoadGeneration++; finishGenericOpenWaits(new Error('The app view started a new navigation. Try opening this shell again.')); rendererReloading = rendererHasLoaded; if (rendererHasLoaded && !quitting) { prepareGenericRendererReload(); startupUpdater?.cancel().catch(() => {}); } cancelPendingQuick(); cancelAllPrompts(); });
+    window.webContents.on('did-finish-load', () => { rendererHasLoaded = true; rendererReloading = false; finishGenericOpenWaits(); });
+    window.webContents.on('destroyed', () => { finishGenericOpenWaits(new Error('The app view was destroyed.')); if (!quitting) startupUpdater?.cancel().catch(() => {}); cancelPendingQuick(); cancelAllPrompts(); });
+    window.webContents.on('render-process-gone', () => { finishGenericOpenWaits(new Error('The app view process exited.')); rendererReloading = true; if (!quitting) { prepareGenericRendererReload(); startupUpdater?.cancel().catch(() => {}); } cancelPendingQuick(); cancelAllPrompts(); });
     return window.loadURL(uiURL).then(() => {
       const currentVersion = app.getVersion(), debugging = !!app.commandLine?.getSwitchValue?.('remote-debugging-port');
       if (!eligibleStartup({ packaged: app.isPackaged, platform: process.platform, arch: process.arch, executablePath: process.execPath, debugging, currentVersion })) return;
@@ -591,7 +636,7 @@ else {
       await startupUpdater?.prepareQuit();
       approved();
       if (app.nerdsshellScratchpadDirty && (app.nerdsshellScratchpadRevision || 0) !== scratchRevision) throw new Error('Scratchpad changed during confirmation. Save it or review quitting again.');
-      quitting = true; sessionNotifications?.dispose();
+      quitting = true; finishGenericOpenWaits(new Error('NerdSSHell is closing.')); sessionNotifications?.dispose();
       cancelPendingQuick();
       for (const id of connections.keys()) disconnect(id);
       for (const done of prompts.values()) done(null);

@@ -12,9 +12,10 @@ const { FILE_NAME } = require('../src/password-store.cjs');
 const root = path.resolve(__dirname, '..'), metadata = require('../package.json'), options = new Map();
 for (let index = 2; index < process.argv.length; index++) {
   const name = process.argv[index], value = process.argv[++index];
-  if (!['--exe', '--output'].includes(name) || options.has(name) || !value || !path.isAbsolute(value)) throw Error('Use --exe and --output once each, with absolute paths.');
+  if (options.has(name) || !value || (name === '--viewport' ? !['1024x768','1920x1080'].includes(value) : !['--exe','--output'].includes(name) || !path.isAbsolute(value))) throw Error('Use absolute --exe/--output paths and an optional --viewport of 1024x768 or 1920x1080.');
   options.set(name, value);
 }
+const [viewportWidth, viewportHeight] = (options.get('--viewport') || '1024x768').split('x').map(Number);
 const exe = fs.realpathSync.native(options.get('--exe') || path.join(root, 'dist', 'win-unpacked', 'NerdSSHell.exe'));
 assert.ok(fs.statSync(exe).isFile() && path.basename(exe).toLowerCase() === 'nerdsshell.exe', 'Select an existing NerdSSHell.exe.');
 const output = path.resolve(options.get('--output') || path.join(root, '.local', 'packaged-quick-connect'));
@@ -88,7 +89,9 @@ async function connectDebugger(url, port) {
   });
   let nextId = 1; const pending = new Map();
   ws.onmessage = event => {
-    const message = JSON.parse(event.data), task = pending.get(message.id); if (!task) return;
+    const message = JSON.parse(event.data);
+    if (message.method === 'Runtime.exceptionThrown') { const d=message.params?.exceptionDetails; (report.rendererErrors ||= []).push({line:d?.lineNumber,column:d?.columnNumber,type:/^[A-Za-z_][A-Za-z0-9_]{0,80}$/.test(d?.exception?.className||'')?d.exception.className:null}); report.rendererErrors=report.rendererErrors.slice(-10); }
+    const task = pending.get(message.id); if (!task) return;
     pending.delete(message.id); clearTimeout(task.timer);
     message.error ? task.reject(new Error('Owned debugger command failed.')) : task.resolve(message.result);
   };
@@ -174,11 +177,25 @@ async function privacy(name, expectedSaved = 0) {
   check(name + ': no temporary saved profiles, credentials or workspace entries', state.profiles.length === expectedSaved && state.profiles.every(p=>p.terminalType==='generic') && vaultEmpty() && unsaved.every(id=>!state.workspace.order.some(k=>k.startsWith(id+'/')) && !state.workspace.slots.some(k=>typeof k==='string'&&k.startsWith(id+'/')) && !state.workspace.active.startsWith(id+'/')));
   check(name + ': no plaintext password in settings or renderer state', !text.includes(password) && await control.evaluate(`api.state().then(s=>!JSON.stringify(s).includes(${literal(password)})&&!/"(?:password|ciphertext|secrets)":/.test(JSON.stringify(s)))`));
 }
+// Same logical-row extraction as Packaged-PerPane-Smoke: only soft wraps join.
+// Keep hard newlines and the exact pane/peer checks; a narrow terminal is not missing output.
+function terminalText(view) {
+  const buffer = view.terminal.buffer.active; let text = '';
+  for (let i = 0; i < buffer.length; i++) {
+    const line = buffer.getLine(i); if (!line) continue;
+    text += (line.isWrapped ? '' : '\n') + line.translateToString(!buffer.getLine(i + 1)?.isWrapped);
+  }
+  return text;
+}
+function terminalTextExpression(paneKey) { return `(${terminalText.toString()})(views.get(${literal(paneKey)}))`; }
 async function manualInput(fixture, paneKey, marker) {
   for (const stream of fixture.channels) stream.intentionalInput = true;
   await pointer(`views.get(${literal(paneKey)}).host`); await control.send('Input.insertText', { text: marker }); await key('Enter', 'Enter', 13);
   await until(()=>fixture.received.includes(marker), 'Intentional input did not reach its appliance.');
-  await control.wait(`(()=>{const v=views.get(${literal(paneKey)});return Array.from({length:v.terminal.buffer.active.length},(_,i)=>v.terminal.buffer.active.getLine(i)?.translateToString(true)||'').join(${literal('\n')}).includes(${literal(marker)});})()`, 'Appliance echo did not reach its owning terminal.');
+  try { await control.wait(`${terminalTextExpression(paneKey)}.includes(${literal(marker)})`, 'Appliance echo did not reach its owning terminal.'); } catch (error) {
+    try { report.inputFailure = await control.evaluate(`(()=>{const v=views.get(${literal(paneKey)}),buffer=v.terminal.buffer.active,r=v.host.getBoundingClientRect();return {viewport:{width:innerWidth,height:innerHeight},host:{width:r.width,height:r.height},cols:v.terminal.cols,rows:v.terminal.rows,ready:v.ready,active:active===${literal(paneKey)},textareaFocused:document.activeElement===v.terminal.textarea,physicalContains:Array.from({length:buffer.length},(_,i)=>buffer.getLine(i)?.translateToString(true)||'').join(${literal('\n')}).includes(${literal(marker)}),logicalContains:(${terminalText.toString()})(v).includes(${literal(marker)}),visibleRows:Array.from({length:Math.min(buffer.length,8)},(_,i)=>{const line=buffer.getLine(i);return {wrapped:!!line?.isWrapped,text:(line?.translateToString(true)||'').slice(0,256)};})};})()`); persistReport(); } catch {}
+    throw error;
+  }
 }
 async function closeTab(paneKey, confirm = true) {
   await pointer(`([...$('tabs').children].find(tab=>tab.title===profiles.get(views.get(${literal(paneKey)}).pane.profileId).name+' / '+label(views.get(${literal(paneKey)}).pane))).querySelector('.close-tab')`);
@@ -198,7 +215,7 @@ async function main() {
   assert.ok(output !== path.resolve(temporary) && !output.startsWith(path.resolve(temporary)+path.sep), 'Keep reports outside disposable user data.');
   report.executableSha256=createHash('sha256').update(fs.readFileSync(exe)).digest('hex'); report.asarSha256=createHash('sha256').update(fs.readFileSync(path.join(path.dirname(exe),'resources','app.asar'))).digest('hex');
   const state = new StateStore(temporary); state.data.notifications = { enabled:false,audio:false,desktop:false,visual:false }; state.save();
-  const a=await createFixture('A'), b=await createFixture('B'); await launch(); report.runtime = await control.evaluate('api.workbenchDiagnostics().then(d=>d.runtime)'); report.platform = { os: process.platform, architecture: process.arch, release: os.release() };
+  const a=await createFixture('A'), b=await createFixture('B'); await launch(); await control.send('Emulation.setDeviceMetricsOverride',{width:viewportWidth,height:viewportHeight,deviceScaleFactor:1,mobile:false}); report.acceptanceViewport={width:viewportWidth,height:viewportHeight}; report.runtime = await control.evaluate('api.workbenchDiagnostics().then(d=>d.runtime)'); report.platform = { os: process.platform, architecture: process.arch, release: os.release() };
   report.phase='Reusable defaults and shortcut'; await settings(a); report.baseline=await resources();
   await click('#sidebarToggle'); check('Sidebar can collapse before Quick shortcut',await control.evaluate(`$('connectionSidebar').classList.contains('collapsed')`));
   await key('q','KeyQ',81,3); check('Ctrl+Alt+Q expands the sidebar and focuses the address box',await control.evaluate(`!$('connectionSidebar').classList.contains('collapsed')&&document.activeElement===$('quickAddress')`));
@@ -232,13 +249,16 @@ async function main() {
   check('Cancel connection retires only its pending transport and leaves both live shells',await control.evaluate(`views.get(${literal(keyA)}).ready&&views.get(${literal(keyB)}).ready`)&&a.peers.size===1);
   report.phase='Network loss and retained transcript'; const beforeLoss=metrics.connections; for(const peer of b.peers)peer._sock.destroy();
   await control.wait(`!views.get(${literal(keyB)}).ready&&views.get(${literal(keyB)}).pane.dead`, 'Transport loss did not retire the owned terminal.'); await until(()=>b.peers.size===0&&b.channels.size===0,'Lost appliance resources remained.'); await delay(500);
-  check('Network loss keeps the ended transcript without reconnecting or affecting its sibling',metrics.connections===beforeLoss&&await control.evaluate(`profiles.has(${literal(idB)})&&profiles.get(${literal(idB)}).temporary&&views.get(${literal(keyA)}).ready&&Array.from({length:views.get(${literal(keyB)}).terminal.buffer.active.length},(_,i)=>views.get(${literal(keyB)}).terminal.buffer.active.getLine(i)?.translateToString(true)||'').join(${literal('\n')}).includes('ONLY_APPLIANCE_B')`));
+  check('Network loss keeps the ended transcript without reconnecting or affecting its sibling',metrics.connections===beforeLoss&&await control.evaluate(`profiles.has(${literal(idB)})&&profiles.get(${literal(idB)}).temporary&&views.get(${literal(keyA)}).ready&&${terminalTextExpression(keyB)}.includes('ONLY_APPLIANCE_B')`));
   await closeTab(keyB,false); await control.wait(`!profiles.has(${literal(idB)})`, 'Closing final lost transcript retained its temporary entry.');
   check('Final transcript closure removes its temporary runtime', (await resources()).connections===1);
-  report.phase='Renderer reload preserves metadata without reconnect or input replay'; const connectionsBeforeReload=metrics.connections, inputsBeforeReload=metrics.manualInputBytes;
+  report.phase='Renderer reload preserves metadata without reconnect or input replay'; const connectionsBeforeReload=metrics.connections, inputsBeforeReload=metrics.manualInputBytes, shellsBeforeReload=metrics.shells, authBeforeReload=metrics.authenticationRequests, peerBeforeReload=[...a.peers][0], channelBeforeReload=[...a.channels][0];
   await control.evaluate('window.__quickSmokeBeforeReload=true;true');
-  await control.send('Page.reload'); await control.wait(`(()=>{try{return window.__quickSmokeBeforeReload!==true&&typeof profiles!=='undefined'&&profiles.has(${literal(idA)})&&views.has(${literal(keyA)})&&views.get(${literal(keyA)}).ready;}catch{return false;}})()`, 'Reloaded temporary shell did not reattach its existing view.', true);
-  check('Renderer reload retains the live generic temporary identity without creating a connection or replaying input',metrics.connections===connectionsBeforeReload&&metrics.manualInputBytes===inputsBeforeReload&&await control.evaluate(`profiles.get(${literal(idA)}).temporary&&views.get(${literal(keyA)}).actionBar.bar.hidden`));
+  await control.send('Page.reload');
+  try { await control.wait(`(()=>{try{return window.__quickSmokeBeforeReload!==true&&typeof profiles!=='undefined'&&profiles.has(${literal(idA)})&&views.has(${literal(keyA)})&&(views.get(${literal(keyA)}).ready||views.get(${literal(keyA)}).state.textContent==='Could not open');}catch{return false;}})()`, 'Reloaded temporary shell did not reattach its existing view.', true); if(!await control.evaluate(`views.get(${literal(keyA)}).ready`))throw Error('Reloaded temporary shell could not open.'); }
+  catch(error){try{report.reloadFailure=await control.evaluate(`(async()=>{const v=views.get(${literal(keyA)}),p=profiles.get(${literal(idA)}),d=await api.workbenchDiagnostics();return {documentState:document.readyState,notice:$('notice').textContent.slice(0,320),oldDocument:window.__quickSmokeBeforeReload===true,profile:!!p,quickState:p?.quickState?.state,pane:panes.has(${literal(keyA)}),view:!!v,ready:v?.ready,generation:v?.generation,state:v?.state?.textContent?.slice(0,80),opening:opening.has(${literal(keyA)}),active:active===${literal(keyA)},hidden:v?.wrapper.hidden,resources:{connections:d.connections.length,prompts:d.pendingPrompts,views:d.connections.reduce((n,c)=>n+c.openViews,0),standard:d.connections.reduce((n,c)=>n+c.standardChannels,0)}};})()`);persistReport();}catch{}throw error;}
+  report.reloadIdentity={samePeer:a.peers.has(peerBeforeReload),sameChannel:a.channels.has(channelBeforeReload),livePeers:a.peers.size,liveChannels:a.channels.size,connectionCountUnchanged:metrics.connections===connectionsBeforeReload,shellCountUnchanged:metrics.shells===shellsBeforeReload,authenticationCountUnchanged:metrics.authenticationRequests===authBeforeReload};
+  check('Renderer reload retains the live generic temporary identity without creating a connection or replaying input',report.reloadIdentity.samePeer&&report.reloadIdentity.sameChannel&&a.peers.size===1&&a.channels.size===1&&metrics.connections===connectionsBeforeReload&&metrics.shells===shellsBeforeReload&&metrics.authenticationRequests===authBeforeReload&&metrics.manualInputBytes===inputsBeforeReload&&await control.evaluate(`profiles.get(${literal(idA)}).temporary&&views.get(${literal(keyA)}).actionBar.bar.hidden&&!$('promptDialog').open`));
   report.phase='Bare DNS name'; const dnsAuth=a.authRequests, dns=await begin('localhost'); await answerPassword(); await host(a,true,dnsAuth); const dnsKey=await ready(dns);
   check('Bare DNS name resolves with reusable login defaults',await control.evaluate(`profiles.get(${literal(dns)}).host==='localhost'&&profiles.get(${literal(dns)}).port===${a.port}`));
   await closeTab(dnsKey); await control.wait(`!profiles.has(${literal(dns)})`, 'Closed DNS connection retained a temporary profile.');

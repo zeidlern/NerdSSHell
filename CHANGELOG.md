@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — Connection controls and recovery
+## 1.0.4 — Interactive confirmations and connection recovery
 
 - Add an advanced saved Standard SSH terminal baud rate and independent new-window override. Request both SSH PTY speed modes only when creating the terminal; preserve the server default, existing profiles and inherited task settings. Explain tmux/local restrictions and new-terminal/reconnect requirements.
 - Present app-owned confirmations, including multiline paste and session/quit consequences, in one serialized themed dialog. Keep Continue/Paste and Cancel mouse/keyboard accessible, preserve response IDs and caller ownership checks, and keep the Windows parent enabled. Guard trailing double-clicks, reload/destruction and queue limits.
@@ -8,7 +8,7 @@
 - Dismiss About on completed backdrop clicks while preserving inside clicks, selection, Close/Escape, focus return and background-control isolation.
 - Cancel disconnected sign-in prompts and pending command collectors; release retired transport/view references and temporary listeners. Preserve Persistent work, ordered input and Standard SSH's explicit new-shell requirement.
 - Add bounded runtime/operation diagnostics and 120 synthetic plus 100 real loopback lifecycle cycles. The original lengthy-session lag report and exact Win32 cursor/capture mechanism remain unverified; no speculative Electron change.
-- Establish the current official development checkout and owner-requested recovery checkpoints. Existing v1.0.3 release, tag and assets remain unchanged; the owner will choose the next version after review.
+- Establish the current official development checkout and owner-requested recovery checkpoints. Existing v1.0.3 release, tag and assets remain unchanged. The owner authorized publication and local upgrade as 1.0.4.
 - Measured validation and pending limitations are recorded in [development progress](DEVELOPMENT-PROGRESS.md).
 
 ## 1.0.3 — Remember SSH passwords

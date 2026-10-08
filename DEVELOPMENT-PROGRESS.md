@@ -1,12 +1,12 @@
 # Clean baseline and connection fixes: development progress
 
-This checkpoint document is kept in Git at the owner's explicit request so another session can recover the work. Application version and the existing v1.0.3 release remain unchanged until the owner chooses the next version.
+This checkpoint document is kept in Git at the owner's explicit request so another session can recover the work. The initial implementation round preserved version 1.0.3. The owner subsequently authorized merge, publication and local installation as 1.0.4; the existing v1.0.3 release remains intact.
 
 ## Current completion status
 
-All requested implementation sections are complete and fully validated at code/fixture checkpoint 92a5737d874d5e8ec41bb1b226fd78f694783f84. Draft [PR 8](https://github.com/zeidlern/NerdSSHell/pull/8) targets unchanged main d788429. The history below retains measured checkpoint scopes; earlier in-progress statements are superseded by the final receipt.
+The owner now explicitly requests: "Merge and publish and install locally for me." Version 1.0.4 is being prepared on codex/clean-baseline-connection-fixes through PR 8. The implementation checkpoint8175341 passed all source/Linux/Windows/security/package gates; this versioned candidate needs its own build and current required checks before squash merge.
 
-Remaining owner acceptance: choose the next version, manually retest mouse interaction on the reported machine with the reviewed new build, and complete documented real OS/UAC/picker/notification checks before an official release. The installed app and published 1.0.3 have not been replaced. The original general lengthy-session lag and exact Win32 cursor/capture mechanism remain unverified. No independent implementation or validation work remains pending at checkpoint 92a5737.
+Next: complete local versioned acceptance, push the metadata/release receipt, await all six required PR checks, squash merge exact expected head, verify main/tree/CI, create fresh v1.0.4 and publish consumer assets with explicit unsigned status. Then upgrade the registered per-user installation, preserving existing data. A running app must close normally so Standard-shell consequences and unsaved notes receive their own confirmation; no process-name kill or force close. The prior chronological evidence below remains scoped to its original source/version.
 
 ## Authoritative development environment
 
@@ -128,3 +128,9 @@ Canonical-temp local receipt: source/actionlint passed; full Windows suite passe
 - Active source is D:\Dev\NerdSSHell with official origin; D:\Dev\BetterSSH contains only redirect instructions. Retired source/tests/dependencies/builds/history were not imported. Codex's path/trust entry and the repository-relative VS Code workspace are correct. The remaining cosmetic Codex project label can be changed via project menu > Edit project > NerdSSHell; retain its already-correct active directory.
 
 Final recovery: checkout the pushed feature branch in the authoritative directory, read this receipt and AGENTS.md, verify main/release identity before further work, and inspect PR 8. Owner version/release/manual acceptance comes next; do not install or publish these unsigned development bytes as the existing 1.0.3 release.
+
+## Version 1.0.4 release preparation
+
+Owner authorization supersedes the earlier no-publish/no-install hold. Source, lockfile root and root package version are1.0.4; dependency versions, Electron44.5.1, installer GUID and application/data identity remain unchanged. Builds remain unsigned and must be labeled accordingly. Prior releasev1.0.3 is immutable and must not change. Actual1.0.4 results will be recorded after execution. Physical mouse/UAC/picker/notification acceptance is not implied by automated checks.
+
+1.0.4 local receipt: fresh npm ci and synchronized source/lock versions passed. Full suite 908 passed, 0 failed, 1 baseline symlink skip; source/actionlint/package/notices and audits passed. Actual versioned production 71 host/password and 190 pane/UI checks passed; exact-ASAR SDK 48 and native/spelling 16 passed. All 77 shipped source/assets match; packaged runtime metadata matches. Unsigned installer SHA256 a3f086d672d4432ea1827198415ac54bfd27566dfb812327f1772b579b6829a9; ASAR SHA256 052f632d79827cb46417820d453c0b4f3b234d941bb334ffd9600f19a7f564d3. Versioned PR/main gates, squash merge, publication and installation remain next. A normal-exit request is pending for the running local 1.0.3 app; no existing user process or profile has been altered.

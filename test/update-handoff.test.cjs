@@ -98,7 +98,19 @@ test('unconfirmed independent cancellation rejects and preserves original instal
 });
 test('cleanup preserves unknown files and replacements and cannot traverse a substituted directory', t => {
   const f = fixture(t), checked = validatePlan(f.plan), unknown = path.join(f.stage, 'unowned'); fs.writeFileSync(unknown, 'keep'); cleanupOwned(checked.stage, [checked.installer]); assert.equal(fs.readFileSync(unknown, 'utf8'), 'keep'); assert.equal(fs.existsSync(f.plan.installerPath), false);
-  fs.writeFileSync(f.plan.installerPath, 'replacement'); cleanupOwned(checked.stage, [checked.installer]); assert.equal(fs.readFileSync(f.plan.installerPath, 'utf8'), 'replacement');
+  // Keep the original inode allocated: unlink/create may legally reuse it on Linux.
+  const replacement = fixture(t), replacementChecked = validatePlan(replacement.plan);
+  fs.renameSync(replacement.plan.installerPath, path.join(replacement.home, 'original-installer'));
+  fs.writeFileSync(replacement.plan.installerPath, 'replacement');
+  assert.notEqual(fs.lstatSync(replacement.plan.installerPath, { bigint: true }).ino, replacementChecked.installer.ino);
+  cleanupOwned(replacementChecked.stage, [replacementChecked.installer]);
+  assert.equal(fs.readFileSync(replacement.plan.installerPath, 'utf8'), 'replacement');
+  const substituted = fixture(t), substitutedChecked = validatePlan(substituted.plan);
+  fs.renameSync(substituted.stage, path.join(substituted.home, 'original-stage'));
+  fs.mkdirSync(substituted.stage); fs.writeFileSync(substituted.plan.installerPath, 'substituted-directory');
+  assert.notEqual(fs.lstatSync(substituted.stage, { bigint: true }).ino, substitutedChecked.stage.ino);
+  cleanupOwned(substitutedChecked.stage, [substitutedChecked.installer]);
+  assert.equal(fs.readFileSync(substituted.plan.installerPath, 'utf8'), 'substituted-directory');
 });
 test('Windows runner source keeps process lifetime, registry scope, no-kill, exact arguments and nonrecursive cleanup contracts', () => {
   const source = fs.readFileSync(path.join(__dirname, '../src/update-runner.ps1'), 'utf8');

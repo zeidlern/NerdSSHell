@@ -82,6 +82,10 @@ jobs:
         run: node scripts/Packaged-Password-Smoke.cjs
       - name: Exact-ASAR shared confirmation and memory-clipboard acceptance
         run: node scripts/Packaged-Confirmation-Smoke.cjs
+      - name: Exact-ASAR startup update offer without real installation
+        run: node scripts/Startup-Update-Smoke.cjs
+      - name: Isolated Windows update handoff without user installation
+        run: node scripts/Update-Handoff-Smoke.cjs
       - name: Packaged native administrator bridge without UAC
         run: node scripts/Elevated-Console-Smoke.cjs --asar dist/win-unpacked/resources/app.asar
       - name: Windows local scratchpad spelling and correction acceptance
@@ -103,6 +107,8 @@ jobs:
           path: |
             .local/packaged-password/results.json
             .local/packaged-confirmation/results.json
+            .local/startup-update-ui/*.json
+            .local/update-handoff-smoke/*.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json
@@ -124,6 +130,8 @@ jobs:
             package-lock.json
             .local/packaged-password/results.json
             .local/packaged-confirmation/results.json
+            .local/startup-update-ui/*.json
+            .local/update-handoff-smoke/*.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json

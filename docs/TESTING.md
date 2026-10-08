@@ -48,3 +48,9 @@ See [dependency maintenance](DEPENDENCIES.md) for supported/full-lock audit poli
 Record actual commands, pass/failure/skip counts, platform, source SHA, package version and artifact hashes. Keep diagnostics containing private paths, clipboard text or terminal data outside tracked source. [Validation results](VALIDATION.md) records the current release's measured scope.
 
 The shared-confirmation fixture loads the exact unmodified ASAR main/UI/preload under the locked Windows Electron SDK, injecting only a memory clipboard and hidden owned windows. It never reads or writes the Windows clipboard or runs the fused production executable. It exercises real paste IPC, pointer/keyboard Continue and Cancel, exact original-destination input, queue/double-click/backdrop/stale-target behavior and OS-enabled parent state. The production-executable per-pane fixture separately verifies pointer approval/cancellation of owned Standard disconnects and preservation of its sibling connection. These complementary scopes must remain explicit.
+
+## Startup updater acceptance
+
+Run `node scripts/Startup-Update-Smoke.cjs` for exact-ASAR Windows SDK startup prompts. Its public-release transport, current app identity and installer handoff are controlled fixtures; no real release download, user profile, clipboard or installation is involved. Real pointer Upgrade/Not now and corrupt-download refusal are exercised.
+
+Run `node scripts/Update-Handoff-Smoke.cjs` for owned inert Windows parent/installer/restart processes with explicit registry/process-enumeration fixtures. It must prove actual parent-exit persistence, nonce consent/cancellation, file integrity and conservative cleanup. It never modifies the installed user application or real registry. Source helper changes require a new exact-package receipt; do not infer native Windows passes from synthetic tests.

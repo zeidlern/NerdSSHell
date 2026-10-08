@@ -4,7 +4,7 @@
 
 Use [GitHub's private vulnerability report form](https://github.com/zeidlern/NerdSSHell/security/advisories/new). Do not put vulnerabilities, credentials, private keys or unredacted terminal recordings in public issues or pull requests. If the form is unavailable, use an already-established private channel with the maintainer; a public issue may ask for a private contact without disclosing technical details.
 
-Include the affected version/commit, Windows version, a minimal synthetic reproduction, expected impact and relevant sanitized logs. Do not include real credentials or test unrelated systems. The supported line is **v1.0.x**. Reports are handled as time permits; no response-time SLA, bug bounty or independent audit certification is promised.
+Include the affected version/commit, Windows version, a minimal synthetic reproduction, expected impact and relevant sanitized logs. Do not include real credentials or test unrelated systems. The supported line is **v1.x**. Reports are handled as time permits; no response-time SLA, bug bounty or independent audit certification is promised.
 
 ## Trust boundaries
 
@@ -40,7 +40,7 @@ Copy-on-selection is enabled by default. Windows clipboard history/synchronizati
 
 ## Distribution
 
-Use official [Releases](https://github.com/zeidlern/NerdSSHell/releases) and inspect each artifact's documented signing status. An unsigned artifact has no Authenticode-verified publisher identity; a checksum verifies bytes, rather than publisher identity. There is no unattended auto-update mechanism.
+Use official [Releases](https://github.com/zeidlern/NerdSSHell/releases) and inspect each artifact's documented signing status. An unsigned artifact has no Authenticode-verified publisher identity; a checksum verifies bytes, rather than publisher identity. Starting with 1.1.0, packaged Windows x64 launches check the official public GitHub latest-release endpoint. Updates require explicit Upgrade approval, a strict stable version/asset identity and verified size/SHA-256. Requests omit credentials; profiles, host pins and terminal data are not sent. Existing normal quit confirmations remain required, and new installers/uninstallers never force-close running apps. A checksum from the authenticated official release verifies bytes; it is not Authenticode publisher signing. No background installation occurs after refusal or canceled quitting.
 
 Supported builds use `npm ci --omit=optional`. Dependency validation distinguishes that installed graph from the complete lockfile; see [dependency maintenance](docs/DEPENDENCIES.md). Electron fuse and ASAR-integrity checks, native-provider verification, secret scanning and adversarial regressions are part of validation, but cannot prove absence of vulnerabilities.
 

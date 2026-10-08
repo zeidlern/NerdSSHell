@@ -39,6 +39,7 @@ async function fixture(t, options = {}) {
       this.webContents.mainFrame = { url: 'nerdsshell://app/ui/index.html' };
       this.webContents.send = (_channel, event) => {
         events.push(event);
+        if (event.type === 'prompt' && event.kind === 'confirmation') { const answer = consent ? 'choice:0' : null; queueMicrotask(() => handlers.get('nerdsshell:promptReply')({ sender: this.webContents, senderFrame: this.webContents.mainFrame }, event.id, answer, false)); }
         if (event.type === 'prompt' && event.kind === 'host-trust' && options.autoHostTrust !== false) queueMicrotask(() => handlers.get('nerdsshell:promptReply')({ sender: this.webContents, senderFrame: this.webContents.mainFrame }, event.id, consent ? 'trust' : null));
       }; this.webContents.setWindowOpenHandler = () => {};
       this.webContents.session = { setPermissionRequestHandler() {}, setPermissionCheckHandler() {} };
@@ -83,7 +84,7 @@ async function fixture(t, options = {}) {
   }
   const electron = { app, safeStorage, BrowserWindow: Window, ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
     protocol: { registerSchemesAsPrivileged() {}, handle() {} }, clipboard: {}, Menu: { setApplicationMenu() {} }, shell: {}, net: {},
-    dialog: { showMessageBox: async (_window, request) => { native.push(request); return { response: consent ? 0 : 1 }; },
+    dialog: { showMessageBox: async () => { throw Error('An app-owned confirmation unexpectedly opened a native message box'); },
       showOpenDialog: async () => ({ canceled: true }), showSaveDialog: async () => ({ canceled: true }),
       showErrorBox: (_title, message) => startupErrors.push(message) } };
   const filename = path.resolve(__dirname, '../src/main.cjs'), req = createRequire(filename), module = { exports: {} };

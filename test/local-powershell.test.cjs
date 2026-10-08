@@ -206,7 +206,7 @@ function mainHarness(t) {
   const data = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-main-local-'));
   t.after(() => fs.rmSync(data, { recursive: true, force: true }));
   Object.assign(app, { isPackaged: true, commandLine: { getSwitchValue: () => data }, setPath() {}, requestSingleInstanceLock: () => true, whenReady: () => new Promise(() => {}), quit() { quits++; }, getPath: () => data, getVersion: () => 'fixture' });
-  const frame = { url: 'nerdsshell://app/ui/index.html' }, webContents = { mainFrame: frame, send() {} }, window = { webContents, isDestroyed: () => false };
+  const frame = { url: 'nerdsshell://app/ui/index.html' }, webContents = { mainFrame: frame, send(_channel, event) { if (event.type === 'prompt' && event.kind === 'confirmation') { messages.push(event); const answer = 'choice:' + response; queueMicrotask(() => handlers.get('nerdsshell:promptReply')({ sender: webContents, senderFrame: frame }, event.id, answer, false)); } } }, window = { webContents, isDestroyed: () => false };
   const electron = { app, BrowserWindow() {}, ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
     protocol: { registerSchemesAsPrivileged() {} }, dialog: { showMessageBox: async (_w, options) => { messages.push(options); return { response }; } }, clipboard: {}, Menu: {}, shell: {}, net: {} };
   const filename = path.resolve(__dirname, '../src/main.cjs'), req = createRequire(filename), module = { exports: {} };

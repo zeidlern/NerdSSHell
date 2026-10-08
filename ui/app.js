@@ -9,7 +9,7 @@ let notifications = { enabled: true, audio: true, desktop: true, visual: true };
 let sessionDefaults = { scrollback: 100000, archiveMB: 256, record: false, startup: 'all', autoConnect: true };
 let preferenceSection = 'copy', preferenceGeneration = 0, preferenceSaving = false, preferenceLoaded = false, attentionActiveKey = '';
 let order = [], savedOrder = [], slots = [], savedSlots = [], active = '', desiredActive = '', layout = 1, twoPaneOrientation = 'side-by-side', splitX = 50, splitY = 50;
-let saveTimer, noticeTimer, promptId, promptProfileId, promptKind, entryResolve, historyKey, selectedProfile;
+let saveTimer, noticeTimer, promptId, promptProfileId, promptKind, promptChoiceResponses = new Map(), entryResolve, historyKey, selectedProfile;
 let maxOpenViews = 64, pendingViewSlots = 0;
 function requireViewCapacity(key) {
   if (!views.has(key) && views.size + pendingViewSlots >= maxOpenViews) throw new Error(`NerdSSHell supports ${maxOpenViews} open terminal views. Close a view before opening another; persistent remote work keeps running.`);
@@ -548,20 +548,32 @@ async function savePreferences() {
 window.NerdSSHellPreferences = { open: section => run(openPreferences(section)) };
 function showCredentialPrompt(event) {
   promptId = event.id; promptProfileId = event.profileId || null; promptKind = event.kind;
-  $('promptTitle').textContent = event.title; $('promptMessage').textContent = event.message;
-  $('promptValue').type = event.secret ? 'password' : 'text'; $('promptValue').value = ''; $('promptValue').hidden = promptKind === 'host-trust';
-  const remember = promptKind !== 'host-trust' && event.secret === true && event.rememberPasswordAvailable === true;
+  $('promptTitle').textContent = event.title; $('promptMessage').textContent = event.message + (event.detail ? '\n\n' + event.detail : '');
+  $('promptValue').type = event.secret ? 'password' : 'text'; $('promptValue').value = ''; $('promptValue').hidden = ['host-trust', 'confirmation'].includes(promptKind);
+  const remember = !['host-trust', 'confirmation'].includes(promptKind) && event.secret === true && event.rememberPasswordAvailable === true;
   $('promptRememberField').hidden = !remember; $('promptRemember').checked = remember && event.rememberPassword === true;
-  $('promptAccept').textContent = promptKind === 'host-trust' ? 'Trust and connect' : 'Continue';
-  $('promptDialog').showModal(); (promptKind === 'host-trust' ? $('cancelPrompt') : $('promptValue')).focus();
+  promptChoiceResponses.clear(); $('promptChoices').replaceChildren();
+  $('promptAccept').hidden = false; $('cancelPrompt').textContent = 'Cancel';
+  if (promptKind === 'confirmation') {
+    if (!Array.isArray(event.buttons) || !Number.isInteger(event.cancelId) || event.cancelId < 0 || event.cancelId >= event.buttons.length) { replyCredentialPrompt(true); return; }
+    const choices = event.buttons.map((text, index) => ({ text, index })).filter(choice => choice.index !== event.cancelId);
+    $('promptAccept').hidden = choices.length === 0; $('cancelPrompt').textContent = event.buttons[event.cancelId];
+    for (const [position, choice] of choices.entries()) {
+      const control = position === 0 ? $('promptAccept') : element('button');
+      control.type = 'submit'; control.textContent = choice.text;
+      promptChoiceResponses.set(control, 'choice:' + choice.index);
+      if (position) { control.addEventListener('click', suppressPromptDoubleClick); $('promptChoices').append(control); }
+    }
+  } else $('promptAccept').textContent = promptKind === 'host-trust' ? 'Trust and connect' : 'Continue';
+  $('promptDialog').showModal(); (['host-trust', 'confirmation'].includes(promptKind) ? $('cancelPrompt') : $('promptValue')).focus();
 }
 function clearCredentialPrompt() {
-  promptId = null; promptProfileId = null; promptKind = null; $('promptValue').value = ''; $('promptRemember').checked = false; $('promptRememberField').hidden = true; $('promptDialog').close();
+  promptId = null; promptProfileId = null; promptKind = null; promptChoiceResponses.clear(); $('promptChoices').replaceChildren(); $('promptValue').value = ''; $('promptRemember').checked = false; $('promptRememberField').hidden = true; $('promptDialog').close();
 }
 function replyCredentialPrompt(cancelled = false, submitter = null) {
-  if (!cancelled && promptKind === 'host-trust' && submitter !== $('promptAccept')) return;
-  const id = promptId, value = cancelled ? null : promptKind === 'host-trust' ? 'trust' : $('promptValue').value;
-  const remember = !cancelled && promptKind !== 'host-trust' && !$('promptRememberField').hidden && $('promptRemember').checked === true;
+  if (!cancelled && (promptKind === 'host-trust' && submitter !== $('promptAccept') || promptKind === 'confirmation' && !promptChoiceResponses.has(submitter))) return;
+  const id = promptId, value = cancelled ? null : promptKind === 'confirmation' ? promptChoiceResponses.get(submitter) : promptKind === 'host-trust' ? 'trust' : $('promptValue').value;
+  const remember = !cancelled && !['host-trust', 'confirmation'].includes(promptKind) && !$('promptRememberField').hidden && $('promptRemember').checked === true;
   clearCredentialPrompt();
   if (id) run(cancelled ? api.promptReply(id, null) : api.promptReply(id, value, remember));
 }
@@ -654,12 +666,14 @@ $('connectionForm').elements.auth.addEventListener('change', updateAuthenticatio
 $('chooseKey').addEventListener('click', () => run((async () => { const file = await api.chooseKey(); if (file) $('connectionForm').elements.keyPath.value = file; })()));
 $('addConnection').onclick = $('welcomeConnect').onclick = () => editConnection();
 $('cancelConnection').onclick = () => $('connectionDialog').close();
+function suppressPromptDoubleClick(e) { if (e.detail > 1) { e.preventDefault(); e.stopImmediatePropagation(); } }
+$('promptAccept').addEventListener('click', suppressPromptDoubleClick);
 $('promptForm').onsubmit = e => { e.preventDefault(); replyCredentialPrompt(false, e.submitter); };
 $('cancelPrompt').onclick = () => replyCredentialPrompt(true);
 $('promptDialog').addEventListener('cancel', e => { e.preventDefault(); replyCredentialPrompt(true); });
 $('promptDialog').addEventListener('close', () => { if (!$('promptDialog').open && promptId) replyCredentialPrompt(true); });
 $('promptDialog').addEventListener('keydown', e => {
-  if (promptKind === 'host-trust' && e.key === 'Enter' && e.target !== $('promptAccept') && e.target !== $('cancelPrompt')) e.preventDefault();
+  if (['host-trust', 'confirmation'].includes(promptKind) && e.key === 'Enter' && e.target !== $('cancelPrompt') && !(promptKind === 'host-trust' ? e.target === $('promptAccept') : promptChoiceResponses.has(e.target))) e.preventDefault();
 });
 $('newSessionForm').onsubmit = e => { e.preventDefault(); finishNewSession(true); };
 $('newSessionPersistent').addEventListener('change', updateNewSessionBaud);

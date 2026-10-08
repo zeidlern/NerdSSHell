@@ -226,7 +226,7 @@ function mainHarness(t, MixedClass) {
   const data = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-standard-main-'));
   t.after(() => fs.rmSync(data, { recursive: true, force: true }));
   Object.assign(app, { isPackaged: true, setPath() {}, commandLine: { getSwitchValue: () => data }, requestSingleInstanceLock: () => true, whenReady: () => new Promise(() => {}), quit: () => { quits++; }, getPath: () => data, getVersion: () => 'test' });
-  const frame = { url: 'nerdsshell://app/ui/index.html' }, webContents = { mainFrame: frame, send: (_ch, value) => events.push(value) };
+  const frame = { url: 'nerdsshell://app/ui/index.html' }, webContents = { mainFrame: frame, send: (_ch, value) => { events.push(value); if (value.type === 'prompt' && value.kind === 'confirmation') { const answer = 'choice:' + response; queueMicrotask(() => handlers.get('nerdsshell:promptReply')({ sender: webContents, senderFrame: frame }, value.id, answer, false)); } } };
   const window = { webContents, isDestroyed: () => false };
   const electron = { app, BrowserWindow() {}, ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
     protocol: { registerSchemesAsPrivileged() {} }, dialog: { showMessageBox: async () => ({ response }) }, clipboard: {}, Menu: {}, shell: {}, net: {} };

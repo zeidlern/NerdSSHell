@@ -36,7 +36,7 @@ This checkpoint document is kept in Git at the owner's explicit request so anoth
 
 Read AGENTS.md and the required architecture/security/release documents. Confirm origin and branch before editing. Use only this fresh checkout. Read .local/USER-MISSION.txt for the owner's complete request when available; all public decisions and measured results belong in this document/PR. Re-run unfinished checks, never convert an interrupted command into a pass. Source scripts derive paths from their repository root.
 
-Latest pushed checkpoint: e18266f (research-only SSH speed tests and CI dispatch/artifact guards). The initial clean-environment checkpoint contains no application changes. Next: fresh architecture research and focused implementation.
+Latest pushed checkpoint: edfea32 (tested connection/window controls, dialog approval and lifecycle implementation). The initial clean-environment checkpoint contains no application changes. Next: fresh architecture research and focused implementation.
 
 ## Preimplementation research checkpoint
 
@@ -74,3 +74,25 @@ Next: finish baud regressions, freeze/review the combined diff, full source/regr
 - The rerun of full exact-package pane/native fixtures against the revised authentication build is in progress; do not infer completed results from older candidates.
 
 Next: complete those package gates, implement/test the shared confirmation follow-up, recheck main and release assets, push a final checkpoint and open the PR with honest validation/manual limits.
+
+Post-checkpoint Windows reruns: exact revised package passed186 pane/baud/About/SSH/SFTP/console checks, exact-ASAR native provider/owned cleanup acceptance, and16 spelling/wrap checks. All source/package version and unsigned status remain as recorded above. Shared clickable confirmation service is now actively being implemented in response to the owner's native paste-popup reproduction; both Continue and Cancel are required, with no user clipboard or live remote actions.
+
+Linux implementation acceptance at edfea32: [run37713138520](https://github.com/zeidlern/NerdSSHell/actions/runs/37713138520) passed875 regressions and all10 real OpenSSH/tmux/SFTP integrations, zero failures/skips. The application-level saved profile, independent new-window override, server default and task inheritance all produced the expected Linux PTY speeds. Windows was intentionally skipped in Linux-only dispatch; its local exact-package gates are recorded separately.
+
+## Shared interactive confirmation follow-up
+
+- The owner's reproduced native paste popup was inaccessible to the mouse. App-owned message-box confirmations now share the themed renderer presenter/queue with credentials and host approval, keeping Continue and Cancel interactive in the existing enabled Windows app window. OS file/UAC/error pickers are unchanged. The exact Win32 cursor/capture mechanism remains unverified; the problematic native app-confirmation path is removed.
+- Physical/logical response IDs and all caller destination/profile/session/review revalidation remain. Server-support ask(confirm) is converted before queueing to avoid recursion; no automatic approval. The queue is bounded64 and invalidates active/queued requests on renderer reload/destruction. Renderer loss never automatically closes authenticated Standard shells or terminates Persistent work.
+- Focused58-case confirmation/password/UI checks passed. Full current Windows suite passed908, failed0, skipped1 of909 cases (same baseline symlink privilege). Current source and workflow syntax checks passed.
+- New acceptance uses an exact-ASAR Windows Electron SDK harness with injected memory clipboard, not the fused executable or physical clipboard; it must prove successful mouse/keyboard paste reaches only the originating terminal. Existing fused-exe pane acceptance additionally tests actual shared disconnect confirmation approval/cancellation. Fresh final build/acceptance are in progress, not claimed complete yet.
+
+## Final shared-confirmation local acceptance
+
+- Windows full suite:908 passed,0 failed,1 baseline symlink skip of909; source/publication and actionlint checks passed.
+- Fresh final package/fuse/ASAR/native-hash/identity/notice checks passed. All75 shipped source/assets match the tested ASAR byte-for-byte. Locked runtime remains Electron44.5.1/Chromium152.0.7977.130; no version/dependency change.
+- Actual fused-executable host/password suite:71 passed. Actual fused-executable pane/rate/About/SSH/SFTP/console/shared-confirmation suite:190 passed. Pointer Cancel retained every owned shell; pointer Continue closed only approved fixture-a and preserved fixture-b.
+- Exact-ASAR Windows SDK/memory-clipboard harness:47 passed. Successful mouse/keyboard Continue delivered exact multiline input to the originating echo channel; Cancel/outside/double-click/stale/replacement guards and serialization passed. The owned Windows parent stayed OS-enabled; no OS clipboard read/write. This scope does not claim a physical-clipboard or fused-exe paste test. Owned fixture processes/windows/peers and temporary data were cleaned.
+- Exact final ASAR native provider/ownership/cleanup and16 local spelling/wrap checks passed. No real UAC, file/color picker, physical toast/audio or manual installed-user acceptance is claimed. The tester's general lengthy-session lag remains unreplicated.
+- Unsigned LOCAL development artifact: installerSHA25676ab801919922e7288712f99d887f1bac9ff0ca29625e347580eda44038f7fef; ASARSHA256b1fe67c59d3577dd264a9760cf56bfca984b34865ef26e25065a4b49d124decd. This is not the published1.0.3 release. Neither installed applications nor user profiles/clipboard/remote sessions were modified.
+
+Next: push this tested section, open the PR and complete full GitHub Linux/Windows/audit/CodeQL validation. Recheck main and immutable v1.0.3 release/tag/assets afterward. Owner version/release and manual mouse acceptance on the owner's machine remain review decisions.

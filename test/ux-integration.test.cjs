@@ -8,7 +8,7 @@ const { StateStore } = require('../src/storage.cjs');
 const { profile } = require('../src/core.cjs');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; }
-async function mainFixture(t) {
+async function mainFixture(t, timerHooks = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-ux-integrated-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const handlers = new Map(), messages = [], notices = [], app = new EventEmitter(); let responder = () => ({ response: 1 }), attempts = 0, exits = 0, window;
@@ -18,7 +18,13 @@ async function mainFixture(t) {
   class FakeWindow extends EventEmitter {
     constructor() { super(); window = this; this.destroyed = false;
       this.webContents = new EventEmitter(); this.webContents.mainFrame = { url: 'nerdsshell://app/ui/index.html' };
-      this.webContents.send = (_channel, event) => notices.push(event);
+      this.webContents.send = (_channel, event) => {
+        notices.push(event);
+        if (event.type === 'prompt' && event.kind === 'confirmation') {
+          messages.push(event);
+          Promise.resolve(responder(event)).then(result => handlers.get('nerdsshell:promptReply')({ sender: this.webContents, senderFrame: this.webContents.mainFrame }, event.id, Number.isInteger(result?.response) ? 'choice:' + result.response : null, false));
+        }
+      };
       this.webContents.setWindowOpenHandler = () => {};
       this.webContents.session = { setPermissionRequestHandler() {}, setPermissionCheckHandler() {} };
     }
@@ -30,14 +36,15 @@ async function mainFixture(t) {
   }
   const electron = { app, BrowserWindow: FakeWindow, ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
     protocol: { registerSchemesAsPrivileged() {}, handle() {} },
-    dialog: { showMessageBox: async (_w, options) => { messages.push(options); return responder(options); }, showErrorBox(_title, message) { throw new Error(message); } },
+    dialog: { showMessageBox: async () => { throw Error('App-owned confirmation unexpectedly used a native message box'); }, showErrorBox(_title, message) { throw new Error(message); } },
     clipboard: {}, Menu: { setApplicationMenu() {} }, shell: {}, net: {} };
   const filename = path.resolve(__dirname, '../src/main.cjs'), req = createRequire(filename), module = { exports: {} };
-  vm.runInNewContext(fs.readFileSync(filename, 'utf8') + '\nmodule.exports={connections,getStore:()=>store};', {
+  vm.runInNewContext(fs.readFileSync(filename, 'utf8') + '\nmodule.exports={connections,prompts,ask,confirm,getStore:()=>store};', {
     require: name => name === 'electron' ? electron : req(name), module, __dirname: path.dirname(filename),
-    process, Buffer, console, setTimeout, clearTimeout, AbortController, Response, URL
+    process, Buffer, console, setTimeout: timerHooks.setTimeout || setTimeout, clearTimeout: timerHooks.clearTimeout || clearTimeout, AbortController, Response, URL
   });
   await tick();
+  t.after(() => { for (const answer of module.exports.prompts.values()) answer(null); });
   return { root, app, messages, notices, main: module.exports, get window() { return window; }, attempts: () => attempts, exits: () => exits,
     respond(fn) { responder = typeof fn === 'function' ? fn : () => ({ response: fn }); },
     invoke: (name, ...args) => handlers.get('nerdsshell:' + name)({ sender: window.webContents, senderFrame: window.webContents.mainFrame }, ...args),
@@ -52,7 +59,7 @@ function runtime(id = 'fixture', shells = 1) {
     disconnect() { disconnected++; remote.connected = false; records.clear(); } };
   return { profile: p, remote, disconnected: () => disconnected };
 }
-test('actual window close keeps renderer and unsaved notes alive when native Cancel is chosen', async t => {
+test('actual window close keeps renderer and unsaved notes alive when Cancel is chosen', async t => {
   const h = await mainFixture(t); await h.invoke('scratchpadDirty', true);
   const e = h.close(); assert.equal(e.prevented, true); assert.equal(h.window.destroyed, false);
   await tick(); assert.equal(h.exits(), 0); assert.equal(h.app.nerdsshellScratchpadDirty, true);
@@ -60,7 +67,7 @@ test('actual window close keeps renderer and unsaved notes alive when native Can
   assert.deepEqual([...h.messages[0].buttons], ['Continue', 'Cancel']); assert.equal(h.messages[0].defaultId, 1);
   h.respond(0); h.close(); await tick(); await tick(); assert.equal(h.exits(), 1);
 });
-test('actual quit serializes dialogs; scratchpad Cancel preserves LOCAL and Persistent work', async t => {
+test('actual quit serializes themed confirmations; scratchpad Cancel preserves LOCAL and Persistent work', async t => {
   const h = await mainFixture(t), local = runtime('local-fixture', 1), persistent = runtime('mission-fixture', 0);
   h.main.connections.set('local-fixture', local); h.main.connections.set('mission-fixture', persistent);
   await h.invoke('scratchpadDirty', true); const d = deferred(); h.respond(() => d.promise);
@@ -154,4 +161,93 @@ test('old settings migrate legacy favorites while retaining all prior user state
   assert.deepEqual(reloaded.data.actionConfiguration.favoritesByOS.Windows, ['system.disk']);
   assert.deepEqual(reloaded.data.actionConfiguration.favoritesByOS.Ubuntu, ['system.disk']);
   assert.equal(fs.readFileSync(original.file, 'utf8'), baseline, 'Load alone does not rewrite user settings');
+});
+
+
+test('shared confirmation policy preserves every logical button ID and delegates OS file/error controls', async () => {
+  let nativeBoxes = 0, opens = 0, errors = 0, seen;
+  const native = { showMessageBox() { nativeBoxes++; }, showOpenDialog() { assert.equal(this, native); opens++; return 'picker'; }, showErrorBox() { assert.equal(this, native); errors++; } };
+  const policy = cancelOnRight(native, async (_window, options) => { seen = options; return { response: 1 }; });
+  const original = { buttons: ['Yes', 'Cancel', 'No'], cancelId: 1, defaultId: 0 };
+  assert.equal((await policy.showMessageBox({}, original)).response, 2);
+  assert.deepEqual(seen.buttons, ['Yes', 'No', 'Cancel']); assert.equal(seen.defaultId, 2); assert.equal(seen.cancelId, 2);
+  assert.deepEqual(original.buttons, ['Yes', 'Cancel', 'No']); assert.equal(nativeBoxes, 0);
+  assert.equal(policy.showOpenDialog(), 'picker'); policy.showErrorBox('Synthetic', 'Synthetic'); assert.equal(opens, 1); assert.equal(errors, 1);
+});
+
+test('server-support confirmation shares the credential queue without recursively enqueueing behind itself', async t => {
+  const h = await mainFixture(t), hold = deferred(); h.respond(() => hold.promise);
+  const approval = h.main.ask({ title: 'Synthetic server support', message: 'Explicit support approval', confirm: true }); await tick();
+  const prompt = h.notices.find(e => e.type === 'prompt'); assert.equal(prompt.kind, 'confirmation');
+  assert.deepEqual([...prompt.buttons], ['Continue', 'Cancel']); assert.equal(prompt.defaultId, 1);
+  hold.resolve({ response: 0 }); assert.equal(await approval, true); assert.equal(h.main.prompts.size, 0);
+});
+
+test('queued app confirmations reject malformed replies and never leak into native message boxes', async t => {
+  const h = await mainFixture(t), hold = deferred(); h.respond(() => hold.promise);
+  const first = h.main.confirm('First', 'Synthetic'), second = h.main.confirm('Second', 'Synthetic'); await tick();
+  assert.equal(h.messages.length, 1); const one = h.notices.find(e => e.type === 'prompt');
+  await h.invoke('promptReply', one.id, 'choice:7', false); assert.equal(await first, false); await tick();
+  assert.equal(h.messages.length, 2); const two = h.notices.filter(e => e.type === 'prompt').at(-1);
+  await h.invoke('promptReply', one.id, 'choice:0', false); assert.equal(h.main.prompts.size, 1);
+  await h.invoke('promptReply', two.id, 'choice:0', false); assert.equal(await second, true); assert.equal(h.main.prompts.size, 0);
+});
+
+test('dialog queue saturation fails explicitly and all canceled slots become reusable', async t => {
+  const h = await mainFixture(t), hold = deferred(); h.respond(() => hold.promise);
+  const tasks = Array.from({ length: 64 }, (_, index) => h.main.confirm('Synthetic ' + index, 'No operation'));
+  for (const task of tasks) task.catch(() => {});
+  await assert.rejects(h.main.confirm('Overflow', 'No operation'), /Too many dialogs/);
+  for (let index = 0; index < tasks.length; index++) { await tick(); const id = [...h.main.prompts.keys()][0]; assert.ok(id); await h.invoke('promptReply', id, null); assert.equal(await tasks[index], false); }
+  const after = h.main.confirm('After cancellation', 'No operation'); await tick();
+  await h.invoke('promptReply', [...h.main.prompts.keys()][0], 'choice:0'); assert.equal(await after, true); assert.equal(h.main.prompts.size, 0);
+});
+
+
+test('a failed renderer send cancels the confirmation and leaves the queue reusable', async t => {
+  const h = await mainFixture(t), send = h.window.webContents.send;
+  h.window.webContents.send = () => { throw Error('Synthetic destroyed sender'); };
+  assert.equal(await h.main.confirm('Synthetic', 'No operation'), false); assert.equal(h.main.prompts.size, 0);
+  h.window.webContents.send = send; h.respond(0);
+  assert.equal(await h.main.confirm('Recovered', 'No operation'), true); assert.equal(h.main.prompts.size, 0);
+});
+
+test('renderer reload cancels active and queued confirmations without accepting late replies', async t => {
+  const h = await mainFixture(t), hold = deferred(); h.respond(() => hold.promise);
+  h.window.webContents.emit('did-finish-load');
+  const first = h.main.confirm('First', 'No operation'), queued = h.main.confirm('Queued', 'No operation'); await tick();
+  const old = [...h.main.prompts.keys()][0]; h.window.webContents.emit('did-start-loading');
+  assert.equal(await first, false); assert.equal(await queued, false); assert.equal(h.main.prompts.size, 0);
+  await h.invoke('promptReply', old, 'choice:0');
+  assert.equal(await h.main.confirm('While reloading', 'No operation'), false); assert.equal(h.messages.length, 1);
+  h.window.webContents.emit('did-finish-load'); h.respond(0);
+  assert.equal(await h.main.confirm('New renderer', 'No operation'), true); assert.equal(h.main.prompts.size, 0);
+});
+
+test('destroying the renderer cancels owned approvals and cannot leave an invisible queued prompt', async t => {
+  const h = await mainFixture(t), hold = deferred(); h.respond(() => hold.promise);
+  const active = h.main.confirm('Active', 'No operation'), queued = h.main.confirm('Queued', 'No operation'); await tick();
+  h.window.webContents.isDestroyed = () => true; h.window.webContents.emit('destroyed');
+  assert.equal(await active, false); assert.equal(await queued, false); assert.equal(h.main.prompts.size, 0);
+  assert.equal(await h.main.confirm('Destroyed frame', 'No operation'), false); assert.equal(h.main.prompts.size, 0);
+});
+
+
+test('renderer loss preserves authenticated Standard shells and Persistent work, and quit fails closed without a usable presenter', async t => {
+  const h = await mainFixture(t), standard = runtime('standard-owned', 1), persistent = runtime('persistent-owned', 0);
+  h.main.connections.set('standard-owned', standard); h.main.connections.set('persistent-owned', persistent);
+  h.window.webContents.emit('render-process-gone');
+  assert.equal(standard.disconnected(), 0); assert.equal(persistent.disconnected(), 0);
+  assert.equal(standard.remote.connected, true); assert.equal(standard.remote.shells.size, 1); assert.equal(persistent.remote.connected, true);
+  h.app.quit(); await tick(); await tick();
+  assert.equal(h.exits(), 0); assert.equal(standard.disconnected(), 0); assert.equal(persistent.disconnected(), 0); assert.equal(h.messages.length, 0);
+});
+
+
+test('approval expiration still resolves safely when the renderer cancellation send fails', async t => {
+  const callbacks = [], h = await mainFixture(t, { setTimeout(callback, ms) { assert.equal(ms, 180000); callbacks.push(callback); return callback; }, clearTimeout() {} });
+  const hold = deferred(); h.respond(() => hold.promise);
+  const decision = h.main.confirm('Expiration', 'No operation'); await tick();
+  assert.equal(h.main.prompts.size, 1); h.window.webContents.send = () => { throw Error('Synthetic dead renderer'); };
+  callbacks.shift()(); assert.equal(await decision, false); assert.equal(h.main.prompts.size, 0);
 });

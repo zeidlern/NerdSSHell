@@ -11,7 +11,7 @@ const { OutputBuffer } = require('./output-buffer.cjs');
 const { StateStore, Archive, publishExport } = require('./storage.cjs');
 const { PasswordStore } = require('./password-store.cjs');
 const { cancelOnRight } = require('./dialog-policy.cjs');
-const dialog = cancelOnRight(nativeDialog);
+const dialog = cancelOnRight(nativeDialog, presentMessageBox);
 const { MixedRemote } = require('./mixed-remote.cjs');
 const { installSessionActions, isStandardSession } = require('./session-actions.cjs');
 const { listDirectory, download, remotePath, downloadName } = require('./sftp-browser.cjs');
@@ -27,7 +27,7 @@ let workbench, sessionCommands, sessionNotifications;
 const { upload } = require('./transfer.cjs');
 const { profile, integer, pasteText } = require('./core.cjs');
 const { MAX_OPEN_VIEWS, ViewBudget } = require('./session-limits.cjs');
-let window, store, passwords, quitting = false, quitPending = false, promptChain = Promise.resolve();
+let window, store, passwords, quitting = false, quitPending = false, promptChain = Promise.resolve(), queuedPrompts = 0, promptGeneration = 0, rendererHasLoaded = false, rendererReloading = false;
 const credentialVersions = new Map();
 const connections = new Map(), archives = new Map(), prompts = new Map(), transfers = new Map(), fileListings = new FileListings();
 const viewBudget = new ViewBudget(connections);
@@ -38,27 +38,60 @@ function emit(type, data = {}) {
   workbench?.observe(type, data);
   if (['snapshot', 'detached', 'ended', 'standard-ended'].includes(type)) sessionCommands?.forget(data.key);
   if (['detached', 'ended', 'standard-ended'].includes(type)) sessionNotifications?.forget(data.key);
-  if (type === 'status' && ['connecting', 'disconnected'].includes(data.state)) sessionNotifications?.clearProfile(data.profileId); if (window && !window.isDestroyed()) window.webContents.send('nerdsshell:event', { type, ...data }); }
+  if (type === 'status' && ['connecting', 'disconnected'].includes(data.state)) sessionNotifications?.clearProfile(data.profileId); if (window && !window.isDestroyed() && !window.webContents.isDestroyed?.()) window.webContents.send('nerdsshell:event', { type, ...data }); }
 function confirm(title, message, detail = '') { return dialog.showMessageBox(window, { type: 'question', title, message, detail, buttons: ['Cancel', 'Continue'], defaultId: 0, cancelId: 0, noLink: true }).then(x => x.response === 1); }
-function ask(options) {
-  const { valid = () => true, onRemember, ...publicOptions } = options;
-  publicOptions.rememberPasswordAvailable = options.rememberPasswordAvailable === true;
-  publicOptions.rememberPassword = publicOptions.rememberPasswordAvailable && options.rememberPassword === true;
-  const task = promptChain.then(() => {
-    if (!valid()) return null;
-    if (options.confirm) return confirm(options.title, options.message).then(answer => valid() ? answer : null);
-    return new Promise(resolve => {
-      const id = randomUUID(); const timer = setTimeout(() => { prompts.delete(id); emit('promptCancelled', { id }); resolve(null); }, 180000);
-      const done = (value, remember) => {
-        clearTimeout(timer); prompts.delete(id);
-        if (!valid()) { resolve(null); return; }
-        if (value !== null && publicOptions.rememberPasswordAvailable) onRemember?.(remember ?? publicOptions.rememberPassword);
-        resolve(value);
-      }; done.profileId = options.profileId; done.rememberPasswordAvailable = publicOptions.rememberPasswordAvailable;
-      prompts.set(id, done); emit('prompt', { id, ...publicOptions });
-    });
+function presentMessageBox(...args) {
+  const options = args.at(-1), buttons = options.buttons || ['OK'];
+  const cancelId = buttons.length === 1 ? 0 : options.cancelId;
+  if (!Array.isArray(buttons) || buttons.length < 1 || buttons.length > 8 || buttons.some(label => typeof label !== 'string' || !label || label.length > 160) || !Number.isInteger(cancelId) || cancelId < 0 || cancelId >= buttons.length) throw new Error('Invalid confirmation buttons.');
+  if (quitting || rendererReloading || !window || window.isDestroyed() || window.webContents.isDestroyed?.() || args.length > 1 && args[0] !== window) return Promise.resolve({ response: cancelId });
+  return queuePrompt({ kind: 'confirmation', title: options.title || 'NerdSSHell', message: options.message || '', detail: options.detail || '', buttons, cancelId, defaultId: cancelId }).then(value => {
+    const index = typeof value === 'string' && /^choice:[0-7]$/.test(value) ? Number(value.slice(7)) : cancelId;
+    return { response: index < buttons.length ? index : cancelId };
   });
+}
+function ask(options) {
+  if (!options.confirm) return queuePrompt(options);
+  // Convert before queueing: calling confirm() from inside the same queue would
+  // enqueue behind ourselves and deadlock server-support approvals.
+  return queuePrompt({ ...options, kind: 'confirmation', buttons: ['Continue', 'Cancel'], cancelId: 1, defaultId: 1 }).then(value => {
+    if (options.valid && !options.valid()) return null;
+    return value === 'choice:0';
+  });
+}
+function queuePrompt(options) {
+  if (queuedPrompts + prompts.size >= 64) return Promise.reject(new Error('Too many dialogs are waiting. Finish or cancel one before trying again.'));
+  queuedPrompts++; const generation = promptGeneration;
+  const task = promptChain.then(() => { queuedPrompts--; return generation === promptGeneration ? requestPrompt(options, generation) : null; });
   promptChain = task.catch(() => {}); return task;
+}
+function requestPrompt(options, generation) {
+  const { valid = () => true, onRemember, ...publicOptions } = options;
+  if (quitting || rendererReloading || !valid() || !window || window.isDestroyed() || window.webContents.isDestroyed?.()) return null;
+  publicOptions.rememberPasswordAvailable = options.kind !== 'confirmation' && options.rememberPasswordAvailable === true;
+  publicOptions.rememberPassword = publicOptions.rememberPasswordAvailable && options.rememberPassword === true;
+  return new Promise(resolve => {
+    const id = randomUUID();
+    const timer = setTimeout(() => { prompts.delete(id); try { emit('promptCancelled', { id }); } catch {} resolve(null); }, 180000);
+    const done = (value, remember) => {
+      if (!prompts.has(id)) return;
+      clearTimeout(timer); prompts.delete(id);
+      if (quitting || rendererReloading || generation !== promptGeneration || !valid() || !window || window.isDestroyed() || window.webContents.isDestroyed?.()) { resolve(null); return; }
+      if (publicOptions.kind === 'confirmation' && value !== null && (!/^choice:[0-7]$/.test(value) || Number(value.slice(7)) >= publicOptions.buttons.length)) value = null;
+      if (value !== null && publicOptions.rememberPasswordAvailable) onRemember?.(remember ?? publicOptions.rememberPassword);
+      resolve(value);
+    };
+    done.profileId = options.profileId; done.rememberPasswordAvailable = publicOptions.rememberPasswordAvailable;
+    prompts.set(id, done);
+    try { emit('prompt', { id, ...publicOptions }); } catch { clearTimeout(timer); prompts.delete(id); resolve(null); }
+  });
+}
+function cancelAllPrompts() {
+  promptGeneration++;
+  for (const [id, answer] of [...prompts]) {
+    try { emit('promptCancelled', { id }); } catch {}
+    answer(null);
+  }
 }
 function cancelProfilePrompts(id) {
   for (const [promptId, answer] of prompts) {
@@ -373,7 +406,10 @@ else {
     window.webContents.on('will-navigate', e => e.preventDefault());
     window.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
     window.webContents.session.setPermissionCheckHandler(() => false);
-    window.webContents.on('render-process-gone', () => { for (const id of connections.keys()) disconnect(id); });
+    window.webContents.on('did-start-loading', () => { rendererReloading = rendererHasLoaded; cancelAllPrompts(); });
+    window.webContents.on('did-finish-load', () => { rendererHasLoaded = true; rendererReloading = false; });
+    window.webContents.on('destroyed', cancelAllPrompts);
+    window.webContents.on('render-process-gone', () => { rendererReloading = true; cancelAllPrompts(); });
     return window.loadURL(uiURL);
   }).catch(e => { console.error('NerdSSHell startup failed:', e); dialog.showErrorBox('NerdSSHell could not start', e.message); app.exit(1); });
   app.on('window-all-closed', () => app.quit());

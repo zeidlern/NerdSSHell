@@ -263,7 +263,8 @@ async function main() {
     report.administrator = await require('./Packaged-Administrator-Smoke.cjs').administratorSmoke({ evaluate, wait, check, screenshot });
   } else report.administrator = 'Skipped: opt-in --administrator-fixture requires native Windows consent and uses only a disposable LOCAL console.';
   await require('./Terminal-Baud-Smoke.cjs').terminalBaudSmoke({ evaluate, send, wait, check, received: () => metrics.terminalBaud });
-  // Closing the fixture transport avoids a native quit-confirmation; only synthetic shells are affected.
+  await require('./Shared-Confirmation-Smoke.cjs').sharedConfirmationSmoke({ evaluate, send, wait, check, screenshot });
+  // Closing the remaining owned transport avoids a quit prompt; no real sessions are affected.
   for (const peer of peers) peer.end(); await wait('[...views.values()].every(v=>!v.files.connected&&!v.ready)', 'Fixture disconnect did not reach browsers.');
   check('Transport disconnect disables all owned browsers'); report.status = 'passed';
   report.gracefulShutdownRequested = true;

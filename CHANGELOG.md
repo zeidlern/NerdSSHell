@@ -3,6 +3,7 @@
 ## Unreleased — Connection controls and recovery
 
 - Add an advanced saved Standard SSH terminal baud rate and independent new-window override. Request both SSH PTY speed modes only when creating the terminal; preserve the server default, existing profiles and inherited task settings. Explain tmux/local restrictions and new-terminal/reconnect requirements.
+- Present app-owned confirmations, including multiline paste and session/quit consequences, in one serialized themed dialog. Keep Continue/Paste and Cancel mouse/keyboard accessible, preserve response IDs and caller ownership checks, and keep the Windows parent enabled. Guard trailing double-clicks, reload/destruction and queue limits.
 - Serialize first-use host-key approval through the existing in-app prompt with explicit Trust and connect, Cancel focused and stale-target cancellation. Keep changed/revoked-key blocking and Windows-protected password consent intact.
 - Dismiss About on completed backdrop clicks while preserving inside clicks, selection, Close/Escape, focus return and background-control isolation.
 - Cancel disconnected sign-in prompts and pending command collectors; release retired transport/view references and temporary listeners. Preserve Persistent work, ordered input and Standard SSH's explicit new-shell requirement.

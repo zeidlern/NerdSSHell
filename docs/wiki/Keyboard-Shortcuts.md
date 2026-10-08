@@ -36,3 +36,5 @@ These shortcuts apply to the 1.0.x workspace. Focus and modal dialogs matter; or
 Closing a view is not the same as **End**. Ending persistent work uses the explicit End control and confirmation. Multiline paste confirmation is not a substitute for reading the command or checking the host.
 
 The About dialog also closes on a completed backdrop click, its Close button or Escape. Inside clicks and text-selection drags keep it open; dismissal returns focus and does not activate the control beneath the backdrop. Security trust prompts require their explicit Trust button or cancellation.
+
+Multiline paste and other app-owned confirmations use the same themed in-app dialog. Continue and Cancel support mouse and keyboard input; Cancel starts focused. Clicking outside a consequence confirmation keeps it pending and cannot activate a control underneath. OS file and UAC pickers retain their native interfaces.

@@ -30,7 +30,7 @@ function fixture() {
     forgetPassword: async id => { calls.forgotten.push(id); return { ...context.profiles.get(id), rememberPassword: false }; }, onEvent: callback => { api.event = callback; } };
   const element = (_tag, _class, text) => Object.assign(new Node(), { textContent: text });
   const button = (text, action) => Object.assign(new Node(), { textContent: text, action });
-  const context = vm.createContext({ $, api, promptId: null, promptProfileId: null, promptKind: null, profiles: new Map(), panes: new Map(), statuses: new Map(), views: new Map(),
+  const context = vm.createContext({ $, api, promptId: null, promptProfileId: null, promptKind: null, promptChoiceResponses: new Map(), profiles: new Map(), panes: new Map(), statuses: new Map(), views: new Map(),
     sessionDefaults: {}, selectedProfile: '', FormData, element, button, label: p => p.name, newSession() {},
     message: text => calls.notices.push(text), run: promise => Promise.resolve(promise).catch(error => calls.notices.push(error.message)),
     connectProfile: async id => calls.connections.push(id), updateSessionMode() {}, renderConnections() {}, structuredClone });
@@ -38,7 +38,7 @@ function fixture() {
   vm.runInContext(source.slice(source.indexOf('function showCredentialPrompt('), source.indexOf('function isAppShortcut(')), context);
   vm.runInContext(source.slice(source.indexOf('api.onEvent(event => {'), source.indexOf("$('connectionForm').addEventListener('submit'")), context);
   vm.runInContext(source.slice(source.indexOf("$('connectionForm').addEventListener('submit'"), source.indexOf("$('chooseKey').addEventListener")), context);
-  vm.runInContext(source.slice(source.indexOf("$('promptForm').onsubmit"), source.indexOf("$('newSessionForm').onsubmit")), context);
+  vm.runInContext(source.slice(source.indexOf('function suppressPromptDoubleClick('), source.indexOf("$('newSessionForm').onsubmit")), context);
   return { context, $, form, calls, api };
 }
 const passwordPrompt = { type: 'prompt', id: 'login', profileId: 'fixture', title: 'Password', message: 'Fixture account', secret: true, rememberPasswordAvailable: true, rememberPassword: false };
@@ -182,4 +182,24 @@ test('late close and cancellation events cannot reject a newer prompt or carry t
   assert.equal(f.$('promptDialog').open, true); assert.equal(f.$('promptValue').hidden, false);
   assert.equal(f.$('promptValue').type, 'password'); assert.equal(f.context.promptId, 'new-password');
   assert.deepEqual(f.calls.replies, [['old-key', null]]);
+});
+
+
+test('themed consequence confirmations render all choices and require an explicit current submitter', () => {
+  const f = fixture(); f.api.event({ ...passwordPrompt, id: 'consequence', kind: 'confirmation', buttons: ['Yes', 'No', 'Cancel'], cancelId: 2, detail: '<b>Literal consequence</b>' });
+  assert.equal(f.$('promptValue').hidden, true); assert.equal(f.$('promptRememberField').hidden, true); assert.equal(f.$('cancelPrompt').focused, true);
+  assert.equal(f.$('promptAccept').textContent, 'Yes'); assert.equal(f.$('promptChoices').children[0].textContent, 'No');
+  assert.equal(f.$('promptMessage').textContent, passwordPrompt.message + '\n\n<b>Literal consequence</b>');
+  f.$('promptForm').onsubmit({ preventDefault() {} }); assert.deepEqual(f.calls.replies, []);
+  const no = f.$('promptChoices').children[0]; f.$('promptForm').onsubmit({ submitter: no, preventDefault() {} });
+  assert.deepEqual(f.calls.replies, [['consequence', 'choice:1', false]]);
+  f.api.event({ ...passwordPrompt, id: 'new-confirmation', kind: 'confirmation', buttons: ['Continue', 'Cancel'], cancelId: 1 });
+  f.$('promptForm').onsubmit({ submitter: no, preventDefault() {} }); assert.equal(f.calls.replies.length, 1);
+  f.$('promptForm').onsubmit({ submitter: f.$('promptAccept'), preventDefault() {} }); assert.deepEqual(f.calls.replies.at(-1), ['new-confirmation', 'choice:0', false]);
+});
+
+test('a repeated pointer click cannot automatically approve the next prompt', () => {
+  const f = fixture(); let prevented = false, stopped = false;
+  f.$('promptAccept').events.click[0]({ detail: 2, preventDefault() { prevented = true; }, stopImmediatePropagation() { stopped = true; } });
+  assert.equal(prevented, true); assert.equal(stopped, true); assert.deepEqual(f.calls.replies, []);
 });

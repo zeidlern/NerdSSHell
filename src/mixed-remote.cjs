@@ -27,9 +27,12 @@ class MixedRemote extends Remote {
     this.standard.client = this.client;
     this.standard.connected = true;
     this.standard.closing = false;
-    this.client.prependOnceListener('close', () => {
+    const client = this.client;
+    client.prependOnceListener('close', () => {
+      if (this.standard.client !== client) return;
       this.standard.connected = false;
       for (const record of [...this.shells.values()]) this.standard.finishShell(record);
+      this.standard.client = null;
     });
   }
   async enablePersistence() {
@@ -62,9 +65,10 @@ class MixedRemote extends Remote {
   }
   isStandard(key) { return typeof key === 'string' && key.startsWith(this.profile.id + '/standard-'); }
   activeShellCount() { return this.standard.activeShellCount(); }
-  async createSession(name, persistent = true) {
+  async createSession(name, persistent = true, baud) {
+    if (persistent && baud !== undefined) throw new Error('Terminal baud overrides apply only to new Standard SSH shells.');
     if (typeof persistent !== 'boolean') throw new Error('Choose whether the session is persistent.');
-    if (!persistent) return this.standard.create(name);
+    if (!persistent) return this.standard.create(name, undefined, baud);
     await this.enablePersistence(); return Remote.prototype.create.call(this, name);
   }
   async create(name, command) { await this.enablePersistence(); return Remote.prototype.create.call(this, name, command); }

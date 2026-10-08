@@ -37,7 +37,11 @@ async function fixture(t, options = {}) {
     constructor() {
       super(); window = this; this.webContents = new EventEmitter();
       this.webContents.mainFrame = { url: 'nerdsshell://app/ui/index.html' };
-      this.webContents.send = (_channel, event) => events.push(event); this.webContents.setWindowOpenHandler = () => {};
+      this.webContents.send = (_channel, event) => {
+        events.push(event);
+        if (event.type === 'prompt' && event.kind === 'confirmation') { const answer = consent ? 'choice:0' : null; queueMicrotask(() => handlers.get('nerdsshell:promptReply')({ sender: this.webContents, senderFrame: this.webContents.mainFrame }, event.id, answer, false)); }
+        if (event.type === 'prompt' && event.kind === 'host-trust' && options.autoHostTrust !== false) queueMicrotask(() => handlers.get('nerdsshell:promptReply')({ sender: this.webContents, senderFrame: this.webContents.mainFrame }, event.id, consent ? 'trust' : null));
+      }; this.webContents.setWindowOpenHandler = () => {};
       this.webContents.session = { setPermissionRequestHandler() {}, setPermissionCheckHandler() {} };
     }
     isDestroyed() { return false; } isFocused() { return true; } isMinimized() { return false; } flashFrame() {}
@@ -60,8 +64,12 @@ async function fixture(t, options = {}) {
       }
       this.authenticatedPassword = this.secrets.password;
       if (gate) await gate.promise;
-      if (trust && !await this.options.trust({ host: this.profile.host, port: this.profile.port, fingerprint: 'SHA256:synthetic-fingerprint-only' })) {
-        const denied = new Error('Server identity verification cancelled.'); denied.code = 'NERDSSHELL_HOST_VERIFICATION'; throw denied;
+      const endpoint = this.profile.host.toLowerCase() + ':' + this.profile.port;
+      if (trust && !this.options.pins[endpoint]) {
+        if (!await this.options.trust({ host: this.profile.host, port: this.profile.port, fingerprint: 'SHA256:synthetic-fingerprint-only' })) {
+          const denied = new Error('Server identity verification cancelled.'); denied.code = 'NERDSSHELL_HOST_VERIFICATION'; throw denied;
+        }
+        this.options.savePin(endpoint, 'SHA256:synthetic-fingerprint-only');
       }
       if (error) {
         if (error.level === 'client-authentication' && this.passwordFactorAccepted !== true && typeof this.passwordRejected !== 'boolean') this.passwordRejected = true;
@@ -76,7 +84,7 @@ async function fixture(t, options = {}) {
   }
   const electron = { app, safeStorage, BrowserWindow: Window, ipcMain: { handle: (name, fn) => handlers.set(name, fn) },
     protocol: { registerSchemesAsPrivileged() {}, handle() {} }, clipboard: {}, Menu: { setApplicationMenu() {} }, shell: {}, net: {},
-    dialog: { showMessageBox: async (_window, request) => { native.push(request); return { response: consent ? 0 : 1 }; },
+    dialog: { showMessageBox: async () => { throw Error('An app-owned confirmation unexpectedly opened a native message box'); },
       showOpenDialog: async () => ({ canceled: true }), showSaveDialog: async () => ({ canceled: true }),
       showErrorBox: (_title, message) => startupErrors.push(message) } };
   const filename = path.resolve(__dirname, '../src/main.cjs'), req = createRequire(filename), module = { exports: {} };
@@ -167,7 +175,7 @@ test('rejected remembered authentication evicts encrypted and runtime credential
   await remembered(h); await h.invoke('disconnect', config.id); reject = true;
   await assert.rejects(h.connect(), error => error.level === 'client-authentication');
   assert.equal(h.passwords.get(h.store.data.profiles[0]), null); const runtime = h.connections.get(config.id);
-  assert.equal(runtime.wanted, false); assert.equal(runtime.secrets.password, undefined); assert.equal(runtime.timer, undefined); assertNoPlaintext(h);
+  assert.equal(runtime.wanted, false); assert.equal(runtime.secrets.password, undefined); assert.equal(runtime.timer == null, true); assertNoPlaintext(h);
 });
 
 test('rejected remembered password followed by successful interactive fallback is removed without closing the authenticated connection', async t => {
@@ -201,7 +209,7 @@ test('accepted remembered password factor survives a rejected OTP while retry cr
   const job = h.connect(), challenge = await h.prompt(); assert.equal(challenge.rememberPasswordAvailable, false);
   await h.reply(challenge, OTP, false); await assert.rejects(job, error => error.level === 'client-authentication');
   assert.equal(h.passwords.get(h.store.data.profiles[0]), PASSWORD, 'the server already accepted the stored password as an authentication factor');
-  const runtime = h.connections.get(config.id); assert.equal(runtime.wanted, false); assert.equal(runtime.timer, undefined);
+  const runtime = h.connections.get(config.id); assert.equal(runtime.wanted, false); assert.equal(runtime.timer == null, true);
   assert.equal(runtime.secrets.password, undefined); assert.equal(runtime.remote.secrets.password, undefined);
   assert.equal(runtime.remote.connected, false); assertNoPlaintext(h, [PASSWORD, OTP]);
 });
@@ -331,7 +339,7 @@ test('encryption write failures preserve successful sign-in and report a sanitiz
 });
 
 test('settings write failures cannot leave an orphaned saved password or disrupt successful sign-in', async t => {
-  const h = await fixture(t); h.add(); const before = fs.readFileSync(h.store.file);
+  const h = await fixture(t); h.add(); h.store.data.pins[config.host + ':' + config.port] = 'SHA256:synthetic-fingerprint-only'; const before = fs.readFileSync(h.store.file);
   h.store.save = () => { throw new Error('Synthetic settings failure: ' + PASSWORD); };
   const job = h.connect(), prompt = await h.prompt(); await h.reply(prompt); await job;
   assert.equal(h.connections.get(config.id).remote.connected, true); assert.equal(h.connections.get(config.id).state, 'connected');
@@ -355,4 +363,34 @@ test('new credential IPC rejects foreign windows, same-origin subframes and navi
   for (const invalid of [null, 'true', 1, {}, []]) await assert.rejects(h.reply(prompt, PASSWORD, invalid), /Invalid|remember/i);
   for (const invalid of [undefined, {}, [], 'x'.repeat(4097)]) await assert.rejects(h.invoke('promptReply', prompt.id, invalid, true), /Invalid|response/i);
   await h.reply(prompt, PASSWORD, false); await job; assert.equal(h.passwords.get(h.store.data.profiles[0]), null); assertNoPlaintext(h);
+});
+
+
+test('simultaneous unknown servers serialize host approvals, reject unexpected replies and bind acceptance to the current transport', async t => {
+  const h = await fixture(t, { autoHostTrust: false }); h.add({ id: 'first-host' }); h.add({ id: 'second-host' });
+  const first = h.connect('first-host'), second = h.connect('second-host');
+  first.catch(() => {}); second.catch(() => {});
+  const loginOne = await h.prompt(); await h.reply(loginOne, PASSWORD, false);
+  const loginTwo = await h.prompt(h.events.indexOf(loginOne) + 1); await h.reply(loginTwo, PASSWORD, false);
+  const approval = await h.prompt(h.events.indexOf(loginTwo) + 1); await tick();
+  assert.equal(approval.kind, 'host-trust'); assert.equal(approval.rememberPasswordAvailable, false);
+  assert.match(approval.message, /synthetic.invalid:22/); assert.match(approval.message, /SHA256:synthetic-fingerprint-only/);
+  assert.equal(h.native.length, 0); assert.equal(h.events.filter(e => e.type === 'prompt' && e.kind === 'host-trust').length, 1);
+  await h.reply(approval, 'yes', false); await assert.rejects(first, { code: 'NERDSSHELL_HOST_VERIFICATION' });
+  const next = await h.prompt(h.events.indexOf(approval) + 1); assert.equal(next.kind, 'host-trust');
+  await h.invoke('disconnect', 'second-host'); await second;
+  await h.reply(next, 'trust', false);
+  assert.deepEqual(h.store.data.pins, {}); assert.equal(h.passwords.get(h.store.data.profiles[0]), null);
+});
+
+
+test('approval for a replaced host transport cannot pin an identity or save its login password', async t => {
+  const h = await fixture(t, { autoHostTrust: false }); h.add();
+  const connecting = h.connect(), login = await h.prompt(); await h.reply(login, PASSWORD, true);
+  const approval = await h.prompt(h.events.indexOf(login) + 1);
+  const original = h.connections.get(config.id).remote;
+  h.connections.get(config.id).remote = new original.constructor(original.profile, original.options);
+  await h.reply(approval, 'trust', false); await connecting;
+  assert.deepEqual(h.store.data.pins, {}); assert.equal(original.closing, true);
+  assert.equal(h.passwords.get(h.store.data.profiles[0]), null); assertNoPlaintext(h);
 });

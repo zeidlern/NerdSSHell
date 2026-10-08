@@ -4,6 +4,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      linux_only:
+        description: Run only Linux source and disposable SSH research checks
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -45,6 +50,7 @@ jobs:
           bash scripts/ci-sshd.sh
       - run: npm run test:integration
   windows:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.linux_only }}
     needs: tests
     runs-on: windows-latest
     timeout-minutes: 20
@@ -74,6 +80,8 @@ jobs:
         run: npm run verify:package
       - name: Windows-protected remembered passwords and packaged restart acceptance
         run: node scripts/Packaged-Password-Smoke.cjs
+      - name: Exact-ASAR shared confirmation and memory-clipboard acceptance
+        run: node scripts/Packaged-Confirmation-Smoke.cjs
       - name: Packaged native administrator bridge without UAC
         run: node scripts/Elevated-Console-Smoke.cjs --asar dist/win-unpacked/resources/app.asar
       - name: Windows local scratchpad spelling and correction acceptance
@@ -94,6 +102,7 @@ jobs:
           retention-days: 14
           path: |
             .local/packaged-password/results.json
+            .local/packaged-confirmation/results.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json
@@ -102,6 +111,7 @@ jobs:
             .local/scratchpad-spelling-smoke/*.png
           if-no-files-found: ignore
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.ref == 'refs/heads/main'
         with:
           name: NerdSSHell-Windows-x64
           include-hidden-files: true
@@ -113,6 +123,7 @@ jobs:
             docs/THIRD-PARTY-NOTICES.md
             package-lock.json
             .local/packaged-password/results.json
+            .local/packaged-confirmation/results.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json

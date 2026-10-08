@@ -1,6 +1,24 @@
 /* global $, api, views, run, message, fit, withViewCapacity */
 'use strict';
 (() => {
+  const aboutDialog = $('helpDialog');
+  let pressedAboutBackdrop = false;
+  function onAboutBackdrop(event) {
+    if (event.target !== aboutDialog) return false;
+    const bounds = aboutDialog.getBoundingClientRect();
+    return event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
+  }
+  aboutDialog.addEventListener('pointerdown', event => { pressedAboutBackdrop = event.button === 0 && event.isPrimary !== false && onAboutBackdrop(event); });
+  aboutDialog.addEventListener('pointercancel', () => { pressedAboutBackdrop = false; });
+  aboutDialog.addEventListener('close', () => { pressedAboutBackdrop = false; });
+  aboutDialog.addEventListener('click', event => {
+    const dismiss = pressedAboutBackdrop && event.button === 0 && onAboutBackdrop(event);
+    pressedAboutBackdrop = false;
+    if (!dismiss) return;
+    // Keep the modal inert through the complete click; never dispatch it to a
+    // control underneath, and leave text-selection drags inside About alone.
+    event.preventDefault(); event.stopPropagation(); aboutDialog.close();
+  });
   $('sidebarToggle').onclick = () => {
     const collapsed = $('connectionSidebar').classList.toggle('collapsed');
     $('sidebarToggle').textContent = collapsed ? '»' : '‹';

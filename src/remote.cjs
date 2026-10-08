@@ -30,11 +30,21 @@ class Remote extends EventEmitter {
     this.pins = pins; this.secrets = secrets; this.clientFactory = clientFactory || (() => new (require('ssh2').Client)());
     this.knownHosts = knownHosts; this.client = null; this.connected = false; this.panes = [];
     this.controls = new Map(); this.opening = new Map(); this.views = new Map(); this.closing = false;
-    this.prefix = tmuxPrefix(this.profile); this.discovering = null;
+    this.prefix = tmuxPrefix(this.profile); this.discovering = null; this.pendingCommands = new Set();
   }
   async connect() {
     const p = this.profile; const client = this.client = this.clientFactory();
-    let privateKey, passphrase, password;
+    let privateKey, passphrase, password, hostVerified = false;
+    const current = () => this.client === client && !this.closing;
+    const authenticationAllowed = () => current() && hostVerified;
+    const blockUnverified = () => {
+      if (authenticationAllowed()) return true;
+      if (!current()) return false;
+      const error = new Error('Server identity has not been verified. Connection blocked.');
+      error.code = 'NERDSSHELL_HOST_VERIFICATION'; this.verificationError = this.lastError = error;
+      this.cancelSignIn?.(error); this.disconnect(); this.emit('disconnected', error);
+      return false;
+    };
     if (p.auth === 'key') {
       const stat = fs.statSync(p.keyPath); if (!stat.isFile() || stat.size > 1024 * 1024) throw new Error('Choose a private key file smaller than 1 MB.');
       privateKey = fs.readFileSync(p.keyPath);
@@ -50,15 +60,27 @@ class Remote extends EventEmitter {
     if (this.closing) throw new Error('Sign-in cancelled.');
     const options = { host: p.host, port: p.port, username: p.username, readyTimeout: 180000,
       keepaliveInterval: 15000, keepaliveCountMax: 3, privateKey, passphrase, password,
-      tryKeyboard: true, hostVerifier: (key, done) => this.verifyHost(key).then(accepted => {
-        if (!accepted) {
-          const error = new Error('Server identity verification cancelled. Connection blocked.');
-          error.code = 'NERDSSHELL_HOST_VERIFICATION'; this.verificationError = this.lastError = error;
-        }
-        done(accepted);
-      }, error => {
-        error.code = 'NERDSSHELL_HOST_VERIFICATION'; this.verificationError = this.lastError = error; done(false);
-      }) };
+      tryKeyboard: true, hostVerifier: (key, done) => {
+        // ssh2's callback verifier must return undefined; a returned Promise
+        // is treated as an immediate synchronous approval by the pinned API.
+        if (!current()) return;
+        hostVerified = false;
+        this.verifyHost(key).then(accepted => {
+          if (!current()) return;
+          const permitted = hostVerified = accepted === true;
+          if (!permitted) {
+            const error = new Error('Server identity verification cancelled. Connection blocked.');
+            error.code = 'NERDSSHELL_HOST_VERIFICATION'; this.verificationError = this.lastError = error;
+          }
+          try { done(permitted); } catch { hostVerified = false; blockUnverified(); }
+        }, reason => {
+          if (!current()) return;
+          const error = reason instanceof Error ? reason : new Error('Server identity verification failed. Connection blocked.');
+          error.code = 'NERDSSHELL_HOST_VERIFICATION';
+          this.verificationError = this.lastError = error;
+          try { done(false); } catch { blockUnverified(); }
+        });
+      } };
     if (p.auth === 'agent') {
       options.agent = process.platform === 'win32' ? '\\\\.\\pipe\\openssh-ssh-agent' : process.env.SSH_AUTH_SOCK;
       if (!options.agent) throw new Error('No SSH agent is available. Choose a private key file or password in the connection settings.');
@@ -68,39 +90,57 @@ class Remote extends EventEmitter {
     // must not make that rejected password eligible for permanent storage.
     let lastAuth, passwordPartial = false, authIndex = 0;
     this.passwordAuthenticated = false; this.passwordRejected = false; this.passwordFactorAccepted = false;
-    if (p.auth === 'password') options.authHandler = (_methodsLeft, partialSuccess) => {
-      if (lastAuth === 'password') {
+    const authOrder = ['none', p.auth === 'password' ? 'password' : p.auth === 'key' ? 'publickey' : 'agent', 'keyboard-interactive'];
+    options.authHandler = (_methodsLeft, partialSuccess) => {
+      if (!blockUnverified()) return false;
+      if (p.auth === 'password' && lastAuth === 'password') {
         if (partialSuccess === true) passwordPartial = this.passwordFactorAccepted = true;
         else this.passwordRejected = true;
       }
-      lastAuth = ['none', 'password', 'keyboard-interactive'][authIndex++] || false;
+      lastAuth = authOrder[authIndex++] || false;
       return lastAuth;
     };
     client.on('keyboard-interactive', async (_name, instructions, _language, prompts, finish) => {
+      if (!blockUnverified()) return;
       try {
         const answers = [];
         for (const prompt of prompts) {
           const a = await this.ask({ title: `Sign in to ${p.name}`, message: `${instructions}\n${prompt.prompt}`.slice(0, 2000), secret: !prompt.echo });
-          if (a === null || this.closing) { finish([]); return; } answers.push(a);
+          if (!current() || !blockUnverified()) return;
+          if (a === null) { finish([]); return; }
+          answers.push(a);
         }
-        finish(answers);
-      } catch { finish([]); }
+        if (authenticationAllowed()) finish(answers);
+      } catch { if (authenticationAllowed()) finish([]); }
     });
     client.on('error', e => { this.lastError = this.verificationError || e; });
     client.on('close', () => {
+      if (this.client !== client) return;
       this.connected = false;
-      for (const c of this.controls.values()) c.detach(); this.controls.clear();
+      this.clearConnectionWork(new Error('Connection lost. Command completion is unknown; no command was retried.'));
+      this.client = null; this.secrets = {};
       if (!this.closing) this.emit('disconnected', this.lastError || new Error('Connection lost. Remote sessions have not been terminated.'));
     });
     await new Promise((resolve, reject) => {
-      const error = e => reject(this.lastError || e);
-      client.once('error', error); client.once('ready', () => {
+      let finished = false;
+      const complete = error => {
+        if (finished) return; finished = true;
+        client.off('ready', ready); client.off('error', failed); client.off('close', closed);
+        if (this.cancelSignIn === cancelled) this.cancelSignIn = null;
+        if (error) reject(error); else resolve();
+      };
+      const failed = error => complete(this.lastError || error);
+      const closed = () => complete(this.lastError || new Error('Connection closed before sign-in completed.'));
+      const cancelled = error => complete(error || new Error('Sign-in cancelled.'));
+      const ready = () => {
+        if (!blockUnverified()) { complete(this.verificationError || new Error('Sign-in cancelled.')); return; }
         this.passwordAuthenticated = p.auth === 'password' && (lastAuth === 'password' || passwordPartial);
         if (this.passwordAuthenticated) this.passwordFactorAccepted = true;
-        client.off('error', error); resolve();
-      });
-      client.once('close', () => reject(this.lastError || new Error('Connection closed before sign-in completed.')));
-      client.connect(options);
+        complete();
+      };
+      this.cancelSignIn = cancelled;
+      client.once('ready', ready); client.once('error', failed); client.once('close', closed);
+      try { client.connect(options); } catch (error) { complete(error); }
     });
     if (this.closing || this.client !== client) throw new Error('Sign-in cancelled.');
     this.connected = true;
@@ -110,6 +150,7 @@ class Remote extends EventEmitter {
   }
   async verifyHost(key) {
     if (this.closing) return false;
+    const client = this.client;
     const p = this.profile; const target = `${p.host.toLowerCase()}:${p.port}`;
     let known = this.knownHosts;
     if (known === undefined) {
@@ -123,24 +164,61 @@ class Remote extends EventEmitter {
     if (status === 'changed' && !pin) throw new Error(`The identity of ${p.host} differs from your OpenSSH known_hosts file. Connection blocked. Received ${fp}.`);
     if (pin || status === 'trusted') return true;
     const accepted = await this.trust({ host: p.host, port: p.port, fingerprint: fp });
-    if (!accepted || this.closing) return false;
+    if (!accepted || this.closing || this.client !== client) return false;
     this.pins[target] = fp; await this.savePin?.(target, fp); return true;
   }
   exec(command, { timeout = 20000, input, maxBytes = 8 * 1024 * 1024 } = {}) {
-    if (!this.connected) return Promise.reject(new Error('Not connected.'));
+    if (!this.connected || this.closing) return Promise.reject(new Error('Not connected.'));
+    const client = this.client;
     return new Promise((resolve, reject) => {
-      let stream, done = false, timer; const out = [], err = []; let bytes = 0;
-      const finish = (e, result) => { if (done) return; done = true; clearTimeout(timer); if (e) { stream?.close(); reject(e); } else resolve(result); };
+      const chunks = { stdout: [], stderr: [] };
+      let channel, timer, settled = false, received = 0, onOutput, onErrorOutput, onError, onClose;
+      const operation = { cancel: error => finish(error) };
+      const finish = (error, result) => {
+        if (settled) return; settled = true;
+        clearTimeout(timer); this.pendingCommands.delete(operation);
+        if (channel) {
+          if (onOutput) channel.off('data', onOutput);
+          if (onErrorOutput) channel.stderr.off('data', onErrorOutput);
+          if (onError) channel.off('error', onError);
+          if (onClose) channel.off('close', onClose);
+          // ssh2 may publish a late error after a cancelled channel is closed.
+          channel.on('error', ignoreClosedChannelError);
+        }
+        chunks.stdout.length = 0; chunks.stderr.length = 0;
+        if (error) { try { channel?.close(); } catch {} reject(error); } else resolve(result);
+      };
+      this.pendingCommands.add(operation);
       timer = setTimeout(() => finish(new Error('The server command timed out. Its completion is unknown; it was not retried.')), timeout);
-      this.client.exec(command, (e, s) => {
-        if (e) return finish(e); stream = s;
-        if (done) { s.close(); return; }
-        const collect = list => b => { bytes += b.length; if (bytes > maxBytes) return finish(new Error('Remote response exceeds the safety limit.')); list.push(Buffer.from(b)); };
-        s.on('data', collect(out)); s.stderr.on('data', collect(err)); s.on('error', e => finish(e));
-        s.on('close', code => finish(null, { code: code ?? -1, stdout: Buffer.concat(out).toString('utf8'), stderr: Buffer.concat(err).toString('utf8') }));
-        if (input !== undefined) s.end(input); else s.end();
-      });
+      const opened = (error, stream) => {
+        if (error) { finish(error); return; }
+        if (settled) { stream.on('error', ignoreClosedChannelError); try { stream.close(); } catch {} return; }
+        channel = stream;
+        if (client !== this.client || !this.connected || this.closing) { finish(new Error('Connection changed. Command completion is unknown; no command was retried.')); return; }
+        const receive = target => data => {
+          if (settled) return;
+          received += data.length;
+          if (received > maxBytes) { finish(new Error('Remote response exceeds the safety limit.')); return; }
+          target.push(Buffer.from(data));
+        };
+        onOutput = receive(chunks.stdout); onErrorOutput = receive(chunks.stderr);
+        onError = error => finish(error);
+        onClose = code => finish(null, { code: code ?? -1, stdout: Buffer.concat(chunks.stdout).toString('utf8'), stderr: Buffer.concat(chunks.stderr).toString('utf8') });
+        channel.on('data', onOutput); channel.stderr.on('data', onErrorOutput);
+        channel.on('error', onError); channel.on('close', onClose);
+        try { channel.end(input); } catch (error) { finish(error); }
+      };
+      try { client.exec(command, opened); } catch (error) { finish(error); }
     });
+  }
+  clearConnectionWork(error) {
+    clearTimeout(this.refreshTimer); this.refreshTimer = null;
+    this.cancelSignIn?.();
+    for (const operation of [...this.pendingCommands]) operation.cancel(error);
+    this.opening.clear();
+    for (const control of this.controls.values()) control.detach(); this.controls.clear();
+    for (const view of this.views.values()) { view.active = false; view.initialized = false; }
+    this.views.clear();
   }
   async checked(command, options) {
     const r = await this.exec(command, options);
@@ -401,12 +479,12 @@ class Remote extends EventEmitter {
   }
   sftp() { if (!this.connected) return Promise.reject(new Error('Not connected.')); return new Promise((resolve, reject) => this.client.sftp((e, s) => e ? reject(e) : resolve(s))); }
   disconnect() {
-    this.closing = true; clearTimeout(this.refreshTimer); this.connected = false;
-    for (const c of this.controls.values()) c.detach(); this.controls.clear();
-    for (const v of this.views.values()) v.active = false; this.views.clear();
+    this.closing = true; this.connected = false;
+    this.clearConnectionWork(new Error('Disconnected. Command completion is unknown; no command was retried.'));
     // Drop this object's references. The caller separately decides whether retry secrets survive.
     // JavaScript and the SSH library do not promise secure memory zeroization.
     const client = this.client; this.client = null; this.secrets = {}; closeSshTransport(client);
   }
 }
+function ignoreClosedChannelError() {}
 module.exports = { Remote };

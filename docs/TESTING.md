@@ -26,6 +26,7 @@ npm.cmd run verify:package
 node .\scripts\Verify-Notices.cjs
 node .\scripts\Elevated-Console-Smoke.cjs --asar dist/win-unpacked/resources/app.asar
 node .\scripts\Packaged-Password-Smoke.cjs
+node .\scripts\Packaged-Confirmation-Smoke.cjs
 node .\scripts\Scratchpad-Spelling-Smoke.cjs
 node .\scripts\Packaged-PerPane-Smoke.cjs
 ```
@@ -45,3 +46,5 @@ A no-UAC administrator bridge fixture validates transport/provider ownership, ra
 See [dependency maintenance](DEPENDENCIES.md) for supported/full-lock audit policy, [security architecture](SECURITY-REVIEW.md) for adversarial coverage and [release process](PUBLIC-RELEASE.md) for distribution checks. Do not weaken a test, host verifier or scanner to obtain a pass.
 
 Record actual commands, pass/failure/skip counts, platform, source SHA, package version and artifact hashes. Keep diagnostics containing private paths, clipboard text or terminal data outside tracked source. [Validation results](VALIDATION.md) records the current release's measured scope.
+
+The shared-confirmation fixture loads the exact unmodified ASAR main/UI/preload under the locked Windows Electron SDK, injecting only a memory clipboard and hidden owned windows. It never reads or writes the Windows clipboard or runs the fused production executable. It exercises real paste IPC, pointer/keyboard Continue and Cancel, exact original-destination input, queue/double-click/backdrop/stale-target behavior and OS-enabled parent state. The production-executable per-pane fixture separately verifies pointer approval/cancellation of owned Standard disconnects and preservation of its sibling connection. These complementary scopes must remain explicit.

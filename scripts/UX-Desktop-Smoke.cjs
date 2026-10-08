@@ -1,12 +1,13 @@
 'use strict';
 /** Extends only the disposable loopback packaged fixture, never installed user sessions. */
-async function uxDesktopSmoke({ evaluate, wait, check, screenshot }) {
+async function uxDesktopSmoke({ evaluate, wait, check, screenshot, send }) {
   check('Compact local launchers show PowerShell and Command Prompt below Scratchpad', await evaluate(`$('localPowerShell').innerText.trim()==='PowerShell'&&$('localCommandPrompt').innerText.trim()==='Command Prompt'&&getComputedStyle($('localPowerShell').querySelector('.launcher-icon')).display==='none'&&document.querySelector('.local-launcher').firstElementChild.id==='scratchpadToggle'`));
   check('Toolbar keeps four accessible Layout buttons and removes redundant bottom/configuration controls', await evaluate(`document.querySelectorAll('.layout-buttons [data-layout-choice]').length===4 && [...document.querySelectorAll('.layout-buttons button')].every(b=>b.getAttribute('aria-label')&&b.title) && !$('wbLaunch') && !$('statusbar') && !$('newSessionBottom') && !$('filesToggle') && !$('focusPane') && !$('fullScreen') && !$('dataFolder')`));
   check('Session controls and location badges reflect each owner', await evaluate(`__smokeKeys.every(key=>{const v=views.get(key),head=v.wrapper.querySelector('.pane-session-controls'),labels=[...head.querySelectorAll('button')].map(b=>b.textContent);return ['Rename','End Session'].every(label=>labels.includes(label))&&labels.includes('Disconnect')===!v.pane.local&&v.wrapper.querySelector('.pane-location-badge').textContent===(v.pane.local?'LOCAL':'REMOTE');})`));
   await evaluate(`run(newSession()); true`);
   await wait(`$('newSessionDialog').open`, 'Per-session creation dialog did not open.');
   check('New session explains Persistent Session (tmux) and keeps Cancel last/right', await evaluate(`$('newSessionPersistent').checked && $('newSessionPersistence').textContent.includes('Persistent Session (tmux)') && $('newSessionPersistence').textContent.includes('Keeps the remote shell running') && $('newSessionForm').querySelector('.dialog-actions').lastElementChild.id==='cancelNewSession'`));
+  check('New Persistent session makes its unsupported baud override unavailable', await evaluate(`$('newSessionBaud').disabled && $('newSessionBaudHint').textContent.includes('tmux')`));
   await evaluate(`$('cancelNewSession').click(); true`);
   await evaluate(`$('sidebarToggle').click(); true`);
   check('Connection rail collapses without closing consoles', await evaluate(`$('connectionSidebar').classList.contains('collapsed') && __smokeKeys.every(k=>views.get(k).ready)`));
@@ -43,12 +44,13 @@ async function uxDesktopSmoke({ evaluate, wait, check, screenshot }) {
   await screenshot('ux-preferences-favorites');
   await evaluate(`$('cancelPreferences').click(); true`);
   check('Cancel discards color previews and closes the shared Preferences window', await evaluate(`!$('preferencesDialog').open&&JSON.stringify(appearance)===${JSON.stringify(savedAppearance)}&&document.documentElement.style.getPropertyValue('--bg')===appearance.uiBackground`));
-  await evaluate(`$('help').click(); true`);
+  const helpPoint = await evaluate(`(()=>{const r=$('help').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+  for (const type of ['mousePressed','mouseReleased']) await send('Input.dispatchMouseEvent', { type, ...helpPoint, button: 'left', clickCount: 1 });
   check('About identifies NerdSSHell, its developer and release build without placeholders', await evaluate(`$('helpDialog').open && $('helpDialog').textContent.includes('NerdSSHell') && $('helpDialog').textContent.includes('Developed by Nicholas Zeidler') && $('helpDialog').textContent.includes('Release build') && !$('helpDialog').textContent.includes('to be completed')`));
   await wait(`$('aboutBrandIcon').complete&&$('aboutBrandIcon').naturalWidth===512`, 'Packaged About artwork did not load through the app protocol.');
   check('Packaged About uses the larger theme-matched production logo', await evaluate(`$('aboutBrandIcon').getBoundingClientRect().width>=140&&$('aboutBrandIcon').getAttribute('src')===(luminance(appearance.uiBackground)>0.179?'branding/app-light-512.png':'branding/app-dark-512.png')`));
   await screenshot('ux-about-brand');
-  await evaluate(`$('closeHelp').click(); true`);
+  await require('./About-Dialog-Smoke.cjs').aboutDialogSmoke({ evaluate, wait, check, send });
   await evaluate(`layout=4;active=__smokeKeys[3];slots=[...__smokeKeys];render();true`);
   const originals = await evaluate(`[...order]`);
   await evaluate(`(()=>{const data=new DataTransfer();data.setData('application/x-nerdsshell-pane',__smokeKeys[3]);views.get(__smokeKeys[0]).wrapper.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:data}));return true;})()`);

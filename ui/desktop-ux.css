@@ -53,3 +53,5 @@ button.danger,.error,.connection-status.disconnected{color:var(--danger,#ff9298)
 @media(max-width:1000px){.action-config-layout{grid-template-columns:1fr}#actionConfigList{max-height:28vh}#actionCode{min-height:150px}}
 
 @media(max-width:850px){.brand-name{font-size:17px}.brand-tagline{font-size:9px}.brand{gap:7px}#titlebar{padding:0 10px}.brand img{width:32px;height:32px}}
+
+.prompt-actions{flex-wrap:wrap}#promptChoices{display:contents}

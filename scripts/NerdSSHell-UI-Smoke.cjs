@@ -72,7 +72,19 @@ async function main() {
     check('Fresh UI uses the logo-blue accent', await page.evaluate(() => document.documentElement.style.getPropertyValue('--accent') === '#00aaf0'));
     await page.locator('#help').click(); await wait(() => document.querySelector('#aboutBrandIcon').naturalWidth === 512);
     check('About loads the large theme-matched mascot through bundled assets', await page.evaluate(() => document.querySelector('#aboutBrandIcon').getAttribute('src').endsWith('app-dark-512.png') && document.querySelector('#aboutBrandIcon').getBoundingClientRect().width >= 140));
-    await page.screenshot({ path: path.join(output, 'about-dark.png') }); await page.locator('#closeHelp').click();
+    await page.screenshot({ path: path.join(output, 'about-dark.png') });
+    const pointerSession = await page.context().newCDPSession(page);
+    await require('./About-Dialog-Smoke.cjs').aboutDialogSmoke({ evaluate: code => page.evaluate(code), send: (method, params) => pointerSession.send(method, params), check,
+      wait: async (code, label) => { for (let i = 0; i < 100; i++) { if (await page.evaluate(code)) return; await new Promise(resolve => setTimeout(resolve, 50)); } throw Error(label); } });
+    await page.locator('#addConnection').click();
+    await page.locator('#connectionForm details').filter({ has: page.locator('summary', { hasText: 'Advanced terminal settings' }) }).locator('summary').click();
+    check('New connection baud leaves existing server terminal defaults unchanged', await page.locator('[name=terminalBaud]').inputValue() === '0');
+    await page.locator('[name=terminalBaud]').selectOption('115200');
+    check('Connection baud control selects a standard rate and explains new-window/reconnect scope', await page.evaluate(() => new FormData(document.querySelector('#connectionForm')).get('terminalBaud') === '115200' && document.querySelector('#connectionBaudHint').textContent.includes('Create a new Standard window or reconnect') && document.querySelector('#connectionBaudHint').textContent.includes('physical serial port')));
+    await page.locator('#cancelConnection').click();
+    await page.evaluate(() => editConnection({ id: 'fixture', name: 'Fixture', terminalBaud: 57600 }));
+    check('Editing a saved connection restores its terminal baud rate without contacting a server', await page.locator('[name=terminalBaud]').inputValue() === '57600');
+    await page.locator('#cancelConnection').click();
     await page.locator('#scratchpadToggle').click();
     await page.locator('#scratchText').fill('A mispelled scratchpad note $variable = 1');
     check('Scratchpad spelling is enabled and fresh text is visible before syntax painting', await page.locator('#scratchText').evaluate(node => node.spellcheck && node.lang === 'en-US' && (node.getAttribute('data-highlight') !== 'pending' || getComputedStyle(node).color !== 'rgba(0, 0, 0, 0)')));

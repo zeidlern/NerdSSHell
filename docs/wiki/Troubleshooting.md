@@ -26,6 +26,12 @@ Record the About version, full source SHA for source builds, Windows version, se
 
 **tmux missing/unsupported:** use Standard SSH for a task that does not require persistence, or have the server administrator install compatible tmux. Installation prompts are explicit server changes, not mandatory clicks.
 
+## Repeated-connect responsiveness
+
+Open the command workbench with **Ctrl+Shift+P** and choose **Connection diagnostics** to see the running app and bundled Electron/Chromium/Node versions plus pending-prompt, pending-command and channel counts. Edit identifying metadata before sharing. Include the approximate connection count, Standard versus Persistent mode, number of panes, and whether output is heavy. An independently installed Electron version does not change the installer's bundled runtime. Terminal baud rate does not set network throughput.
+
+This development round cancels abandoned sign-in prompts and command collectors when their transport ends. The original long-session lag report remains unreproduced; the automated loopback comparison did not show a general establishment-latency trend or establish an Electron/renderer leak.
+
 ## Missing sessions or output
 
 Confirm the same server, account and tmux socket. Standard SSH and local sessions cannot be reattached after closure. A server reboot cannot be repaired by a client reconnection. A saved tab is not a saved process.

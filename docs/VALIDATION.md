@@ -1,3 +1,39 @@
+# Version 1.0.4 validation
+
+The owner authorized merge, unsigned publication and local upgrade after review of [PR 8](https://github.com/zeidlern/NerdSSHell/pull/8). These results were executed on Windows 11 x64 / Node.js 24.19.0 against the versioned 1.0.4 source and installer. Electron remains 44.5.1. Current PR/main CI receipts are recorded in the [release notes](https://github.com/zeidlern/NerdSSHell/releases/tag/v1.0.4) once publication completes; earlier CI results below retain their original version scope.
+
+| Check | Actual local result |
+| --- | --- |
+| Fresh locked supported install | Passed; dependency versions unchanged |
+| Source/publication metadata/branding/UI checks | Passed |
+| Windows unit/native regressions | 908 passed, zero failures, one existing file-symlink privilege skip of 909 |
+| Fresh Windows x64 NSIS build and exact package | Identity/version, fuses, ASAR integrity, native hashes, containment and notices passed |
+| Current shipped source/assets | All 77 files match the tested ASAR byte-for-byte; trimmed packaged runtime metadata matches source |
+| Production host/password/restart acceptance | 71 checks passed |
+| Production pane/rate/About/SSH/SFTP/console/shared-confirmation acceptance | 190 checks passed |
+| Exact-ASAR SDK paste acceptance | 48 checks passed; memory-only clipboard and all owned fixture cleanup verified |
+| Exact-ASAR native provider/ownership/cleanup | Passed without requesting UAC |
+| Local spelling/wrap acceptance | 16 checks passed; no external requests |
+| Supported and complete dependency graph | Zero vulnerabilities |
+| Workflow syntax | actionlint passed |
+
+The SDK paste fixture is distinct from production-executable acceptance: it runs unmodified ASAR code with an injected memory clipboard. Mouse/keyboard Continue delivers the exact multiline input once to the original echo shell; cancellation, double-click and stale-target guards send no input. The production executable separately proves pointer approval/cancellation for Standard disconnect consequences.
+
+The implementation adds 120 synthetic and 100 verified loopback lifecycle cycles. Loopback Persistent controls are modeled; the real Linux OpenSSH/tmux integration gates execute actual tmux. The original long-session lag and exact Win32 cursor/capture mechanism remain unverified. Runtime diagnostics expose bounded counts and versions without credentials or terminal content.
+
+## Exact 1.0.4 Windows candidate
+
+The application and installer are unsigned (NotSigned). Checksums establish byte identity, not publisher identity. The existing v1.0.3 release remains intact.
+
+| File | SHA-256 |
+| --- | --- |
+| NerdSSHell-1.0.4-x64-Setup.exe | a3f086d672d4432ea1827198415ac54bfd27566dfb812327f1772b579b6829a9 |
+| app.asar | 052f632d79827cb46417820d453c0b4f3b234d941bb334ffd9600f19a7f564d3 |
+
+Automated tests do not establish every clean-user installation scenario, genuine alternate-account UAC, native file/color dialogs or physical notification behavior. Normal closure of the installed app is required before upgrade so Standard shell consequences and unsaved notes receive their own confirmation. Existing profiles, host pins, Windows-protected remembered passwords and the installer/data identity remain compatible.
+
+---
+
 # Version 1.0.2 validation
 
 Validated October 7, 2026 against [code revision 1f3e6a2](https://github.com/zeidlern/NerdSSHell/commit/1f3e6a256344556bc3dcc45567a8bede077640d1). Local checks ran on Windows x64 with Node.js 24.19.0; GitHub CI used Node.js 22 on Linux and Windows. These results apply to the identified source and artifacts.

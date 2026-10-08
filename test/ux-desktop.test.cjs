@@ -312,3 +312,45 @@ test('desktop Command Prompt administrator launch uses the same serialized fixed
   for (const id of ['local:cmd-admin', 'local:cmd /k echo wrong', 'C:\\untrusted\\cmd.exe', {}, ['local:cmd']]) await assert.rejects(h.handlers.localAdminOpen(id), /local shell installation/);
   assert.deepEqual(calls, ['local:cmd']);
 });
+
+
+function aboutInteraction() {
+  const nodes = new Map();
+  const node = id => {
+    if (!nodes.has(id)) nodes.set(id, { open: true, listeners: {}, closes: 0,
+      addEventListener(type, callback) { this.listeners[type] = callback; },
+      close() { this.open = false; this.closes++; this.listeners.close?.(); },
+      getBoundingClientRect: () => ({ left: 40, right: 400, top: 80, bottom: 450 }) });
+    return nodes.get(id);
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../ui/desktop-ux.js'), 'utf8'), { $: node });
+  const about = node('helpDialog');
+  const fire = (type, values = {}) => {
+    const event = { button: 0, isPrimary: true, target: about, clientX: 10, clientY: 10,
+      preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.stopped = true; }, ...values };
+    about.listeners[type](event); return event;
+  };
+  return { node, about, fire };
+}
+
+test('About backdrop dismissal waits for the complete primary click and stops propagation', () => {
+  const f = aboutInteraction(); f.fire('pointerdown'); assert.equal(f.about.open, true);
+  const click = f.fire('click'); assert.equal(f.about.open, false); assert.equal(f.about.closes, 1);
+  assert.equal(click.defaultPrevented, true); assert.equal(click.stopped, true);
+});
+
+test('About content, border padding, right clicks and pointer cancellation keep the dialog open', () => {
+  const f = aboutInteraction();
+  for (const values of [{ clientX: 90, clientY: 120 }, { target: f.node('aboutHeading') }, { button: 2 }, { isPrimary: false }]) {
+    f.fire('pointerdown', values); f.fire('click', values); assert.equal(f.about.closes, 0);
+  }
+  f.fire('pointerdown'); f.fire('pointercancel'); f.fire('click'); assert.equal(f.about.closes, 0);
+});
+
+test('About preserves selection drags across its border and scopes dismissal away from trust prompts', () => {
+  const f = aboutInteraction();
+  f.fire('pointerdown', { clientX: 90, clientY: 120 }); f.fire('click'); assert.equal(f.about.open, true);
+  f.fire('pointerdown'); f.fire('click', { clientX: 90, clientY: 120 }); assert.equal(f.about.open, true);
+  f.fire('pointerdown', { target: f.node('promptDialog') }); f.fire('click', { target: f.node('promptDialog') });
+  assert.equal(f.about.open, true); assert.equal(f.node('promptDialog').open, true);
+});

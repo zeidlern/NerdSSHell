@@ -102,6 +102,7 @@ jobs:
           retention-days: 14
           path: |
             .local/packaged-password/results.json
+            .local/packaged-confirmation/results.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json
@@ -122,6 +123,7 @@ jobs:
             docs/THIRD-PARTY-NOTICES.md
             package-lock.json
             .local/packaged-password/results.json
+            .local/packaged-confirmation/results.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json

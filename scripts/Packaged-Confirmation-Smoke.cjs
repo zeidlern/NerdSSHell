@@ -25,6 +25,8 @@ const asar = physicalFs.realpathSync.native(options.get('--asar') || path.join(r
 // Use the locked package's supported loader; it checksum-verifies and installs
 // the development SDK on demand when a fresh CI install has no executable yet.
 const runtime = fs.realpathSync.native(options.get('--runtime') || (process.versions.electron ? process.execPath : require('electron')));
+const temporaryRoot = fs.realpathSync.native(os.tmpdir());
+const samePath = (first, second) => process.platform === 'win32' ? path.resolve(first).toLowerCase() === path.resolve(second).toLowerCase() : path.resolve(first) === path.resolve(second);
 const output = path.resolve(options.get('--output') || path.join(root, '.local', 'packaged-confirmation'));
 assert.ok(physicalFs.statSync(asar).isFile() && path.basename(asar) === 'app.asar', 'Choose an existing app.asar.');
 assert.ok(fs.statSync(runtime).isFile() && path.basename(runtime).toLowerCase() === 'electron.exe', 'Choose an Electron SDK executable.');
@@ -33,14 +35,15 @@ const delay = milliseconds => new Promise(resolve => setTimeout(resolve, millise
 const literal = value => JSON.stringify(value).replace(/[<>\u2028\u2029]/g, character => '\\u' + character.charCodeAt(0).toString(16).padStart(4, '0'));
 function ownedDataDirectory() {
   const directory = options.get('--data');
-  const tempRoot = path.resolve(os.tmpdir()) + path.sep;
-  assert.ok(directory && path.resolve(directory).startsWith(tempRoot) && path.basename(directory).startsWith('nerdsshell-confirmation-'), 'Data must be an owned disposable fixture directory.');
+  assert.ok(directory && path.basename(directory).startsWith('nerdsshell-confirmation-'), 'Data must be an owned disposable fixture directory.');
   assert.ok(fs.lstatSync(directory).isDirectory() && !fs.lstatSync(directory).isSymbolicLink(), 'Data must be an ordinary directory.');
-  return fs.realpathSync.native(directory);
+  const resolved = fs.realpathSync.native(directory);
+  assert.ok(samePath(path.dirname(resolved), temporaryRoot), 'Data must be a direct child of the canonical temporary root.');
+  return resolved;
 }
 async function launch() {
   if (process.platform !== 'win32') throw new Error('This acceptance fixture requires Windows.');
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-confirmation-'));
+  const directory = fs.mkdtempSync(path.join(temporaryRoot, 'nerdsshell-confirmation-'));
   const resolved = fs.realpathSync.native(directory);
   const args = [__filename, '--fixture-runtime', '--asar', asar, '--runtime', runtime, '--output', output, '--data', resolved, '--user-data-dir=' + resolved];
   // Node owns this exact child handle; there is no process-name or global cleanup.
@@ -74,7 +77,7 @@ async function launch() {
     clearTimeout(timeout);
     assert.ok(child.exitCode !== null || child.signalCode !== null, 'Owned runtime must stop before deleting its data.');
     assert.equal(fs.realpathSync.native(resolved), resolved);
-    assert.ok(path.resolve(resolved).startsWith(path.resolve(os.tmpdir()) + path.sep) && !fs.lstatSync(resolved).isSymbolicLink(), 'Cleanup is confined to the exact owned temporary directory.');
+    assert.ok(samePath(path.dirname(resolved), temporaryRoot) && path.basename(resolved).startsWith('nerdsshell-confirmation-') && !fs.lstatSync(resolved).isSymbolicLink(), 'Cleanup is confined to the exact owned temporary directory.');
     fs.rmSync(resolved, { recursive: true, force: true, maxRetries: 4, retryDelay: 300 });
     const filename = path.join(output, 'results.json');
     if (fs.existsSync(filename)) {
@@ -114,6 +117,7 @@ async function runFixture() {
   let evaluate, wait, send;
   try {
     assert.equal(process.versions.electron, '44.5.1', 'Acceptance uses the current pinned Electron SDK.');
+    check('Canonical Windows temporary root directly owns the disposable fixture directory', samePath(path.dirname(directory), temporaryRoot));
     server = new Server({ hostKeys: [hostKey] }, peer => {
       peers.add(peer); metrics.connections++; peer.on('error', () => {}); peer.on('close', () => peers.delete(peer));
       peer.on('authentication', context => {
@@ -314,7 +318,7 @@ async function runFixture() {
     if (evaluate) {
       try { report.failure.ui = await evaluate('({promptOpen:$("promptDialog").open,promptKind,focused:document.activeElement?.id,profileCount:profiles.size,viewCount:views.size})'); } catch {}
     }
-    persist(); console.log('Exact-ASAR confirmation acceptance failed during ' + report.failure.phase + '.');
+    persist(); console.log('Exact-ASAR confirmation acceptance failed: ' + JSON.stringify(report.failure));
   } finally {
     for (const window of [...windows]) { try { if (window.webContents.debugger.isAttached()) window.webContents.debugger.detach(); window.destroy(); } catch {} }
     for (const peer of peers) peer._sock?.destroy();

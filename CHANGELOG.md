@@ -7,7 +7,7 @@
 - Serialize first-use host-key approval through the existing in-app prompt with explicit Trust and connect, Cancel focused and stale-target cancellation. Keep changed/revoked-key blocking and Windows-protected password consent intact.
 - Dismiss About on completed backdrop clicks while preserving inside clicks, selection, Close/Escape, focus return and background-control isolation.
 - Cancel disconnected sign-in prompts and pending command collectors; release retired transport/view references and temporary listeners. Preserve Persistent work, ordered input and Standard SSH's explicit new-shell requirement.
-- Add bounded runtime/operation diagnostics and 120 synthetic plus 100 real loopback lifecycle cycles. The original lengthy-session lag report and tester's exact mouse failure remain unreproduced; no speculative Electron change.
+- Add bounded runtime/operation diagnostics and 120 synthetic plus 100 real loopback lifecycle cycles. The original lengthy-session lag report and exact Win32 cursor/capture mechanism remain unverified; no speculative Electron change.
 - Establish the current official development checkout and owner-requested recovery checkpoints. Existing v1.0.3 release, tag and assets remain unchanged; the owner will choose the next version after review.
 - Measured validation and pending limitations are recorded in [development progress](DEVELOPMENT-PROGRESS.md).
 

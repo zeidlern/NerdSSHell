@@ -11,7 +11,7 @@ function preferences(value = {}) {
   if (!Array.isArray(favorites) || favorites.length > 3 || favorites.some(id => !actions.some(a => a.id === id))) throw new Error('Choose up to three built-in favorite actions.');
   return { favorites: [...new Set(favorites)] };
 }
-function installWorkbench({ handle, connections, getStore, app, dialog, getWindow, emit, queueOutput, discardOutput, output, forKey, actionTarget = () => undefined, shellProvider = installedShells, localFactory = (s, o) => new LocalRemote(s, o), withViewSlot = (_remote, _key, operation) => operation() }) {
+function installWorkbench({ handle, connections, getStore, app, dialog, getWindow, emit, queueOutput, discardOutput, output, forKey, actionTarget = () => undefined, shellProvider = installedShells, localFactory = (s, o) => new LocalRemote(s, o), withViewSlot = (_remote, _key, operation) => operation(), pendingPromptCount = () => 0 }) {
   const facts = new WeakMap(), probes = new WeakMap(), reviews = new ReviewTickets(), locks = new Map(), journal = [];
   let activeProbes = 0, launches = 0, confirmations = 0;
   const localConsoleSequence = new Map();
@@ -172,7 +172,7 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
     } else locks.delete(key);
     emit('input-lock', { key, locked }); return locked;
   });
-  handle('workbenchDiagnostics', () => diagnosticSnapshot(connections, journal, { version: app.getVersion(), platform: process.platform, architecture: process.arch }));
+  handle('workbenchDiagnostics', () => diagnosticSnapshot(connections, journal, { version: app.getVersion(), platform: process.platform, architecture: process.arch, versions: process.versions, pendingPrompts: pendingPromptCount() }));
   return {
     resolvePaneAction(key, actionId, argument) {
       const r = forKey(key), o = owner(r.profile.id, key);

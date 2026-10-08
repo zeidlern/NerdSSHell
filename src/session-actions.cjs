@@ -1,4 +1,5 @@
 'use strict';
+const { terminalBaud } = require('./core.cjs');
 /** Session-scoped lifecycle operations. Native consent is bound to the original transport. */
 function isStandardSession(remote, key) {
   return !!(remote?.profile?.local || remote?.isStandard?.(key) || remote?.shells?.has(key));
@@ -23,10 +24,12 @@ function installSessionActions({ handle, runtime, connections, forKey, dialog, g
       return await operation();
     } finally { pending.delete(key); }
   }
-  handle('create', (id, name, persistent = true) => {
+  handle('create', (id, name, persistent = true, baud) => {
     if (typeof persistent !== 'boolean') throw new Error('Choose whether the new session is persistent.');
+    if (baud !== undefined) terminalBaud(baud);
     const remote = runtime(id).remote;
-    return withViewSlot(remote, undefined, () => remote.profile.local ? remote.create(name) : remote.createSession(name, persistent));
+    if (baud !== undefined && (remote.profile.local || persistent)) throw new Error('Terminal baud overrides apply only to new Standard SSH shells.');
+    return withViewSlot(remote, undefined, () => remote.profile.local ? remote.create(name) : remote.createSession(name, persistent, baud));
   });
   handle('close', async key => {
     if (typeof key !== 'string' || key.length > 240) throw new Error('Invalid session.');

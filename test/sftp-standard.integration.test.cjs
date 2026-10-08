@@ -69,3 +69,30 @@ test('real OpenSSH: terminal baud modes are observable per PTY and tmux owns sep
   const shared = await Promise.all([exec('stty speed; sleep 0.1; stty speed', pty(9600)), exec('stty speed; sleep 0.1; stty speed', pty(115200))]);
   assert.deepEqual(shared.map(value => value.split(/\s+/)), [['9600', '9600'], ['115200', '115200']], 'One transport supports independent concurrent PTYs.');
 });
+
+test('real OpenSSH: NerdSSHell saved profile, new-window override and task baud values become Linux PTY speeds', { skip: !process.env.NERDSSHELL_TEST_KEY, timeout: 30000 }, async t => {
+  const host = process.env.NERDSSHELL_TEST_HOST || '127.0.0.1';
+  if (host !== '127.0.0.1') throw new Error('This test only supports the disposable loopback fixture.');
+  const port = Number(process.env.NERDSSHELL_TEST_PORT || 22222);
+  const pub = fs.readFileSync(process.env.NERDSSHELL_TEST_HOST_KEY + '.pub', 'utf8').trim().split(/\s+/);
+  const remote = new StandardRemote({ id: 'baud-application-ci', name: 'Disposable terminal baud', host, port,
+    username: process.env.NERDSSHELL_TEST_USER || os.userInfo().username, auth: 'key', keyPath: process.env.NERDSSHELL_TEST_KEY, terminalBaud: 9600 },
+    { knownHosts: `[${host}]:${port} ${pub[0]} ${pub[1]}\n`, ask: async () => { throw new Error('Test must not prompt or install software.'); } });
+  t.after(() => remote.disconnect()); await remote.connect();
+  const output = new Map(); remote.on('output', (key, bytes) => output.set(key, (output.get(key) || '') + bytes.toString()));
+  const readSpeed = async pane => {
+    await remote.open(pane.key);
+    const until = Date.now() + 10000;
+    while (Date.now() < until) {
+      const match = /(?:^|[\r\n])(\d+)(?:[\r\n]|$)/.exec(output.get(pane.key) || '');
+      if (match) return Number(match[1]);
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    throw new Error('Owned disposable PTY did not publish its terminal speed.');
+  };
+  const first = await remote.create('Saved profile', 'stty speed; sleep 1');
+  const second = await remote.create('New window override', 'stty speed; sleep 1', 115200);
+  assert.deepEqual(await Promise.all([readSpeed(first), readSpeed(second)]), [9600, 115200]);
+  const normal = await remote.create('Server default', 'stty speed; sleep 1', 0); assert.equal(await readSpeed(normal), 38400);
+  const task = await remote.createTask('Inherited task speed', 'stty speed; sleep 1'); assert.equal(await readSpeed(task), 9600);
+});

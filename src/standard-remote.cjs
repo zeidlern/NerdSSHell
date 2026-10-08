@@ -1,7 +1,7 @@
 'use strict';
 const { randomUUID } = require('node:crypto');
 const { Remote } = require('./remote.cjs');
-const { sessionName, integer } = require('./core.cjs');
+const { sessionName, integer, terminalBaud } = require('./core.cjs');
 
 /** Ordinary SSH PTY shells. Authentication/trust remain in Remote; no exec/tmux commands. */
 class StandardRemote extends Remote {
@@ -20,7 +20,8 @@ class StandardRemote extends Remote {
     this.emit('panes', this.panes); return this.panes;
   }
   activeShellCount() { return [...this.shells.values()].filter(s => !s.dead).length; }
-  async create(name, launchCommand) {
+  async create(name, launchCommand, baud = this.profile.terminalBaud) {
+    const rate = terminalBaud(baud);
     sessionName(name);
     if (!this.connected || this.closing) throw new Error('Not connected.');
     if (this.activeShellCount() >= 16) throw new Error('Close a standard shell before opening more (limit 16 per connection).');
@@ -28,7 +29,8 @@ class StandardRemote extends Remote {
     const pane = { key, profileId: this.profile.id, sessionId: uuid, sessionToken: uuid,
       sessionName: name, windowId: uuid, windowName: 'Shell', windowPanes: 1,
       paneId: uuid, paneIndex: 0, windowIndex: 0, cols: 120, rows: 36,
-      command: 'SSH shell', standard: true, dead: false };
+      command: 'SSH shell', standard: true, dead: false,
+      ...(this.profile.local ? {} : { terminalBaud: rate }) };
     const record = { pane, dead: false, channelClosed: false, stream: null, paused: true, serial: 0, pendingWrite: null, pendingBytes: 0, pendingCount: 0, tail: Promise.resolve() };
     const client = this.client; this.shells.set(key, record);
     try {
@@ -45,6 +47,8 @@ class StandardRemote extends Remote {
         client.once('close', closed);
         try {
           const geometry = { term: 'xterm-256color', cols: pane.cols, rows: pane.rows };
+          // PTY creation only: existing jobs, tmux panes and local consoles remain untouched.
+          if (!this.profile.local && rate !== 0) geometry.modes = { TTY_OP_ISPEED: rate, TTY_OP_OSPEED: rate };
           const validateOpening = () => { if (settled || record.dead || this.shells.get(key) !== record || this.client !== client || !this.connected || this.closing) throw new Error('Console opening was cancelled. No startup text was sent.'); };
           if (this.profile.local && client.openLocalShell) client.openLocalShell(geometry, launchCommand, finish, validateOpening);
           else if (launchCommand === undefined) client.shell(geometry, finish);

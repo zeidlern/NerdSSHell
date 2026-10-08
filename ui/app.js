@@ -9,7 +9,7 @@ let notifications = { enabled: true, audio: true, desktop: true, visual: true };
 let sessionDefaults = { scrollback: 100000, archiveMB: 256, record: false, startup: 'all', autoConnect: true };
 let preferenceSection = 'copy', preferenceGeneration = 0, preferenceSaving = false, preferenceLoaded = false, attentionActiveKey = '';
 let order = [], savedOrder = [], slots = [], savedSlots = [], active = '', desiredActive = '', layout = 1, twoPaneOrientation = 'side-by-side', splitX = 50, splitY = 50;
-let saveTimer, noticeTimer, promptId, promptProfileId, entryResolve, historyKey, selectedProfile;
+let saveTimer, noticeTimer, promptId, promptProfileId, promptKind, entryResolve, historyKey, selectedProfile;
 let maxOpenViews = 64, pendingViewSlots = 0;
 function requireViewCapacity(key) {
   if (!views.has(key) && views.size + pendingViewSlots >= maxOpenViews) throw new Error(`NerdSSHell supports ${maxOpenViews} open terminal views. Close a view before opening another; persistent remote work keeps running.`);
@@ -398,12 +398,21 @@ function chooseNewSession(id) {
   $('newSessionName').value = 'Session-' + new Date().toTimeString().slice(0, 8).replace(/:/g, '-');
   $('newSessionPersistence').hidden = local;
   $('newSessionPersistent').checked = true;
-  newSessionTarget = id;
+  newSessionTarget = id; $('newSessionBaud').value = ''; updateNewSessionBaud();
   return new Promise(resolve => { newSessionResolve = resolve; $('newSessionDialog').showModal(); $('newSessionName').focus(); $('newSessionName').select(); });
+}
+function updateNewSessionBaud() {
+  const local = !!profiles.get(newSessionTarget)?.local, persistent = $('newSessionPersistent').checked;
+  $('newSessionBaudField').hidden = local; $('newSessionBaud').disabled = local || persistent;
+  const rate = profiles.get(newSessionTarget)?.terminalBaud || 0;
+  $('newSessionBaud').options[0].textContent = 'Use connection setting (' + (rate ? rate + ' baud' : 'server default') + ')';
+  $('newSessionBaudHint').textContent = persistent ? 'Persistent tmux panes manage their own terminal settings. This override is available when persistence is unchecked.' : 'Applied when this Standard SSH window is created. Sets the speed reported to remote terminal programs; does not change SSH bandwidth or a physical serial port. Each new Standard window can choose its own speed.';
 }
 function finishNewSession(accepted) {
   const resolve = newSessionResolve;
-  const result = accepted ? { name: $('newSessionName').value, persistent: $('newSessionPersistent').checked } : null;
+  const persistent = $('newSessionPersistent').checked, value = $('newSessionBaud').value;
+  const result = accepted ? { name: $('newSessionName').value, persistent,
+    terminalBaud: !persistent && !profiles.get(newSessionTarget)?.local && value !== '' ? Number(value) : undefined } : null;
   newSessionResolve = newSessionTarget = null; $('newSessionDialog').close(); resolve?.(result);
 }
 async function newSession(profileId) {
@@ -413,7 +422,7 @@ async function newSession(profileId) {
   const choice = await chooseNewSession(id);
   if (choice === null) return;
   await withViewCapacity(async release => {
-    const pane = await api.create(id, choice.name, choice.persistent); panes.set(pane.key, pane);
+    const pane = await api.create(id, choice.name, choice.persistent, choice.terminalBaud); panes.set(pane.key, pane);
     release(); await openPane(pane.key);
   });
 }
@@ -538,19 +547,21 @@ async function savePreferences() {
 }
 window.NerdSSHellPreferences = { open: section => run(openPreferences(section)) };
 function showCredentialPrompt(event) {
-  promptId = event.id; promptProfileId = event.profileId || null;
+  promptId = event.id; promptProfileId = event.profileId || null; promptKind = event.kind;
   $('promptTitle').textContent = event.title; $('promptMessage').textContent = event.message;
-  $('promptValue').type = event.secret ? 'password' : 'text'; $('promptValue').value = '';
-  const remember = event.secret === true && event.rememberPasswordAvailable === true;
+  $('promptValue').type = event.secret ? 'password' : 'text'; $('promptValue').value = ''; $('promptValue').hidden = promptKind === 'host-trust';
+  const remember = promptKind !== 'host-trust' && event.secret === true && event.rememberPasswordAvailable === true;
   $('promptRememberField').hidden = !remember; $('promptRemember').checked = remember && event.rememberPassword === true;
-  $('promptDialog').showModal(); $('promptValue').focus();
+  $('promptAccept').textContent = promptKind === 'host-trust' ? 'Trust and connect' : 'Continue';
+  $('promptDialog').showModal(); (promptKind === 'host-trust' ? $('cancelPrompt') : $('promptValue')).focus();
 }
 function clearCredentialPrompt() {
-  promptId = null; promptProfileId = null; $('promptValue').value = ''; $('promptRemember').checked = false; $('promptRememberField').hidden = true; $('promptDialog').close();
+  promptId = null; promptProfileId = null; promptKind = null; $('promptValue').value = ''; $('promptRemember').checked = false; $('promptRememberField').hidden = true; $('promptDialog').close();
 }
-function replyCredentialPrompt(cancelled = false) {
-  const id = promptId, value = cancelled ? null : $('promptValue').value;
-  const remember = !cancelled && !$('promptRememberField').hidden && $('promptRemember').checked === true;
+function replyCredentialPrompt(cancelled = false, submitter = null) {
+  if (!cancelled && promptKind === 'host-trust' && submitter !== $('promptAccept')) return;
+  const id = promptId, value = cancelled ? null : promptKind === 'host-trust' ? 'trust' : $('promptValue').value;
+  const remember = !cancelled && promptKind !== 'host-trust' && !$('promptRememberField').hidden && $('promptRemember').checked === true;
   clearCredentialPrompt();
   if (id) run(cancelled ? api.promptReply(id, null) : api.promptReply(id, value, remember));
 }
@@ -643,10 +654,15 @@ $('connectionForm').elements.auth.addEventListener('change', updateAuthenticatio
 $('chooseKey').addEventListener('click', () => run((async () => { const file = await api.chooseKey(); if (file) $('connectionForm').elements.keyPath.value = file; })()));
 $('addConnection').onclick = $('welcomeConnect').onclick = () => editConnection();
 $('cancelConnection').onclick = () => $('connectionDialog').close();
-$('promptForm').onsubmit = e => { e.preventDefault(); replyCredentialPrompt(); };
+$('promptForm').onsubmit = e => { e.preventDefault(); replyCredentialPrompt(false, e.submitter); };
 $('cancelPrompt').onclick = () => replyCredentialPrompt(true);
-$('promptDialog').addEventListener('cancel', () => replyCredentialPrompt(true));
+$('promptDialog').addEventListener('cancel', e => { e.preventDefault(); replyCredentialPrompt(true); });
+$('promptDialog').addEventListener('close', () => { if (!$('promptDialog').open && promptId) replyCredentialPrompt(true); });
+$('promptDialog').addEventListener('keydown', e => {
+  if (promptKind === 'host-trust' && e.key === 'Enter' && e.target !== $('promptAccept') && e.target !== $('cancelPrompt')) e.preventDefault();
+});
 $('newSessionForm').onsubmit = e => { e.preventDefault(); finishNewSession(true); };
+$('newSessionPersistent').addEventListener('change', updateNewSessionBaud);
 $('cancelNewSession').onclick = () => finishNewSession(false);
 $('newSessionDialog').addEventListener('cancel', e => { e.preventDefault(); finishNewSession(false); });
 $('entryForm').onsubmit = e => { e.preventDefault(); finishEntry($('entryValue').value); }; $('cancelEntry').onclick = () => finishEntry(null); $('entryDialog').addEventListener('cancel', () => finishEntry(null));

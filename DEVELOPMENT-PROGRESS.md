@@ -36,10 +36,41 @@ This checkpoint document is kept in Git at the owner's explicit request so anoth
 
 Read AGENTS.md and the required architecture/security/release documents. Confirm origin and branch before editing. Use only this fresh checkout. Read .local/USER-MISSION.txt for the owner's complete request when available; all public decisions and measured results belong in this document/PR. Re-run unfinished checks, never convert an interrupted command into a pass. Source scripts derive paths from their repository root.
 
-Latest pushed checkpoint: d29b6f3 (verified clean environment and baseline). The initial clean-environment checkpoint contains no application changes. Next: fresh architecture research and focused implementation.
+Latest pushed checkpoint: e18266f (research-only SSH speed tests and CI dispatch/artifact guards). The initial clean-environment checkpoint contains no application changes. Next: fresh architecture research and focused implementation.
 
 ## Preimplementation research checkpoint
 
 - Added a research-only regression to the existing disposable Linux integration suite: independent PTY rates on one transport, observable stty speed and tmux independence. Runtime/UI baud changes await this evidence.
 - Existing build workflow supports Linux-only manual dispatch for this research; normal PR validation still includes Windows. Installer artifact upload is limited to main, keeping the feature-branch development installer off GitHub until review. No release/tag changes.
 - Fresh baseline reproduction found stacked native first-use trust modals outside prompt serialization, a 180-second stale login prompt after transport loss, retained exec collectors and a temporary readiness listener. Reports are sanitized in excluded .local files; fixes remain in progress and are not claimed complete.
+
+## Current implementation and measured evidence
+
+- Research run [37708662908](https://github.com/zeidlern/NerdSSHell/actions/runs/37708662908) at e18266f passed 831 Linux regressions and all nine disposable OpenSSH/tmux/SFTP integrations, with zero failures/skips. Its Windows job was deliberately skipped in Linux-only dispatch and provides no Windows evidence. Real Linux PTYs reported 9600 and 115200 independently on one transport; omitted modes retained 38400 in that fixture. tmux pane speed stayed independent.
+- Based on that evidence, an advanced saved connection rate and a new-Standard-window override are being implemented. Existing windows need a new PTY; Persistent/local windows cannot use this override. This is a terminal compatibility attribute, not bandwidth throttling or serial hardware setup.
+- First-use trust now uses the existing serialized in-app prompt with Cancel focused and explicit Trust and connect. Fresh baseline VM evidence showed concurrent pending native trust requests outside app serialization/registry cleanup; it did not reproduce the reported physical mouse failure. Fresh Chromium UI passed 56 interaction checks with no errors/external requests. About pointer clicks, drags, focus return, Close/Escape and no background click-through are covered. Extended actual packaged host/pin/password acceptance is prepared but has not yet run for changed code.
+- Fresh lifecycle proof reproduced a 180-second stale sign-in prompt, pending command promises/response collectors after disconnect and a retained temporary sign-in listener. Cleanup now cancels those owned operations and invalidates old views without replaying input or launching persistent work.
+- Fresh focused lifecycle/security/password/SFTP validation passed 128 tests. Stress covered 120 synthetic lifecycle cycles and 100 verified real loopback SSH transports. Baseline/current comparison: 20/20 pending commands after disconnect versus 0/20; two retained completed-command collectors versus zero; both have zero live sockets/channels after cleanup. General establishment latency was essentially unchanged (median about 2.3 ms); Node-only steady-state memory samples do not prove a renderer leak or performance improvement. Persistent control behavior in the loopback stress fixture is modeled; the separate Linux integrations execute real tmux.
+- Existing reviewable diagnostics now expose bounded runtime version and operation/channel counts, never raw credential or command data. The original lengthy-session lag remains unreproduced and is not attributed to Electron.
+- In-progress full Windows suite passed 860 tests, zero failures and the one baseline symlink skip, plus two actual baud wire tests. Subsequent baud implementation requires a new full result before completion.
+
+Next: finish baud regressions, freeze/review the combined diff, full source/regression checks, fresh Windows package build and actual packaged acceptance. Then push the tested implementation, recheck main and release identity, open PR and verify final CI. No version/tag/release/installer publication is authorized yet.
+
+## Final validation checkpoint in progress
+
+- Complete source checks and Windows suite passed 896 tests, zero failures and the same one baseline symlink skip of 897 registered tests. A same-key rekey compatibility case was subsequently added; final counts will be recorded after rerunning.
+- The exact packaged rate/About/SSH/SFTP/native console fixture passed 186 checks before the final shared authentication adapter/state revision. Those results retain that scope; a fresh package and relevant gates are being rebuilt.
+- Additional ordinary delayed/rejected/closed-transport authentication controls and supported password/key/agent sequencing checks passed. Independent boundary review completed; source-based protocol-order concerns are covered with synthetic event-order tests, while no hostile out-of-order wire test is claimed.
+- No dependency graph, lockfile, version or release change. Inventories were regenerated and compared: only creation timestamps differed, so the existing unchanged dependency inventory was retained.
+- The final candidate is an unsigned local development build, not the published 1.0.3 installer. No installation or user-data change occurred.
+
+## Tested implementation checkpoint
+
+- Final combined source checks passed. Windows suite: 897 passed, zero failures and the one existing file-symlink privilege skip of 898 tests. Current browser UI: 59 checks passed.
+- Fresh rebuilt Windows package verification/notices passed; all 75 shipped source/assets and 54 runtime source files match the tested ASAR. Electron remains44.5.1; app/package version stays1.0.3 pending owner version choice. Both app and installer are NotSigned. This is a local development candidate, not a replacement release.
+- Exact-package host/password acceptance passed71 checks, covering genuine mouse/keyboard actions, pending/canceled confirmation behavior, fingerprint pinning and all existing encrypted-password restart/Forget/rejection controls. Native package identity: ASAR8358402246e69cb4d2a88fc71c555162ddcd80b0110f55aadbb0da13364a3b70, installer142ee5271bc62ef473e6c57109d909a25ef9b03bdf6ffd240586bbbc7265ee9e.
+- Ordinary authentication compatibility includes verified same-key rekey and supported password/key/agent method ordering. Private security investigation/evidence stays outside tracked source and public PR prose. No hostile out-of-order wire test is claimed.
+- The owner reproduced a native multiline-paste confirmation that cannot be clicked. The screenshot contains private terminal data and is not stored in Git. Shared app-owned confirmation handling will be a separate follow-up section: approval and cancellation must both be fully interactive, with no change to OS file/UAC pickers or caller destination/review checks.
+- The rerun of full exact-package pane/native fixtures against the revised authentication build is in progress; do not infer completed results from older candidates.
+
+Next: complete those package gates, implement/test the shared confirmation follow-up, recheck main and release assets, push a final checkpoint and open the PR with honest validation/manual limits.

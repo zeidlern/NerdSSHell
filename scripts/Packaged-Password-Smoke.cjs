@@ -26,9 +26,9 @@ const output = path.resolve(options.get('--output') || path.join(root, '.local',
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-password-'));
 const createdTemporary = fs.realpathSync.native(temporary), fixtureId = 'fixture-password';
 const firstPassword = 'synthetic-remember-fixture-only', replacementPassword = 'synthetic-replacement-fixture-only', invalidPassword = 'synthetic-rejected-fixture-only';
-let acceptedPassword = firstPassword, server, ws, control, currentOwner;
+let acceptedPassword = firstPassword, server, ws, control, currentOwner, expectedHostFingerprint, capturedHostDialog = false;
 const owners = [], peers = new Set();
-const metrics = { connections: 0, acceptedPasswords: 0, rejectedPasswords: 0, shells: 0, closedShells: 0, echoedInputs: 0, inspections: 0, unexpectedExec: 0 };
+const metrics = { connections: 0, authenticationRequests: 0, acceptedPasswords: 0, rejectedPasswords: 0, shells: 0, closedShells: 0, echoedInputs: 0, inspections: 0, unexpectedExec: 0 };
 const report = { status: 'running', expectedVersion: metadata.version, checks: [], metrics, ownedAppPIDs: [] };
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 // Debugger string literals contain no raw HTML delimiters or Unicode line separators.
@@ -67,6 +67,7 @@ async function createFixture() {
   server = new Server({ hostKeys: [hostKey] }, client => {
     peers.add(client); metrics.connections++; client.on('error', () => {}); client.on('close', () => peers.delete(client));
     client.on('authentication', context => {
+      metrics.authenticationRequests++;
       if (context.method === 'password' && context.username === 'fixture' && context.password === acceptedPassword) { metrics.acceptedPasswords++; context.accept(); }
       else { if (context.method === 'password') metrics.rejectedPasswords++; context.reject(['password']); }
     });
@@ -85,7 +86,7 @@ async function createFixture() {
   server.on('error', () => {}); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const port = server.address().port, store = new StateStore(temporary);
   store.data.profiles = [profile({ id: fixtureId, name: 'Password acceptance fixture', host: '127.0.0.1', port, username: 'fixture', auth: 'password', rememberPassword: false, sessionMode: 'standard', autoConnect: false, record: false, scrollback: 1000 })];
-  store.data.pins[`127.0.0.1:${port}`] = fingerprint(utils.parseKey(hostKey).getPublicSSH()); store.save();
+  expectedHostFingerprint = fingerprint(utils.parseKey(hostKey).getPublicSSH()); store.save();
 }
 async function connectDebugger(url, port) {
   const parsed = new URL(url);
@@ -169,6 +170,21 @@ async function waitPrompt(label) {
 async function answer(password, remember) {
   await control.evaluate(`$('promptValue').value=${literal(password)};$('promptRemember').checked=${literal(remember)};$('promptForm').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));true`);
 }
+async function pointerClick(selector) {
+  const point = await control.evaluate(`(()=>{const bounds=document.querySelector(${literal(selector)}).getBoundingClientRect();return {x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2};})()`);
+  await control.send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...point });
+  await control.send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...point });
+}
+async function pressDialogKey(key, code, windowsVirtualKeyCode, modifiers = 0) {
+  for (const type of ['keyDown', 'keyUp']) await control.send('Input.dispatchKeyEvent', { type, key, code, windowsVirtualKeyCode, modifiers, ...(key === 'Enter' && type === 'keyDown' ? { text: '\r', unmodifiedText: '\r' } : {}) });
+}
+async function waitHostTrust() {
+  await control.wait(`$('promptDialog').open&&promptKind==='host-trust'`, 'First-use host-key dialog did not open.');
+  check('No SSH authentication method or credential reaches the fixture while host approval is pending', metrics.authenticationRequests === 0 && metrics.acceptedPasswords === 0 && metrics.rejectedPasswords === 0 && metrics.shells === 0);
+  if (!capturedHostDialog) { const image = await control.send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(output, 'host-key-dialog.png'), Buffer.from(image.data, 'base64')); capturedHostDialog = true; }
+
+  check('Host approval shows the generated server fingerprint, focuses Cancel and offers no password-saving field', await control.evaluate(`$('promptMessage').textContent.includes(${literal(expectedHostFingerprint)})&&document.activeElement===$('cancelPrompt')&&$('promptValue').hidden&&$('promptRememberField').hidden&&!$('promptRemember').checked&&$('promptAccept').textContent==='Trust and connect'`));
+}
 async function expectConnect(success, label) {
   await control.wait('window.__passwordSmokeResult.done', label);
   check(label, await control.evaluate(`window.__passwordSmokeResult.ok===${literal(success)}`));
@@ -200,7 +216,28 @@ async function main() {
   await control.evaluate(`$('cancelConnection').click();true`);
   await beginConnect(); await waitPrompt('First login prompt did not open.');
   check('First login prompt defaults to not remembering', await control.evaluate(`!$('promptRemember').checked`));
-  await answer(firstPassword, true); await expectConnect(true, 'Opt-in login authenticates through the actual packaged SSH transport');
+  await answer(firstPassword, true); await waitHostTrust();
+  await pointerClick('#preferences');
+  check('Pointer click outside host approval neither approves the key nor activates background Preferences', await control.evaluate(`$('promptDialog').open&&!$('preferencesDialog').open`) && Object.keys(new StateStore(temporary).data.pins).length === 0 && metrics.shells === 0);
+  await pointerClick('#cancelPrompt'); await expectConnect(false, 'Actual Windows pointer Cancel rejects the unknown key');
+  check('Canceled host approval creates no pin, credential or shell', Object.keys(new StateStore(temporary).data.pins).length === 0 && vaultRecords().length === 0 && metrics.authenticationRequests === 0 && metrics.shells === 0);
+  const rejectedConnections = metrics.connections; await delay(500);
+  check('Canceled host approval does not trigger automatic trust retries', metrics.connections === rejectedConnections);
+  for (const method of ['Escape', 'Enter']) {
+    await beginConnect(); await waitPrompt('Repeated synthetic login did not open.'); await answer(firstPassword, true); await waitHostTrust();
+    if (method === 'Enter') {
+      await pressDialogKey('Tab', 'Tab', 9, 8);
+      check('Shift+Tab makes the explicit Trust button keyboard reachable', await control.evaluate(`document.activeElement===$('promptAccept')`));
+      await pressDialogKey('Tab', 'Tab', 9);
+      check('Tab returns focus from Trust to safe Cancel', await control.evaluate(`document.activeElement===$('cancelPrompt')`));
+    }
+    await pressDialogKey(method, method, method === 'Escape' ? 27 : 13);
+    await expectConnect(false, method + ' on Cancel rejects the unknown key');
+    check(method + ' cancellation still creates no pin, credential or shell', Object.keys(new StateStore(temporary).data.pins).length === 0 && vaultRecords().length === 0 && metrics.shells === 0);
+  }
+  await beginConnect(); await waitPrompt('Final opt-in login did not open.'); await answer(firstPassword, true); await waitHostTrust();
+  await pointerClick('#promptAccept'); await expectConnect(true, 'Explicit Windows pointer Trust and connect authenticates through the packaged SSH transport');
+  check('Explicit pointer acceptance pins exactly the generated server key', Object.values(new StateStore(temporary).data.pins).length === 1 && Object.values(new StateStore(temporary).data.pins)[0] === expectedHostFingerprint);
   check('Successful login writes one Windows-encrypted credential record', vaultRecords().length === 1 && vaultRecords()[0].profileId === fixtureId && typeof vaultRecords()[0].ciphertext === 'string');
   check('Submitting a login clears password and consent from the renderer form', await control.evaluate(`$('promptValue').value===''&&!$('promptRemember').checked&&!$('promptDialog').open`));
   await privacyCheck('First login'); await closeApp();

@@ -18,6 +18,7 @@ Select **Add a connection** on the welcome screen or the **+** beside the connec
 | Server | Hostname or address; the UI's sample address is not a configured server |
 | Port | Usually 22; use the administrator's actual value |
 | Username | The server account, not necessarily your Windows username |
+| Standard SSH terminal baud rate (Advanced) | Speed reported by new Standard pseudo-terminals; server default preserves existing behavior |
 | Sign in with | Windows SSH agent, private-key file or password |
 | Remember password on this PC | Optional for password sign-in; saves the next successfully authenticated password encrypted for your Windows account |
 | On connection | Open all running sessions, restore previous views, or show sessions without opening them |
@@ -25,7 +26,15 @@ Select **Add a connection** on the welcome screen or the **+** beside the connec
 
 Use **History and file settings** to configure scrollback, recording, archive retention, the default upload directory and an advanced tmux socket. Leave the socket blank unless you intentionally use a nondefault tmux socket. A custom socket changes which server-side sessions can be found; it is not a network port.
 
-Choose **Save and connect**. Inspect the trust prompt, compare the host fingerprint independently, then authenticate. Cancelling an authentication or trust prompt should stop that attempt; do not approve an unexpected prompt just to clear an error.
+Choose **Save and connect**. In **Verify server identity**, compare the server address and fingerprint independently before selecting **Trust and connect**. Cancel is initially focused; Cancel or Escape stops the attempt. Clicking outside this security prompt does not accept the key. Unknown hosts are reviewed one at a time; changed or revoked identities remain blocked.
+
+## Standard terminal baud rate
+
+Open **Advanced terminal settings** in a saved connection to choose a rate for its new Standard SSH shells, including nonpersistent workbench tasks. **Server default (unchanged)** omits speed modes. In **New session**, uncheck persistence to choose an independent rate for that new window or inherit the saved connection setting. Each Standard window owns a separate pseudo-terminal.
+
+The input/output speed is sent when the PTY is created. Existing terminals retain their rate; create a new Standard window or save and reconnect to use a new setting. Editing a connection closes its Standard shells after consequence confirmation, so finish that work first. Persistent tmux panes manage their own terminal settings; the override is disabled for them and hidden for local Windows consoles.
+
+This advanced compatibility setting changes the speed reported to remote terminal programs. It does not throttle SSH traffic, repair network lag, or configure a physical serial port. Servers may ignore unsupported speeds. Linux OpenSSH acceptance verified independent 9600/115200 PTYs and unchanged tmux pane speed; other appliances need their own acceptance. The parameters are defined by [RFC 4254](https://www.rfc-editor.org/rfc/rfc4254#section-8) and exposed by [ssh2](https://github.com/mscdex/ssh2/tree/v1.17.0).
 
 ## Authentication choices
 

@@ -30,7 +30,7 @@ function fixture() {
     forgetPassword: async id => { calls.forgotten.push(id); return { ...context.profiles.get(id), rememberPassword: false }; }, onEvent: callback => { api.event = callback; } };
   const element = (_tag, _class, text) => Object.assign(new Node(), { textContent: text });
   const button = (text, action) => Object.assign(new Node(), { textContent: text, action });
-  const context = vm.createContext({ $, api, promptId: null, promptProfileId: null, profiles: new Map(), panes: new Map(), statuses: new Map(), views: new Map(),
+  const context = vm.createContext({ $, api, promptId: null, promptProfileId: null, promptKind: null, profiles: new Map(), panes: new Map(), statuses: new Map(), views: new Map(),
     sessionDefaults: {}, selectedProfile: '', FormData, element, button, label: p => p.name, newSession() {},
     message: text => calls.notices.push(text), run: promise => Promise.resolve(promise).catch(error => calls.notices.push(error.message)),
     connectProfile: async id => calls.connections.push(id), updateSessionMode() {}, renderConnections() {}, structuredClone });
@@ -66,7 +66,7 @@ test('private-key and interactive challenge prompts cannot inherit password-savi
 });
 
 test('button cancellation and Escape clear plaintext and consent without saving an answer', () => {
-  for (const cancel of [f => f.$('cancelPrompt').onclick(), f => f.$('promptDialog').events.cancel[0]()]) {
+  for (const cancel of [f => f.$('cancelPrompt').onclick(), f => f.$('promptDialog').events.cancel[0]({ preventDefault() {} })]) {
     const f = fixture(); f.api.event({ ...passwordPrompt, rememberPassword: true }); f.$('promptValue').value = 'synthetic-only'; cancel(f);
     assert.deepEqual(f.calls.replies, [['login', null]]); assert.equal(f.$('promptValue').value, ''); assert.equal(f.context.promptId, null);
     assert.equal(f.$('promptRemember').checked, false); assert.equal(f.$('promptRememberField').hidden, true);
@@ -99,7 +99,7 @@ test('connection remembering is opt-in and switching authentication removes hidd
 test('connection edits never populate or expose saved plaintext passwords', () => {
   const f = fixture(); f.context.editConnection({ id: 'fixture', auth: 'password', rememberPassword: true });
   assert.equal(f.$('promptValue').value, ''); assert.equal(f.form.elements.password, undefined);
-  const connectionHtml = html.slice(html.indexOf('<dialog id="connectionDialog">'), html.indexOf('<dialog id="promptDialog">'));
+  const connectionHtml = html.slice(html.indexOf('<dialog id="connectionDialog">'), html.indexOf('<dialog id="promptDialog"'));
   assert.doesNotMatch(connectionHtml, /<input[^>]+(?:name="password"|type="password")/);
 });
 
@@ -148,4 +148,38 @@ test('a delayed Forget response cannot overwrite a newer connection edit or rest
 test('password profiles offer Forget without exposing saved credential presence; key profiles do not', () => {
   const f = fixture(); f.context.profiles.set('fixture', { id: 'fixture', auth: 'password', rememberPassword: false }); assert.ok(forgetAction(f));
   f.context.profiles.set('fixture', { id: 'fixture', auth: 'key' }); assert.equal(forgetAction(f), undefined);
+});
+
+
+test('host-key confirmation clears secrets and saving consent, focuses Cancel and requires an explicit Trust button', () => {
+  const f = fixture(); f.api.event({ ...passwordPrompt, rememberPassword: true });
+  f.$('promptValue').value = 'synthetic-login';
+  f.api.event({ ...passwordPrompt, id: 'key-confirmation', kind: 'host-trust', message: 'SHA256:synthetic <b>literal</b>' });
+  assert.equal(f.$('promptValue').hidden, true); assert.equal(f.$('promptValue').value, '');
+  assert.equal(f.$('promptRememberField').hidden, true); assert.equal(f.$('promptRemember').checked, false);
+  assert.equal(f.$('cancelPrompt').focused, true); assert.equal(f.$('promptAccept').textContent, 'Trust and connect');
+  assert.equal(f.$('promptMessage').textContent, 'SHA256:synthetic <b>literal</b>');
+  for (const submitter of [undefined, null, f.$('cancelPrompt')]) f.$('promptForm').onsubmit({ submitter, preventDefault() {} });
+  assert.deepEqual(f.calls.replies, []); assert.equal(f.$('promptDialog').open, true);
+  f.$('promptRemember').checked = true;
+  f.$('promptForm').onsubmit({ submitter: f.$('promptAccept'), preventDefault() {} });
+  assert.deepEqual(f.calls.replies, [['key-confirmation', 'trust', false]]);
+});
+
+test('host-key dialog background Enter and unexpected closure cannot approve a key', () => {
+  const f = fixture(); f.api.event({ ...passwordPrompt, id: 'key-confirmation', kind: 'host-trust' });
+  const background = { key: 'Enter', target: f.$('promptDialog'), preventDefault() { this.prevented = true; } };
+  f.$('promptDialog').events.keydown[0](background); assert.equal(background.prevented, true);
+  f.$('promptDialog').close(); f.$('promptDialog').events.close[0]();
+  assert.deepEqual(f.calls.replies, [['key-confirmation', null]]);
+  f.$('promptDialog').events.close[0](); assert.equal(f.calls.replies.length, 1);
+});
+
+test('late close and cancellation events cannot reject a newer prompt or carry trust consent into a password', () => {
+  const f = fixture(); f.api.event({ ...passwordPrompt, id: 'old-key', kind: 'host-trust' }); f.$('cancelPrompt').onclick();
+  f.api.event({ ...passwordPrompt, id: 'new-password' });
+  f.$('promptDialog').events.close[0](); f.api.event({ type: 'promptCancelled', id: 'old-key' });
+  assert.equal(f.$('promptDialog').open, true); assert.equal(f.$('promptValue').hidden, false);
+  assert.equal(f.$('promptValue').type, 'password'); assert.equal(f.context.promptId, 'new-password');
+  assert.deepEqual(f.calls.replies, [['old-key', null]]);
 });

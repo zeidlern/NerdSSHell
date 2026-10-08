@@ -60,6 +60,21 @@ function ask(options) {
   });
   promptChain = task.catch(() => {}); return task;
 }
+function cancelProfilePrompts(id) {
+  for (const [promptId, answer] of prompts) {
+    if (answer.profileId !== id) continue;
+    emit('promptCancelled', { id: promptId }); answer(null);
+  }
+}
+function retryConnection(id, connection) {
+  clearTimeout(connection.timer);
+  const delay = Math.min(30000, 1000 * 2 ** Math.min(connection.attempts++, 5));
+  connection.timer = setTimeout(() => {
+    connection.timer = undefined;
+    if (connections.get(id) !== connection || !connection.wanted || quitting) return;
+    connect(id).catch(() => {});
+  }, delay);
+}
 function saved(id) { const p = store.data.profiles.find(x => x.id === id); if (!p) throw new Error('Unknown connection.'); return p; }
 function credentialVersion(id) { if (!credentialVersions.has(id)) credentialVersions.set(id, randomUUID()); return credentialVersions.get(id); }
 function invalidatePassword(id) { credentialVersions.set(id, randomUUID()); const r = connections.get(id); if (r?.secrets) delete r.secrets.password; if (r?.remote?.secrets) delete r.remote.secrets.password; }
@@ -178,7 +193,8 @@ async function connect(id, secrets) {
   if (r?.busy) return;
   if (r?.remote?.connected) return r.remote.panes;
   if (!r) { r = { profile: p, wanted: true, attempts: 0, secrets: {}, state: 'disconnected' }; connections.set(id, r); }
-  r.profile = p; r.wanted = true; r.busy = true; clearTimeout(r.timer);
+  r.profile = p; r.wanted = true; r.busy = true; clearTimeout(r.timer); r.timer = undefined;
+  r.remote?.disconnect();
   r.secrets = secrets || r.secrets; publishStatus(r, 'connecting', 'Signing in…');
   const token = r.promptToken = randomUUID();
   const passwordVersion = credentialVersion(id); let rememberChoice;
@@ -193,8 +209,9 @@ async function connect(id, secrets) {
     savePin: (target, fp) => { if (active()) { store.data.pins[target] = fp; store.save(); } },
     trust: async v => {
       if (!active()) return false;
-      const accepted = await confirm('Verify server identity', `First connection to ${v.host}:${v.port}`, `Fingerprint: ${v.fingerprint}\n\nCompare this fingerprint with a trusted source before continuing. The accepted identity will be saved.`);
-      return active() && accepted;
+      const accepted = await ask({ kind: 'host-trust', title: 'Verify server identity', profileId: id, valid: active,
+        message: `First connection to ${v.host}:${v.port}\n\nFingerprint: ${v.fingerprint}\n\nCompare this fingerprint with a trusted source before continuing. Trusting the key saves this server identity on this PC.` });
+      return active() && accepted === 'trust';
     } });
   remote.allowDiscovery = p.sessionMode !== 'standard'; // Legacy Standard profiles stay probe-free until explicitly enabled.
   remote.on('panes', panes => { if (active()) emit('panes', { profileId: id, panes }); });
@@ -206,13 +223,14 @@ async function connect(id, secrets) {
   remote.on('disconnected', error => {
     if (!active() || quitting) return;
     rejectRememberedPassword(p, error, passwordVersion, remote);
-    cancelRemoteFiles(id);
-    for (const pane of remote.panes) discardOutput(pane.key);
+    cancelRemoteFiles(id); cancelProfilePrompts(id);
+    workbench?.disconnect(id); sessionCommands?.disconnect(id);
+    for (const key of output.keys()) if (key.startsWith(id + '/')) discardOutput(key);
+    remote.disconnect();
     publishStatus(r, 'disconnected', error.message);
     // Auth/trust failures require an explicit user action; network loss uses bounded backoff.
-    if (p.sessionMode === 'standard' || error.code === 'NERDSSHELL_HOST_VERIFICATION' || error.level === 'client-authentication') { r.wanted = false; r.secrets = {}; remote.disconnect(); return; }
-    const delay = Math.min(30000, 1000 * 2 ** Math.min(r.attempts++, 5));
-    clearTimeout(r.timer); r.timer = setTimeout(() => connect(id).catch(() => {}), delay);
+    if (p.sessionMode === 'standard' || error.code === 'NERDSSHELL_HOST_VERIFICATION' || error.level === 'client-authentication') { r.wanted = false; r.secrets = {}; return; }
+    retryConnection(id, r);
   });
   try {
     if (p.auth === 'password' && p.rememberPassword && r.secrets.password === undefined) {
@@ -228,13 +246,14 @@ async function connect(id, secrets) {
   } catch (e) {
     if (!active()) { remote.disconnect(); return []; }
     rejectRememberedPassword(p, e, passwordVersion, remote);
+    cancelProfilePrompts(id);
     remote.disconnect(); publishStatus(r, 'disconnected', e.message);
     if (p.sessionMode === 'standard' || e.level === 'client-authentication' || String(e.code).startsWith('PASSWORD_STORAGE_') || ['NERDSSHELL_HOST_VERIFICATION', 'NERDSSHELL_RESOURCE_LIMIT'].includes(e.code) || /auth|identity|key|cancel|support|passphrase|agent|permission|known_hosts/i.test(e.message)) { r.wanted = false; r.secrets = {}; }
-    else if (r.wanted && !quitting) { const delay = Math.min(30000, 1000 * 2 ** Math.min(r.attempts++, 5)); r.timer = setTimeout(() => connect(id).catch(() => {}), delay); }
+    else if (r.wanted && !quitting) retryConnection(id, r);
     throw e;
   } finally { r.busy = false; }
 }
-function disconnect(id) { workbench?.disconnect(id); sessionCommands?.disconnect(id); sessionNotifications?.clearProfile(id); cancelRemoteFiles(id); const r = connections.get(id); if (!r) return; r.promptToken = randomUUID(); for (const [prompt, done] of prompts) if (done.profileId === id) { emit('promptCancelled', { id: prompt }); done(null); } r.wanted = false; clearTimeout(r.timer); for (const key of output.keys()) if (key.startsWith(`${id}/`)) discardOutput(key); r.remote?.disconnect(); r.secrets = {}; publishStatus(r, 'disconnected', r.profile.sessionMode === 'standard' ? 'Disconnected. Standard shells are not restorable; connect to start a new shell.' : 'Disconnected. Persistent work was left running; Standard shells are not restorable.'); }
+function disconnect(id) { workbench?.disconnect(id); sessionCommands?.disconnect(id); sessionNotifications?.clearProfile(id); cancelRemoteFiles(id); const r = connections.get(id); if (!r) return; r.promptToken = randomUUID(); cancelProfilePrompts(id); r.wanted = false; clearTimeout(r.timer); r.timer = undefined; for (const key of output.keys()) if (key.startsWith(`${id}/`)) discardOutput(key); r.remote?.disconnect(); r.secrets = {}; publishStatus(r, 'disconnected', r.profile.sessionMode === 'standard' ? 'Disconnected. Standard shells are not restorable; connect to start a new shell.' : 'Disconnected. Persistent work was left running; Standard shells are not restorable.'); }
 function handle(name, fn) {
   ipcMain.handle(`nerdsshell:${name}`, async (event, ...args) => {
     if (event.sender !== window?.webContents || event.senderFrame !== window.webContents.mainFrame || event.senderFrame.url !== uiURL) throw new Error('Untrusted request.');
@@ -310,7 +329,7 @@ function registerIPC() {
   handle('cancelTransfer', id => transfers.get(id)?.abort());
   handle('dataFolder', () => shell.openPath(app.getPath('userData')));
   installPublicLinks({ handle, shell });
-  workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key), withViewSlot: (remote, key, operation) => viewBudget.run(remote, key, operation) });
+  workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key), withViewSlot: (remote, key, operation) => viewBudget.run(remote, key, operation), pendingPromptCount: () => prompts.size });
   sessionCommands = installSessionCommands({ handle, connections, forKey, assertInput: key => workbench.assertInput(key), resolveAction: (key, id, argument) => workbench.resolvePaneAction(key, id, argument) });
 }
 // Resolve storage before the single-instance lock so upgrades share the same

@@ -14,6 +14,14 @@ function integer(value, min, max, label) {
 function geometry(cols, rows) {
   return { cols: integer(cols, 1, 1000, 'remote columns'), rows: integer(rows, 1, 500, 'remote rows') };
 }
+// Zero is an application sentinel: omit speed modes, never request termios B0.
+const TERMINAL_BAUD_RATES = Object.freeze([0, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400]);
+function terminalBaud(value = 0) {
+  if (typeof value !== 'number' && !(typeof value === 'string' && /^[0-9]{1,6}$/.test(value))) throw new Error('Invalid terminal baud rate.');
+  const rate = Number(value);
+  if (!TERMINAL_BAUD_RATES.includes(rate)) throw new Error('Choose a supported terminal baud rate or the server default.');
+  return rate;
+}
 function pasteText(value) {
   if (typeof value !== 'string' || Buffer.byteLength(value) > 1024 * 1024) throw new Error('Clipboard exceeds 1 MB. Upload a file instead.');
   // Ordinary keyboard events still carry Ctrl+C etc. Only clipboard text is checked here.
@@ -54,6 +62,7 @@ function profile(value) {
   return { id: uuid, sessionMode, name: text(value.name || host, 'connection name', 80), host, username,
     port: integer(Number(value.port ?? 22), 1, 65535, 'port'), auth, rememberPassword, keyPath, socket,
     autoConnect: value.autoConnect !== false, startup, record: value.record === true,
+    terminalBaud: terminalBaud(value.terminalBaud),
     scrollback: integer(Number(value.scrollback ?? 100000), 1000, 500000, 'scrollback'),
     archiveMB: integer(Number(value.archiveMB ?? 256), 16, 4096, 'archive size'),
     uploadDirectory: text(value.uploadDirectory || '~/NerdSSHell-Uploads', 'upload directory') };
@@ -142,6 +151,6 @@ function knownHostStatus(contents, host, port, key) {
   }
   return trusted ? 'trusted' : matched ? 'changed' : 'unknown';
 }
-module.exports = { text, integer, geometry, pasteText, id, shellQuote, sessionName, profile, tmuxPrefix, unescapeOctal,
+module.exports = { text, integer, geometry, terminalBaud, TERMINAL_BAUD_RATES, pasteText, id, shellQuote, sessionName, profile, tmuxPrefix, unescapeOctal,
   PANE_FORMAT, parsePanes, paneKey, restoreOrder, fingerprint, knownHostStatus,
   SESSION_IDENTITY_OPTION, LEGACY_SESSION_IDENTITY_OPTION, SESSION_IDENTITY_FORMAT, parseSessionIdentity };

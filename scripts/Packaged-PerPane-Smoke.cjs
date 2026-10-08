@@ -34,7 +34,7 @@ const visibleFixture = options.has('--visible');
 const output = options.has('--output') ? path.resolve(options.get('--output')) : path.join(root, '.local', 'packaged-per-pane');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-per-pane-'));
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-const metrics = { logins: 0, shells: 0, closedShells: 0, exec: 0, inspections: 0, unexpectedExec: 0, sftp: 0, closedSftp: 0, directories: [], resize: [] };
+const metrics = { logins: 0, shells: 0, closedShells: 0, exec: 0, inspections: 0, unexpectedExec: 0, sftp: 0, closedSftp: 0, directories: [], resize: [], terminalBaud: [] };
 const peers = new Set(), report = { status: 'running', started: new Date().toISOString(), executable: exe, expectedVersion: metadata.version, visibleFixture, appPID: null, checks: [], screenshots: [], metrics, nativeDialogs: 'Unverified: upload/download native dialogs and transfer bytes are covered separately.' };
 let server, launcher, appPID, ws;
 async function freePort() { const s = net.createServer(); await new Promise(resolve => s.listen(0, '127.0.0.1', resolve)); const p = s.address().port; await new Promise(resolve => s.close(resolve)); return p; }
@@ -44,7 +44,10 @@ async function fixture() {
   server = new Server({ hostKeys: [hostKey] }, client => {
     peers.add(client); metrics.logins++; client.on('error', () => {}); client.on('close', () => peers.delete(client));
     client.on('authentication', ctx => ctx.method === 'password' && ctx.username === 'fixture' && ctx.password === 'synthetic-loopback-only' ? ctx.accept() : ctx.reject());
-    client.on('ready', () => client.on('session', accept => {
+    client.on('ready', () => {
+      const decipher = client._protocol._decipher, received = decipher._onPayload;
+      decipher._onPayload = payload => { const baud = require('./Terminal-Baud-Smoke.cjs').receivedTerminalBaud(payload); if (baud) metrics.terminalBaud.push(baud); return received(payload); };
+      client.on('session', accept => {
       const session = accept();
       session.on('exec', (_accept, reject, info) => { metrics.exec++; if (info.command === PROBE) metrics.inspections++; else metrics.unexpectedExec++; reject(); });
       session.on('pty', acceptPty => acceptPty());
@@ -74,11 +77,12 @@ async function fixture() {
         });
         sftp.on('CLOSE', (id, handle) => { handles.delete(handle.toString()); sftp.status(id, utils.sftp.STATUS_CODE.OK); });
       });
-    }));
+      });
+    });
   });
   server.on('error', () => {}); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const port = server.address().port, state = new StateStore(temporary).data;
-  state.profiles = ['fixture-a', 'fixture-b'].map(id => profile({ id, name: id === 'fixture-a' ? 'Loopback A' : 'Loopback B', host: '127.0.0.1', port, username: 'fixture', auth: 'password', sessionMode: 'standard', autoConnect: false, record: false, scrollback: 1000 }));
+  state.profiles = ['fixture-a', 'fixture-b'].map(id => profile({ id, name: id === 'fixture-a' ? 'Loopback A' : 'Loopback B', host: '127.0.0.1', port, username: 'fixture', auth: 'password', sessionMode: 'standard', autoConnect: false, record: false, scrollback: 1000, terminalBaud: id === 'fixture-a' ? 9600 : 0 }));
   state.pins[`127.0.0.1:${port}`] = fingerprint(utils.parseKey(hostKey).getPublicSSH());
   fs.writeFileSync(path.join(temporary, 'settings.json'), JSON.stringify(state));
   report.fixture = { address: '127.0.0.1', port, generatedHostKey: true, preverifiedGeneratedPin: true };
@@ -158,6 +162,7 @@ async function main() {
   await evaluate(`(async()=>{for(const name of ['Pane B','Pane C']){const pane=await api.create('fixture-a',name,false);panes.set(pane.key,pane);await openPane(pane.key,false);}window.__smokeKeys=[...order.filter(k=>k.startsWith('fixture-a/')), ...order.filter(k=>k.startsWith('fixture-b/'))];order=[...__smokeKeys];active=order[3];render();return true;})()`);
   await wait('views.size===4 && [...views.values()].every(v=>v.ready)', 'Four actual shell views did not attach.');
   check('Four real shell channels with three panes sharing one saved connection');
+  check('Saved packaged connection baud reaches each new Standard PTY while server-default connection omits both modes', JSON.stringify(metrics.terminalBaud) === JSON.stringify([{input:9600,output:9600},{input:null,output:null},{input:9600,output:9600},{input:9600,output:9600}]));
   const owners = await evaluate('[...__smokeKeys]'); assert.equal(owners.length, 4);
   await evaluate(`window.__smokeTerminalText=${terminalText.toString()}; true`);
   await wait('[...views.values()].every(v=>/SYNTHETIC SHELL [1-4]/.test(__smokeTerminalText(v)))', 'Initial shell banners did not reach all renderers.');
@@ -251,12 +256,13 @@ async function main() {
   await send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await evaluate(`active=__smokeKeys[0]; $('layoutOne').click(); true`);
   await require('./UX-SFTP-Smoke.cjs').uxSftpSmoke({ evaluate, wait, check, send });
-  await require('./UX-Desktop-Smoke.cjs').uxDesktopSmoke({ evaluate, wait, check, screenshot });
+  await require('./UX-Desktop-Smoke.cjs').uxDesktopSmoke({ evaluate, wait, check, screenshot, send });
   await evaluate(`for(const v of views.values())v.files?.show(false); true`);
   await require('./Packaged-Workbench-Smoke.cjs').workbenchSmoke({ evaluate, wait, check, screenshot });
   if (process.argv.includes('--administrator-fixture')) {
     report.administrator = await require('./Packaged-Administrator-Smoke.cjs').administratorSmoke({ evaluate, wait, check, screenshot });
   } else report.administrator = 'Skipped: opt-in --administrator-fixture requires native Windows consent and uses only a disposable LOCAL console.';
+  await require('./Terminal-Baud-Smoke.cjs').terminalBaudSmoke({ evaluate, send, wait, check, received: () => metrics.terminalBaud });
   // Closing the fixture transport avoids a native quit-confirmation; only synthetic shells are affected.
   for (const peer of peers) peer.end(); await wait('[...views.values()].every(v=>!v.files.connected&&!v.ready)', 'Fixture disconnect did not reach browsers.');
   check('Transport disconnect disables all owned browsers'); report.status = 'passed';

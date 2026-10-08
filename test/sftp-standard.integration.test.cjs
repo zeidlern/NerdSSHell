@@ -34,3 +34,38 @@ test('real OpenSSH: standard PTY and its SFTP sidecar browse, download, upload w
   assert.equal(remote.activeShellCount(), 1, 'file operations must not close the terminal');
   remote.closeView(pane.key); assert.equal(remote.activeShellCount(), 0); await assert.rejects(remote.open(pane.key), /ended/);
 });
+
+test('real OpenSSH: terminal baud modes are observable per PTY and tmux owns separate speeds', { skip: !process.env.NERDSSHELL_TEST_KEY, timeout: 30000 }, async t => {
+  const { Client } = require('ssh2');
+  const host = process.env.NERDSSHELL_TEST_HOST || '127.0.0.1';
+  if (host !== '127.0.0.1') throw new Error('This test only supports the disposable loopback fixture.');
+  const client = new Client(), port = Number(process.env.NERDSSHELL_TEST_PORT || 22222);
+  const publicKey = fs.readFileSync(process.env.NERDSSHELL_TEST_HOST_KEY + '.pub', 'utf8').trim().split(/\s+/)[1];
+  const expected = Buffer.from(publicKey, 'base64');
+  const socket = 'nerdsshell-baud-' + process.pid;
+  const exec = (command, pty) => new Promise((resolve, reject) => {
+    client.exec(command, pty ? { pty } : {}, (error, channel) => {
+      if (error) return reject(error);
+      const out = [], err = [];
+      channel.on('data', bytes => out.push(bytes)); channel.stderr.on('data', bytes => err.push(bytes));
+      channel.on('error', reject); channel.on('close', code => code === 0 ? resolve(Buffer.concat(out).toString().trim()) : reject(new Error(Buffer.concat(err).toString() || 'Fixture command failed.')));
+    });
+  });
+  t.after(async () => { try { await exec(`tmux -L ${socket} kill-server`); } catch {} client.end(); });
+  await new Promise((resolve, reject) => {
+    client.once('ready', resolve); client.once('error', reject);
+    client.connect({ host, port, username: process.env.NERDSSHELL_TEST_USER || os.userInfo().username,
+      privateKey: fs.readFileSync(process.env.NERDSSHELL_TEST_KEY), hostVerifier: key => expected.equals(key) });
+  });
+  const pty = rate => ({ term: 'xterm-256color', rows: 36, cols: 120, modes: { TTY_OP_ISPEED: rate, TTY_OP_OSPEED: rate } });
+  assert.equal(await exec('stty speed', pty(9600)), '9600');
+  assert.equal(await exec('stty speed', pty(115200)), '115200');
+  const normal = await exec('stty speed', { term: 'xterm-256color', rows: 36, cols: 120 });
+  assert.equal(normal, '38400', 'Omitted modes retain the disposable OpenSSH Linux default.');
+  await exec(`tmux -L ${socket} new-session -d -s baud 'sleep 30'`);
+  const paneTty = await exec(`tmux -L ${socket} display-message -p -t baud '#{pane_tty}'`);
+  assert.match(paneTty, /^\/dev\/pts\/\d+$/);
+  assert.equal(await exec(`stty -F ${paneTty} speed`, pty(9600)), normal, 'The SSH PTY speed does not change the independent tmux pane.');
+  const shared = await Promise.all([exec('stty speed; sleep 0.1; stty speed', pty(9600)), exec('stty speed; sleep 0.1; stty speed', pty(115200))]);
+  assert.deepEqual(shared.map(value => value.split(/\s+/)), [['9600', '9600'], ['115200', '115200']], 'One transport supports independent concurrent PTYs.');
+});

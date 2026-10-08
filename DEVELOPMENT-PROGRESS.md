@@ -36,4 +36,10 @@ This checkpoint document is kept in Git at the owner's explicit request so anoth
 
 Read AGENTS.md and the required architecture/security/release documents. Confirm origin and branch before editing. Use only this fresh checkout. Read .local/USER-MISSION.txt for the owner's complete request when available; all public decisions and measured results belong in this document/PR. Re-run unfinished checks, never convert an interrupted command into a pass. Source scripts derive paths from their repository root.
 
-Latest pushed checkpoint: none yet. The initial clean-environment checkpoint contains no application changes. Next: fresh architecture research and focused implementation.
+Latest pushed checkpoint: d29b6f3 (verified clean environment and baseline). The initial clean-environment checkpoint contains no application changes. Next: fresh architecture research and focused implementation.
+
+## Preimplementation research checkpoint
+
+- Added a research-only regression to the existing disposable Linux integration suite: independent PTY rates on one transport, observable stty speed and tmux independence. Runtime/UI baud changes await this evidence.
+- Existing build workflow supports Linux-only manual dispatch for this research; normal PR validation still includes Windows. Installer artifact upload is limited to main, keeping the feature-branch development installer off GitHub until review. No release/tag changes.
+- Fresh baseline reproduction found stacked native first-use trust modals outside prompt serialization, a 180-second stale login prompt after transport loss, retained exec collectors and a temporary readiness listener. Reports are sanitized in excluded .local files; fixes remain in progress and are not claimed complete.

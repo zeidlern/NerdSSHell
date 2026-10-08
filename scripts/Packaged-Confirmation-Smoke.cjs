@@ -22,7 +22,9 @@ for (let index = 2; index < process.argv.length; index++) {
   options.set(name, value);
 }
 const asar = physicalFs.realpathSync.native(options.get('--asar') || path.join(root, 'dist', 'win-unpacked', 'resources', 'app.asar'));
-const runtime = fs.realpathSync.native(options.get('--runtime') || path.join(root, 'node_modules', 'electron', 'dist', 'electron.exe'));
+// Use the locked package's supported loader; it checksum-verifies and installs
+// the development SDK on demand when a fresh CI install has no executable yet.
+const runtime = fs.realpathSync.native(options.get('--runtime') || (process.versions.electron ? process.execPath : require('electron')));
 const output = path.resolve(options.get('--output') || path.join(root, '.local', 'packaged-confirmation'));
 assert.ok(physicalFs.statSync(asar).isFile() && path.basename(asar) === 'app.asar', 'Choose an existing app.asar.');
 assert.ok(fs.statSync(runtime).isFile() && path.basename(runtime).toLowerCase() === 'electron.exe', 'Choose an Electron SDK executable.');

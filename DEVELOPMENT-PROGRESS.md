@@ -23,7 +23,7 @@ This checkpoint document is kept in Git at the owner's explicit request so anoth
 - npm run verify:package and Verify-Notices: passed real fuses, ASAR integrity, native hashes/containment/identity and project/third-party notices.
 - Baseline packaged password restart/Forget/rejection acceptance: 49 checks passed. Baseline packaged renderer/SSH/SFTP/CMD/PS5/PS7 acceptance: 165 checks passed. Real UAC/pickers/physical clipboard/notification acceptance is outside these fixtures. Baseline artifacts were moved to excluded .local/baseline-dist so later builds start without old build output.
 
-## Remaining work, in order
+## Original work sequence (completed; checkpoint history follows)
 
 1. Reinspect the clean architecture and primary protocol/library sources. Confirm observable baud behavior before deciding whether to add a control; investigate per-window and tmux limits.
 2. Investigate first-use host approval and implement secure mouse/keyboard interaction, preserving remembered-password consent and changed/revoked-key blocking.
@@ -36,7 +36,7 @@ This checkpoint document is kept in Git at the owner's explicit request so anoth
 
 Read AGENTS.md and the required architecture/security/release documents. Confirm origin and branch before editing. Use only this fresh checkout. Read .local/USER-MISSION.txt for the owner's complete request when available; all public decisions and measured results belong in this document/PR. Re-run unfinished checks, never convert an interrupted command into a pass. Source scripts derive paths from their repository root.
 
-Latest pushed checkpoint: edfea32 (tested connection/window controls, dialog approval and lifecycle implementation). The initial clean-environment checkpoint contains no application changes. Next: fresh architecture research and focused implementation.
+Latest completed runtime checkpoint: 89f9fd1 (shared interactive app confirmations with passing local Windows acceptance). The following history preserves actual scopes and superseded in-progress states. Current remaining work is the hosted Windows SDK-loader rerun, final CI/release-identity receipt and owner review; use git log and the final sections of this document when resuming.
 
 ## Preimplementation research checkpoint
 
@@ -96,3 +96,11 @@ Linux implementation acceptance at edfea32: [run37713138520](https://github.com/
 - Unsigned LOCAL development artifact: installerSHA25676ab801919922e7288712f99d887f1bac9ff0ca29625e347580eda44038f7fef; ASARSHA256b1fe67c59d3577dd264a9760cf56bfca984b34865ef26e25065a4b49d124decd. This is not the published1.0.3 release. Neither installed applications nor user profiles/clipboard/remote sessions were modified.
 
 Next: push this tested section, open the PR and complete full GitHub Linux/Windows/audit/CodeQL validation. Recheck main and immutable v1.0.3 release/tag/assets afterward. Owner version/release and manual mouse acceptance on the owner's machine remain review decisions.
+
+Draft review PR: https://github.com/zeidlern/NerdSSHell/pull/8 targets main d788429. No merge/release/version change. Final PR-triggered Linux/Windows/audit/CodeQL checks are running. Final recovery checkpoint will record exact outcomes and release identity after completion.
+
+PR89f9fd1 Linux results:886 regressions and10 real integrations passed, no failures/skips. Dependency workflow supported and complete-lock audits each report0 vulnerabilities, installed graph/build proxy checks and secret scan passed. Both CodeQL analyses and CodeQL PR check passed. Hosted Windows build/native/UI/confirmation validation remains in progress; no final pass is claimed yet.
+
+Hosted Windows89f9fd1 passed909 regressions, package verification, native71 host/password checks and production200 pane/UI/confirmation checks. The new SDK clipboard harness alone failed before launch because it bypassed Electron44.5.1's supported lazy SDK loader and assumed node_modules/electron/dist/electron.exe already existed. The fixture now resolves require('electron') (or explicit --runtime), preserving the package's pinned checksums and runtime assertion; no app/runtime/dependency change or skipped gate. Current rerun is required before final CI pass.
+
+CI fixture correction local receipt: npm run check passed; npm test passed908, failed0, skipped1 of909; the revised exact-ASAR SDK/memory-clipboard harness passed47. No shipped source or ASAR bytes changed. Main remainsd788429 and all seven immutable v1.0.3 asset identities/digests were rechecked unchanged before this push. The feature-branch CI rerun must still establish the supported loader cold-start behavior on the hosted Windows runner.

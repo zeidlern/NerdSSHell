@@ -12,7 +12,7 @@ class OutputBuffer {
   keys() { return this.states.keys(); }
   discard(key) {
     const state = this.states.get(key);
-    if (state) { clearTimeout(state.timer); state.chunks = []; state.bytes = 0; }
+    if (state) { clearTimeout(state.timer); state.timer = undefined; state.chunks = []; state.bytes = 0; }
     this.states.delete(key);
   }
   queue(key, bytes) {
@@ -25,7 +25,7 @@ class OutputBuffer {
     if (state.overflow) return;
     if (bytes.length > this.maxBytes - state.bytes) {
       state.overflow = true; state.chunks = []; state.bytes = 0;
-      clearTimeout(state.timer);
+      clearTimeout(state.timer); state.timer = undefined;
       this.emit('recovering', { key });
       // If the FIRST event overflows there is no outstanding acknowledgement.
       // Start recovery ourselves, rather than wait forever for an impossible ack.
@@ -33,13 +33,17 @@ class OutputBuffer {
       return;
     }
     state.chunks.push(bytes); state.bytes += bytes.length;
-    clearTimeout(state.timer); state.timer = setTimeout(() => this.flush(key), this.flushDelay);
+    // Keep the first chunk's deadline: continuous small output must not
+    // postpone display indefinitely. ACK already drains bytes queued in flight.
+    if (!state.inflight && state.timer === undefined) state.timer = setTimeout(() => {
+      state.timer = undefined; this.flush(key);
+    }, this.flushDelay);
     if (state.bytes > 32768) this.flush(key);
   }
   flush(key) {
     const state = this.states.get(key);
     if (!state || state.overflow || state.inflight || !state.chunks.length) return;
-    clearTimeout(state.timer);
+    clearTimeout(state.timer); state.timer = undefined;
     const data = Buffer.concat(state.chunks); state.chunks = []; state.bytes = 0;
     state.inflight = true; state.sequence++;
     this.emit('output', { key, sequence: state.sequence, epoch: state.epoch, data: data.toString('base64') });

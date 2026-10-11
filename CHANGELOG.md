@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — Bounded display flush latency (candidate)
+
+- Preserve the first pending output chunk’s flush deadline instead of restarting it on every arrival. Continuous small output can no longer wait for a quiet gap or the 32 KiB threshold before display delivery.
+- Keep renderer acknowledgements, byte limits, epoch/sequence validation and disconnect/recovery guards intact; chunks received during an outstanding frame wait for its acknowledgement.
+- Add deterministic steady-stream, delayed/stale acknowledgement, threshold and discard regression coverage. This repairs a reproduced app buffering issue; the reported EC2/tmux lag and physical mouse failure are not yet attributed or certified fixed.
+
 ## 1.2.0 — Quick Connect for network devices
 
 - Add an inline Quick Connect bar above saved connections, Enter/Connect and Ctrl+Alt+Q, reusable nonsecret login defaults, IP/DNS/IPv6 and account/port overrides.

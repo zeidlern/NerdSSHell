@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.1 — Bounded display flush latency (candidate)
+## 1.2.1 — Bounded display flush latency
 
 - Preserve the first pending output chunk’s flush deadline instead of restarting it on every arrival. Continuous small output can no longer wait for a quiet gap or the 32 KiB threshold before display delivery.
 - Keep renderer acknowledgements, byte limits, epoch/sequence validation and disconnect/recovery guards intact; chunks received during an outstanding frame wait for its acknowledgement.

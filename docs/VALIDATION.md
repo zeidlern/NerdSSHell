@@ -1,3 +1,30 @@
+# Version 1.2.1 validation
+
+The owner authorized merge, unsigned publication and local installation of [PR11](https://github.com/zeidlern/NerdSSHell/pull/11). These local results apply to the 1.2.1 output-buffer fix on Windows 11 x64 / Node 24.19.0. Electron remains 44.5.1 and dependency versions are unchanged. Protected hosted CI must finish before merge; its exact results and final source identity are recorded in the PR and release receipts.
+
+| Check | Actual local result |
+| --- | --- |
+| Fresh locked supported install | 287 packages installed; zero audit vulnerabilities; supported graph verified |
+| Source/publication metadata/branding/UI checks | Passed |
+| Focused output regression | 38 passed, zero failures/skips |
+| Full regression suite | 1,037 passed, zero failures, one existing file-symlink privilege skip of 1,038 |
+| Fresh unsigned Windows x64 NSIS/app package | Fuses, ASAR integrity, native identity/containment and notices passed |
+| Shipped project source/assets | All 84 match the tested ASAR byte-for-byte; normalized package metadata matches source |
+| Protected-executable pane/SSH/SFTP/console/confirmation acceptance | 190 checks passed against the same ASAR |
+| Protected-executable host/password and Quick Connect acceptance | 71 and 54 passed with generated loopback peers |
+| Exact-ASAR SDK confirmation and startup-upgrade fixtures | 48 and 13 passed; controlled memory clipboard/download/handoff |
+| Exact-ASAR native provider/ownership/cleanup | Passed without requesting UAC |
+| Local spelling/wrap fixture | 16 passed; isolated source helper/SDK, no external requests |
+| Independent read-only patch review | No blocking issue found |
+
+A deterministic test isolates the original display-timer starvation:32-byte chunks every 10 ms delayed the first frame to 10,240 ms. The fix preserves the first chunk's deadline and emits at 12 ms in that fixture, delivering all 35,200 bytes in order. This does not measure wall-clock Windows rendering/network delay or establish the reporter's EC2/tmux cause.
+
+Separately, exact published 1.2.0 passed 93 disposable IP-edit/automatic-reconnect/host-approval checks with password and generated RSA-key authentication. All 14 owned Win32 root-window observations stayed enabled, DOM hit testing and Chromium pointer events worked, and consent/pin guards passed. This does not verify physical Windows mouse/cursor routing; that report remains unreproduced.
+
+Both app and installer are unsigned (NotSigned). Local installer SHA256:446b31fab8a00bca32b68d2e4ca9d257392e60b21eb03e16fc7105fc91269e24; ASAR SHA256:2881a9439148c0849030edc6ecf53684cecaad43cec2075255775fd18ca1c949. Checksums identify bytes, not the publisher. Native file/UAC/color pickers, physical clipboard/notifications and every clean-user/display setup remain outside these automated fixtures.
+
+---
+
 # Version 1.0.4 validation
 
 The owner authorized merge, unsigned publication and local upgrade after review of [PR 8](https://github.com/zeidlern/NerdSSHell/pull/8). These results were executed on Windows 11 x64 / Node.js 24.19.0 against the versioned 1.0.4 source and installer. Electron remains 44.5.1. Current PR/main CI receipts are recorded in the [release notes](https://github.com/zeidlern/NerdSSHell/releases/tag/v1.0.4) once publication completes; earlier CI results below retain their original version scope.

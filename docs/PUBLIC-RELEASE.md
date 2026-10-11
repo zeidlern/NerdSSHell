@@ -35,4 +35,4 @@ Create a fresh version tag from the reviewed `main` commit. Never move or reuse 
 
 Attach only intended consumer assets: installer when approved, SHA-256 manifest, dependency inventories and third-party notices. GitHub's source archives are source downloads, rather than installers. Do not upload complete diagnostics bundles containing user paths, private configuration or terminal data.
 
-Verify the published asset names/checksums/signatures and links from README and Help. Test downloads as a visitor, publish matching [Wiki pages](wiki/Publishing-the-Wiki.md), and retain private recovery/diagnostic records outside the tracked repository. Review alerts and security reports throughout the supported release line; there is no unattended updater.
+Verify the published asset names/checksums/signatures and links from README and Help. Test downloads as a visitor, publish matching [Wiki pages](wiki/Publishing-the-Wiki.md), and retain private recovery/diagnostic records outside the tracked repository. Review alerts and security reports throughout the supported release line; upgrades require explicit user approval.

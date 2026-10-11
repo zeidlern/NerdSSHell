@@ -8,7 +8,7 @@ The prior round is complete: PR8 was squash-merged as b952306, v1.0.4 was publis
 
 The Quick Connect round is complete: PR10 was squash-merged as 1ac76796f748793c1c6d8963e402fb7955c9bcc8; immutable v1.2.0 (release 407138245) was published and the verified published installer upgraded the local app with existing data preserved. Private completion receipts remain under .local/release-1.2.0. Earlier in-progress Quick Connect checkpoints below retain their historical scope.
 
-Current task: investigate reported EC2/tmux lag and an inaccessible host-approval prompt after editing a saved IP. Branch codex/feedback-display-latency starts from official main 1ac7679. Candidate1.2.1 fixes a reproduced output-delivery delay; it does not establish the cause of the reporter's physical mouse failure or all EC2 latency. No new merge, release or local installation has occurred.
+Current task: the owner explicitly authorized merging PR11, publishing 1.2.1 and installing it locally. The display-latency fix is frozen on codex/feedback-display-latency from main 1ac7679. The release is in preparation; successful merge/publication/installation must be established by fresh receipts. The reporter's physical mouse issue and EC2-specific cause remain unresolved.
 
 ## Authoritative development environment
 
@@ -184,3 +184,11 @@ Reload coordination fix receipt: current full1031 passed,0 failed,1 baseline pri
 - Persistent input uses serialized tmux control commands and snapshots can capture substantial history. Those source mechanisms suggest RTT/history diagnostics, not an established fault or reason to weaken input ordering/host trust. Next useful tester comparison is Standard versus Persistent on the same host, stating whether quiet typing, streaming output or reconnect is slow; obtain the actual prompt screenshot and exact Help/About version for the mouse case.
 
 Private reproduction, reports and logs remain under .local/feedback-ec2, outside Git. Current installed/published1.2.0 and all older releases remain unchanged. Official1.2.1 merge/publication/installation are not claimed or performed by this diagnostic checkpoint.
+
+## Owner-authorized 1.2.1 release preparation
+
+The owner requested merge, publication and local installation on 2026-10-11. A fresh locked Windows install added 287 packages and reported 0 audit vulnerabilities; installed-graph verification passed. Fresh unsigned NSIS and app-package verification/notices passed. Installer SHA256:446b31fab8a00bca32b68d2e4ca9d257392e60b21eb03e16fc7105fc91269e24; ASAR remains 2881a9439148c0849030edc6ecf53684cecaad43cec2075255775fd18ca1c949, identical to the 190-check tested candidate. No runtime/dependency change followed those tests. Additional exact-package checks and final protected CI remain in progress.
+
+At the owner's explicit request, the installed 1.2.0 app received a normal window-close request and all its processes exited; no force termination was used. A protected private backup preserves 81 existing data files (9,276,976 bytes) and current-user registration. Private preparation/acceptance receipts are under .local/release-1.2.1. Existing tags/releases/assets remain intact; no publication or installation is claimed until verified completion.
+
+Additional current 1.2.1 package acceptance completed: protected executable Password 71 and Quick 54; exact-ASAR controlled SDK confirmation 48 and startup-upgrade 13; exact-ASAR no-UAC native provider/ownership/cleanup passed; isolated source-helper/SDK spelling 16 passed with zero external requests. All owned fixture cleanup completed. These retain distinct physical clipboard/UAC/mouse limitations and supplement the 190 checks already bound to the unchanged ASAR. Current source/full Windows checks also passed 1037, failed 0, skipped 1 of 1038 after the fresh supported installation. Repository open Dependabot/code-scanning/secret-scanning alerts were each 0; required main/tag rules are active with no main bypass. Final protected PR CI remains required.

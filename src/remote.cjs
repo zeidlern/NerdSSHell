@@ -392,21 +392,37 @@ class Remote extends EventEmitter {
     if (typeof data !== 'string' || Buffer.byteLength(data) > 1024 * 1024) throw new Error('Paste exceeds 1 MB. Upload it as a file instead.');
     const size = Buffer.byteLength(data);
     if (!size) return;
-    // Reserve a place synchronously, before any await. The transport serializes
-    // individual commands; this per-view chain serializes whole keyboard/paste events.
+    // Reserve every event synchronously, including events sharing a pending batch.
+    // Budgets cover unacknowledged data, not just the number of transport requests.
     if ((v.inputMessages || 0) >= 256 || size > 2 * 1024 * 1024 - (v.inputBytes || 0)) {
       throw new Error('Input queue is full. This input was not sent.');
     }
-    const bytes = Buffer.from(data), serial = v.inputSerial || 0, snapshotSerial = v.snapshotSerial;
+    const serial = v.inputSerial || 0, snapshotSerial = v.snapshotSerial;
     const admittedControl = this.controls.get(v.pane.sessionId);
     const current = () => this.views.get(key) === v && v.active && v.initialized &&
       (v.inputSerial || 0) === serial && v.snapshotSerial === snapshotSerial &&
       this.connected && !this.closing && this.controls.get(v.pane.sessionId) === admittedControl && !admittedControl?.closed;
     v.inputMessages = (v.inputMessages || 0) + 1; v.inputBytes = (v.inputBytes || 0) + size;
-    const send = (v.inputTail || Promise.resolve()).then(async () => {
+    // Coalesce only adjacent, not-yet-dispatched typing. Enter, other control
+    // events and multi-chunk pastes remain acknowledgement barriers: a failure
+    // must never release a later submission into a partially delivered command.
+    const batchable = size <= 512 && !/[\x00-\x1f\x7f]/.test(data);
+    let batch = v.inputBatch;
+    if (batchable && batch?.batchable && !batch.started && batch.serial === serial &&
+      batch.snapshotSerial === snapshotSerial && batch.control === admittedControl && batch.size + size <= 512) {
+      batch.parts.push(Buffer.from(data)); batch.size += size;
+      return batch.send.finally(() => { v.inputMessages--; v.inputBytes -= size; });
+    }
+    batch = { parts: [Buffer.from(data)], size, batchable, serial, snapshotSerial,
+      control: admittedControl, started: false, send: null };
+    v.inputBatch = batch;
+    const send = batch.send = (v.inputTail || Promise.resolve()).then(async () => {
+      batch.started = true;
+      if (v.inputBatch === batch) v.inputBatch = null;
       if (!current()) throw new Error('View changed while sending input. Remaining input was discarded.');
       const c = await this.control(v.pane);
       if (c !== admittedControl || !current()) throw new Error('View changed while sending input. Remaining input was discarded.');
+      const bytes = batch.parts.length === 1 ? batch.parts[0] : Buffer.concat(batch.parts, batch.size);
       // Hex input cannot become a shell expansion or a tmux command. Recheck at
       // actual transport dispatch too: another pane may be using the same channel.
       for (let i = 0; i < bytes.length; i += 512) {
@@ -422,6 +438,7 @@ class Remote extends EventEmitter {
     });
     return send.finally(() => { v.inputMessages--; v.inputBytes -= size; });
   }
+
   async resize(key, cols, rows) {
     integer(cols, 20, 1000, 'columns'); integer(rows, 5, 500, 'rows');
     const view = this.views.get(key); if (!view?.active) return;

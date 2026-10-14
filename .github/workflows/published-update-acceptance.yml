@@ -15,9 +15,10 @@ jobs:
   published-update:
     if: ${{ github.repository == 'zeidlern/NerdSSHell' && github.actor == 'zeidlern' && ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
     runs-on: windows-2025
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       NERDSSHELL_ACCEPTANCE_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+      NERDSSHELL_UPDATE_DIAGNOSTICS: '1' # Diagnostic pass only; set to 0 for final uninstrumented acceptance.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

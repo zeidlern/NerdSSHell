@@ -107,6 +107,48 @@ function controllerProtocol(directory, nonce, { fileSystem = fs } = {}) {
 function isCandidateControllerEntry(electron, argv, filename) {
   return !!electron && argv[2] === '--candidate-controller' && typeof argv[1] === 'string' && path.isAbsolute(argv[1]) && path.resolve(argv[1]).toLowerCase() === path.resolve(filename).toLowerCase();
 }
+function diagnosticBootstrap(original, output) {
+  const marker = '$result=Invoke-UpdateBroker'; assert.equal(original.split(marker).length, 2);
+  const worker = path.join(output, 'native-worker.json'), start = path.join(output, 'native-installer-start.json'), end = path.join(output, 'native-installer-exit.json'), instances = path.join(output, 'native-instances.json');
+  const observer = String.raw`Add-Type -TypeDefinition @'
+using System;using System.IO;using System.Runtime.InteropServices;using System.Threading;using System.Threading.Tasks;
+public static class NerdSSHellPublishedInstallerProbe {
+ [DllImport("kernel32.dll")]static extern IntPtr GetCurrentProcess();
+ [DllImport("kernel32.dll",SetLastError=true)]static extern bool DuplicateHandle(IntPtr owner,IntPtr source,IntPtr target,out IntPtr duplicate,uint access,bool inherit,uint options);
+ [DllImport("kernel32.dll")]static extern uint WaitForSingleObject(IntPtr handle,uint milliseconds);
+ [DllImport("kernel32.dll",SetLastError=true)]static extern bool GetExitCodeProcess(IntPtr handle,out uint code);
+ [DllImport("kernel32.dll")]static extern bool CloseHandle(IntPtr handle);
+ public static void Watch(IntPtr original,int pid,string file) {IntPtr held;if(!DuplicateHandle(GetCurrentProcess(),original,GetCurrentProcess(),out held,0,false,2))return;
+  Task.Factory.StartNew(()=>{try{uint waited=WaitForSingleObject(held,600000),code;bool known=GetExitCodeProcess(held,out code);File.WriteAllText(file,"{\"pid\":"+pid+",\"waitResult\":"+waited+",\"exitCodeKnown\":"+(known?"true":"false")+",\"exitCode\":"+code+"}");}catch{}finally{CloseHandle(held);}},CancellationToken.None,TaskCreationOptions.LongRunning,TaskScheduler.Default);
+ }
+}
+'@;
+function Write-PublishedProbe([string]$File,$Value){try{[IO.File]::WriteAllText($File,(ConvertTo-Json -InputObject $Value -Depth 5 -Compress))}catch{}}
+$script:PublishedGuardEvents=@();$script:PublishedOriginalInstanceCheck=(Get-Command Assert-NoUpdateInstances).ScriptBlock;
+function Assert-NoUpdateInstances {
+ $publishedPassed=$false;$publishedError=$null;
+ try{& $script:PublishedOriginalInstanceCheck;$publishedPassed=$true}
+ catch{$publishedError=$_.Exception.Message;throw}
+ finally{$publishedProcesses=@();foreach($publishedName in @('NerdSSHell','BetterSSH')){foreach($publishedItem in @([Diagnostics.Process]::GetProcessesByName($publishedName))){try{$publishedProcesses+=@{pid=$publishedItem.Id;name=$publishedName;start=$publishedItem.StartTime.ToUniversalTime().ToString('o');executable=$publishedItem.MainModule.FileName;hasExited=$publishedItem.HasExited}}catch{$publishedProcesses+=@{pid=$publishedItem.Id;name=$publishedName;inspectionError=$_.Exception.Message}}finally{$publishedItem.Dispose()}}};$script:PublishedGuardEvents+=@{utc=[DateTime]::UtcNow.ToString('o');passed=$publishedPassed;error=$publishedError;processes=$publishedProcesses};Write-PublishedProbe ${psquote(instances)} @($script:PublishedGuardEvents)}
+};
+$script:PublishedOriginalInstaller=(Get-Command Start-UpdateInstaller).ScriptBlock;
+function Start-UpdateInstaller([string]$Installer,[string]$Scope,[string]$Directory){
+ Write-PublishedProbe ${psquote(start)} @{phase='installer-start-request';utc=[DateTime]::UtcNow.ToString('o');scope=$Scope;installer=$Installer;directory=$Directory;arguments=('/S /'+$Scope+' /D='+$Directory)};
+ try{$publishedProcess=& $script:PublishedOriginalInstaller -Installer $Installer -Scope $Scope -Directory $Directory;$script:PublishedInstallerPid=$publishedProcess.Id;
+  [NerdSSHellPublishedInstallerProbe]::Watch($publishedProcess.Handle,$publishedProcess.Id,${psquote(end)});
+  Write-PublishedProbe ${psquote(start)} @{phase='installer-started';utc=[DateTime]::UtcNow.ToString('o');pid=$publishedProcess.Id;scope=$Scope;installer=$Installer;directory=$Directory;arguments=('/S /'+$Scope+' /D='+$Directory)};return $publishedProcess
+ }catch{Write-PublishedProbe ${psquote(start)} @{phase='installer-start-error';error=$_.Exception.Message};throw}
+};
+$script:PublishedOriginalRunner=(Get-Command Invoke-UpdateRunner).ScriptBlock;
+function Invoke-UpdateRunner([string]$Path,[string]$ManifestSha256,[int]$BrokerPid,[int]$CommandTimeoutMs=60000,[int]$ParentTimeoutMs=120000,[int]$InstallerTimeoutMs=600000){
+ $publishedResult=$null;
+ try{$publishedResult=. $script:PublishedOriginalRunner -Path $Path -ManifestSha256 $ManifestSha256 -BrokerPid $BrokerPid -CommandTimeoutMs $CommandTimeoutMs -ParentTimeoutMs $ParentTimeoutMs -InstallerTimeoutMs $InstallerTimeoutMs;return $publishedResult}
+ finally{Write-PublishedProbe ${psquote(worker)} @{instrumentationScope='Passive fixture wrapper delegates original runner/installer, preserving real registry/process checks, default timeouts, payload and args; timing may differ';utc=[DateTime]::UtcNow.ToString('o');phase=(Get-Variable phase -Scope Local -ValueOnly -ErrorAction SilentlyContinue);status=$publishedResult;go=(Get-Variable go -Scope Local -ValueOnly -ErrorAction SilentlyContinue);parentExited=(Get-Variable parentExited -Scope Local -ValueOnly -ErrorAction SilentlyContinue);installComplete=(Get-Variable installComplete -Scope Local -ValueOnly -ErrorAction SilentlyContinue);errors=@($Error|Select-Object -First 8|ForEach-Object {@{type=$_.Exception.GetType().FullName;message=$_.Exception.Message}})}}
+};`;
+  const encodedObserver = Buffer.from(observer).toString('base64');
+  const factory = `$script:PublishedOriginalWorkerFactory=(Get-Command New-UpdateWorkerBootstrap).ScriptBlock;function New-UpdateWorkerBootstrap([string]$Runner,[string]$RunnerSha256,[string]$Path,[string]$ManifestSha256,[int]$BrokerPid,[string]$Nonce){$publishedCode=& $script:PublishedOriginalWorkerFactory -Runner $Runner -RunnerSha256 $RunnerSha256 -Path $Path -ManifestSha256 $ManifestSha256 -BrokerPid $BrokerPid -Nonce $Nonce;$publishedMarker='$result=Invoke-UpdateRunner';$publishedAt=$publishedCode.IndexOf($publishedMarker,[StringComparison]::Ordinal);if($publishedAt -lt 0 -or $publishedCode.LastIndexOf($publishedMarker,[StringComparison]::Ordinal) -ne $publishedAt){throw 'Invalid observed worker entry'};$publishedObserver=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(${psquote(encodedObserver)}));return $publishedCode.Insert($publishedAt,$publishedObserver+';')};`;
+  return original.replace(marker, () => factory + marker);
+}
 function candidateController(archive, plan, output) {
   const data = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), 'nerdsshell-candidate-controller-'));
   const nonce = randomBytes(32).toString('hex'), protocol = controllerProtocol(data, nonce);
@@ -121,7 +163,7 @@ function candidateController(archive, plan, output) {
   const command = async (name, expected) => { protocol.sendCommand(name); return wait(expected, 30000); };
   return { ready: () => wait('READY'), release: () => command('GO', 'GO'), async complete() { await command('DONE', 'DONE'); await until(() => exited, 'Candidate SDK controller did not exit.'); },
     cancel() { if (!cancelTask) cancelTask = exited ? Promise.resolve() : command('CANCEL', 'CANCEL').catch(() => {}); return cancelTask; },
-    get diagnostics() { return { exited, exitCode, stderr, launchError: launchError?.message }; },
+    get diagnostics() { return { pid: child.pid, exited, exitCode, stderr, launchError: launchError?.message }; },
     detach() { child.unref(); child.stdout.unref?.(); child.stderr.unref?.(); }
   };
 }
@@ -132,7 +174,7 @@ async function runCandidateController() {
   assert.equal(path.dirname(directory).toLowerCase(), fs.realpathSync.native(os.tmpdir()).toLowerCase());
   assert.ok(path.basename(directory).startsWith('nerdsshell-candidate-controller-'));
   const plan = JSON.parse(fs.readFileSync(file, 'utf8')), { app, net } = require('electron'), protocol = controllerProtocol(directory, plan.protocolNonce);
-  let handoff, ready, failure;
+  let handoff, ready, failure, stageSampler;
   const send = value => protocol.publish(value);
   const report = { scope: 'Exact canonical candidate-ASAR modules under locked SDK with controlled current-version identity from actual installed legacy parent and pinned tagged public 1.2.2 selection. Real public HTTPS, fixed Windows helper, consent-release, old parent exit and actual NSIS; not candidate production startup.', status: 'running' };
   const persist = () => fs.writeFileSync(plan.output, JSON.stringify(report, null, 2) + '\n');
@@ -155,17 +197,29 @@ async function runCandidateController() {
     report.controlledSelection = { taggedVersion: TO.version, currentVersion: FROM.version, actualLatestFeedUnmodified: true };
     ready = await updater.downloadInstaller(transport, release, FROM.version);
     report.installerSha256 = digest(ready.installerPath); assert.equal(report.installerSha256, TO.sha256);
-    handoff = await packed('./update-handoff.cjs').armUpdate({ ...ready, executablePath: plan.executablePath, userDataDirectory: plan.userDataDirectory, parentPid: plan.parentPid });
-    report.status = 'prepared'; persist(); send({ type: 'READY', sha256: release.sha256, size: release.size, targetVersion: release.version, parentPid: plan.parentPid, candidateVersion: metadata.version, candidateAsarSha256: report.candidateAsarSha256, realLatestCheck: report.realLatestCheck });
+    report.instrumentationScope = plan.diagnostics ? 'Diagnostic-only passive bootstrap hooks delegate real runner and installer without replacing registry/process checks, payload, arguments or timeouts; timing may differ. This is not uninstrumented acceptance.' : 'Exact bundled helper bootstrap/source/arguments, with passive broker and stage observations only; no injected worker wrappers.';
+    report.stageDirectory = ready.stageDirectory;
+    stageSampler = setInterval(() => { try { report.stageObservation = { utc: new Date().toISOString(), exists: fs.existsSync(ready.stageDirectory), files: fs.existsSync(ready.stageDirectory) ? fs.readdirSync(ready.stageDirectory).slice(0, 32) : [] }; persist(); } catch {} }, 500);
+    const diagnosticOutput = path.dirname(plan.output);
+    const executeObserved = (executable, args, options) => {
+      const at = args.indexOf('-EncodedCommand'); assert.ok(at > 0 && at === args.length - 2); const original = Buffer.from(args[at + 1], 'base64').toString('utf16le');
+      const observed = plan.diagnostics ? diagnosticBootstrap(original, diagnosticOutput) : original, observedArgs = [...args]; observedArgs[at + 1] = Buffer.from(observed, 'utf16le').toString('base64');
+      report.nativeCommandLineCharacters = executable.length + observedArgs.reduce((sum, value) => sum + value.length + 3, 0); assert.ok(report.nativeCommandLineCharacters < 32767, 'Observed helper command exceeds the Windows process command limit.');
+      const child = spawn(executable, observedArgs, options); report.nativeBroker = { pid: child.pid, stderr: '' };
+      child.stderr.on('data', bytes => { report.nativeBroker.stderr += bytes.toString().slice(0, Math.max(0, 16384 - report.nativeBroker.stderr.length)); persist(); });
+      child.once('exit', code => { report.nativeBroker.exitCode = code; persist(); }); return child;
+    };
+    handoff = await packed('./update-handoff.cjs').armUpdate({ ...ready, executablePath: plan.executablePath, userDataDirectory: plan.userDataDirectory, parentPid: plan.parentPid }, plan.diagnostics ? { execute: executeObserved } : undefined);
+    report.status = 'prepared'; persist(); send({ type: 'READY', sha256: release.sha256, size: release.size, targetVersion: release.version, parentPid: plan.parentPid, candidateVersion: metadata.version, candidateAsarSha256: report.candidateAsarSha256, realLatestCheck: report.realLatestCheck, stageDirectory: ready.stageDirectory, nativeBrokerPid: report.nativeBroker?.pid, diagnosticInstrumentation: plan.diagnostics === true });
     while (true) {
-      let command; await until(() => { command = protocol.takeCommand(); return !!command; }, 'Candidate controller did not receive its next command.', 600000);
+      let command; await until(() => { command = protocol.takeCommand(); return !!command; }, 'Candidate controller did not receive its next command.', 1200000);
       if (command === 'GO') { assert.equal(report.status, 'prepared'); await handoff.release(); report.status = 'released'; persist(); send({ type: 'GO' }); }
       else if (command === 'CANCEL') { await handoff.cancel(); ready = null; report.status = 'cancelled'; persist(); send({ type: 'CANCEL' }); break; }
       else if (command === 'DONE') { assert.equal(report.status, 'released'); ready = null; report.status = 'passed'; persist(); send({ type: 'DONE' }); break; }
       else throw new Error('Unexpected candidate controller command.');
     }
   } catch (error) { failure = error; report.status = 'failed'; report.failure = error.message; persist(); send({ type: 'ERROR', message: error.message }); }
-  finally { if (failure && handoff) try { await handoff.cancel(); } catch {} if (ready) try { ready.cleanup(); } catch {} app.exit(failure ? 1 : 0); }
+  finally { clearInterval(stageSampler); if (failure && handoff) try { await handoff.cancel(); } catch {} if (ready) try { ready.cleanup(); } catch {} app.exit(failure ? 1 : 0); }
 }
 // Accessibility actions are scoped to the exact owned root PID and executable.
 // No debugging switch or altered ASAR is used, so startup eligibility is real.
@@ -208,11 +262,39 @@ async function registrations() {
       $key=$root.OpenSubKey('Software\\${GUID}',$false);if($key){try{$entries+=@{directory=$key.GetValue('InstallLocation');scope=$hive.ToString()}}finally{$key.Dispose()}}
     }finally{$root.Dispose()}};ConvertTo-Json -InputObject @($entries) -Compress`));
 }
-async function applications({ rootWindowOnly = false } = {}) {
-  return JSON.parse(await powershell(`${rootWindowOnly ? ownedWindowType : ''}$records=@();foreach($name in @('NerdSSHell','BetterSSH')){foreach($owned in @([Diagnostics.Process]::GetProcessesByName($name))){try{
-    if(${rootWindowOnly ? '$true' : '$false'}){if([NerdSSHellPublishedWindow]::Find([uint32]$owned.Id) -eq [IntPtr]::Zero){continue}};
-    $records+=@{pid=$owned.Id;executable=$owned.MainModule.FileName}
+async function applications({ rootWindowOnly = false, details = false } = {}) {
+  return JSON.parse(await powershell(`${rootWindowOnly || details ? ownedWindowType : ''}$records=@();foreach($name in @('NerdSSHell','BetterSSH')){foreach($owned in @([Diagnostics.Process]::GetProcessesByName($name))){try{
+    if(${rootWindowOnly || details ? '$true' : '$false'}){$window=[NerdSSHellPublishedWindow]::Find([uint32]$owned.Id);if(${rootWindowOnly ? '$true' : '$false'} -and $window -eq [IntPtr]::Zero){continue}};
+    $record=@{pid=$owned.Id;executable=$owned.MainModule.FileName};if(${details ? '$true' : '$false'}){$record.start=$owned.StartTime.ToUniversalTime().ToString('o');$record.ownedRootWindow=($window -ne [IntPtr]::Zero);$record.hasExited=$owned.HasExited};$records+=$record
   }finally{$owned.Dispose()}}};ConvertTo-Json -InputObject @($records) -Compress`));
+}
+async function runtimeSnapshot(executable) {
+  const values = await Promise.allSettled([executableVersion(executable), applications({ details: true }), registrations()]);
+  return { utc: new Date().toISOString(), ...Object.fromEntries(['installedProductVersion', 'nerdProcesses', 'registrations'].map((name, index) => [name, values[index].status === 'fulfilled' ? values[index].value : { inspectionError: values[index].reason.message }])) };
+}
+async function nativeProcessSnapshot(handoff, output) {
+  let installer; try { installer = JSON.parse(fs.readFileSync(path.join(output, 'native-installer-start.json'), 'utf8')); } catch {}
+  const roots = [{ pid: handoff.nativeBrokerPid, executable: path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe') }, { pid: installer?.pid, executable: installer?.installer }].filter(value => Number.isSafeInteger(value.pid) && value.pid > 0 && typeof value.executable === 'string');
+  if (!roots.length) return { utc: new Date().toISOString(), roots: [], processes: [] };
+  const code = String.raw`Add-Type -TypeDefinition @'
+using System;using System.Text;using System.Collections.Generic;using System.Runtime.InteropServices;
+public sealed class NerdSSHellPublishedDialog {public string WindowClass;public string Title;public string[] Children;}
+public static class NerdSSHellPublishedDialogs {
+ delegate bool Visitor(IntPtr window,IntPtr state);
+ [DllImport("user32.dll")]static extern bool EnumWindows(Visitor visitor,IntPtr state);
+ [DllImport("user32.dll")]static extern bool EnumChildWindows(IntPtr root,Visitor visitor,IntPtr state);
+ [DllImport("user32.dll")]static extern uint GetWindowThreadProcessId(IntPtr window,out uint process);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)]static extern int GetClassName(IntPtr window,StringBuilder name,int size);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)]static extern int GetWindowText(IntPtr window,StringBuilder text,int size);
+ static string Text(IntPtr window){var text=new StringBuilder(512);GetWindowText(window,text,text.Capacity);return text.ToString();}
+ public static NerdSSHellPublishedDialog[] Read(uint process){var result=new List<NerdSSHellPublishedDialog>();EnumWindows((window,state)=>{uint owner;GetWindowThreadProcessId(window,out owner);if(owner==process){var name=new StringBuilder(256);GetClassName(window,name,name.Capacity);var children=new List<string>();EnumChildWindows(window,(child,unused)=>{string text=Text(child);if(text.Length>0)children.Add(text);return children.Count<12;},IntPtr.Zero);result.Add(new NerdSSHellPublishedDialog{WindowClass=name.ToString(),Title=Text(window),Children=children.ToArray()});}return result.Count<4;},IntPtr.Zero);return result.ToArray();}
+}
+'@;
+    $roots=ConvertFrom-Json ${psquote(JSON.stringify(roots))};$all=@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,ExecutablePath,CreationDate,Name);$ids=New-Object 'Collections.Generic.HashSet[int]';
+    foreach($root in $roots){foreach($item in $all){if($item.ProcessId -eq $root.pid -and [string]::Equals($item.ExecutablePath,$root.executable,[StringComparison]::OrdinalIgnoreCase)){$ids.Add([int]$item.ProcessId)|Out-Null}}};
+    for($depth=0;$depth -lt 4;$depth++){foreach($item in $all){if($ids.Contains([int]$item.ParentProcessId) -and $ids.Count -lt 32){$ids.Add([int]$item.ProcessId)|Out-Null}}};
+    $records=@();foreach($item in $all){if($ids.Contains([int]$item.ProcessId)){$records+=@{pid=$item.ProcessId;parentPid=$item.ParentProcessId;name=$item.Name;executable=$item.ExecutablePath;created=$item.CreationDate.ToUniversalTime().ToString('o');windows=@([NerdSSHellPublishedDialogs]::Read([uint32]$item.ProcessId))}}};ConvertTo-Json -InputObject @($records) -Depth 6 -Compress`;
+  return { utc: new Date().toISOString(), roots, processes: JSON.parse(await powershell(code)) };
 }
 async function executableVersion(executable) {
   return powershell(`$value=[Diagnostics.FileVersionInfo]::GetVersionInfo(${psquote(executable)});if($value.ProductName -cne 'NerdSSHell'){throw 'Wrong installed product'};$value.ProductVersion`);
@@ -234,7 +316,7 @@ async function main() {
   const report = { status: 'running', scope: 'Actual published 1.2.1 startup discovers the current real latest stable release and refuses its broken legacy download safely after accessibility consent. Separate exact canonical candidate-ASAR SDK controller selects pinned tagged public 1.2.2 using a controlled current-version identity, exercises patched Chromium transport and real helper against that actual old parent, then real public NSIS/restart/data preservation. Final manual candidate NSIS bootstrap verifies the exact new installed ASAR and actual fused application. This does not claim legacy clients automatically install. Disposable GitHub-hosted Windows, synthetic data; no clipboard, remote session, UAC or physical mouse acceptance.', source: process.env.GITHUB_SHA, checks: [], from: FROM, to: TO };
   const persist = () => fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2) + '\n');
   const check = (name, value = true) => { assert.equal(value, true, name); report.checks.push(name); persist(); console.log(name); };
-  const staged = []; let app, restarted, controller;
+  const staged = []; let app, restarted, controller, handoff;
   const trackApp = () => {
     const child = spawn(executable, ['--force-renderer-accessibility', '--user-data-dir=' + data], { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     child.stderrText = ''; child.stdout.resume(); child.stderr.on('data', bytes => { child.stderrText += bytes.toString().slice(0, Math.max(0, 16384 - child.stderrText.length)); }); child.once('error', error => { child.launchError = error; }); child.once('close', () => { child.ended = true; });
@@ -286,16 +368,22 @@ async function main() {
     check('Actual legacy download refusal leaves no installer stage or installation', !fs.readdirSync(fs.realpathSync.native(os.tmpdir())).some(name => name.startsWith('nerdsshell-update-' + oldPid + '-')));
     report.legacyAutomaticInstallation = false;
     const candidateArchive = fs.realpathSync.native(path.join(process.cwd(), 'dist', 'win-unpacked', 'resources', 'app.asar'));
-    controller = candidateController(candidateArchive, { executablePath: executable, userDataDirectory: data, parentPid: oldPid, candidateVersion: canonicalVersion }, path.join(output, 'candidate-controller.json'));
-    const handoff = await controller.ready();
+    controller = candidateController(candidateArchive, { executablePath: executable, userDataDirectory: data, parentPid: oldPid, candidateVersion: canonicalVersion, diagnostics: process.env.NERDSSHELL_UPDATE_DIAGNOSTICS === '1' }, path.join(output, 'candidate-controller.json'));
+    handoff = await controller.ready();
     report.handoff = handoff;
     report.candidateRealLatestCheck = handoff.realLatestCheck;
     check('Exact candidate modules return a distinct current or available result from the real latest feed', ['current', 'available'].includes(handoff.realLatestCheck?.status) && handoff.realLatestCheck.currentVersion === canonicalVersion);
     check('Exact candidate Chromium transport downloads pinned public installer and prepares real helper for original parent', handoff.sha256 === TO.sha256 && handoff.parentPid === oldPid && handoff.candidateVersion === canonicalVersion);
+    report.instrumentationScope = handoff.diagnosticInstrumentation ? 'Diagnostic-only worker wrappers delegate original operations; process/marker/version observations are passive but timing may differ. This run is not uninstrumented frozen-helper acceptance.' : 'No injected helper wrappers; exact bundled bootstrap/source/arguments. External process/marker/version observations remain passive.';
+    report.beforeGoSnapshot = await runtimeSnapshot(executable); persist();
     await controller.release();
+    report.afterGoSnapshot = await runtimeSnapshot(executable); persist();
     check('Candidate helper release preserves original living parent until normal close', !app.ended && await executableVersion(executable) === FROM.version + '.0');
     await accessibleAction(oldPid, executable, 'close'); await until(() => app.ended, 'Actual legacy app did not exit after normal close.', 120000);
-    await until(async () => { try { return await executableVersion(executable) === TO.version + '.0'; } catch { return false; } }, 'Real installer did not finish exact 1.2.2 installation.', 180000);
+    report.afterParentExitSnapshot = await runtimeSnapshot(executable); persist();
+    await delay(20000);
+    try { report.nativeAt20Seconds = await nativeProcessSnapshot(handoff, output); } catch (inspectionError) { report.nativeAt20Seconds = { inspectionError: inspectionError.message }; } persist();
+    await until(async () => { try { return await executableVersion(executable) === TO.version + '.0'; } catch { return false; } }, 'Real installer did not finish exact 1.2.2 installation.', 630000);
     await until(async () => { restarted = (await applications({ rootWindowOnly: true })).find(value => value.pid !== oldPid && value.executable.toLowerCase() === executable.toLowerCase()); return !!restarted; }, 'Actual helper did not restart the upgraded application with its owned root window.', 120000);
     report.restartedPid = restarted.pid;
     check('Real helper waits for old app exit, installs 1.2.2 and restarts actual application', app.ended && restarted.pid !== oldPid);
@@ -331,7 +419,8 @@ async function main() {
     check('Actual fused patched application closes normally after bootstrap acceptance', (await applications()).length === 0);
     report.status = 'passed'; persist();
   } catch (error) {
-    report.status = 'failed'; report.failure = error.message; report.ownedAppStderr = app?.stderrText; report.ownedAppEnded = app?.ended === true; report.candidateControllerDiagnostics = controller?.diagnostics; persist(); throw error;
+    report.status = 'failed'; report.failure = error.message; report.ownedAppStderr = app?.stderrText; report.ownedAppEnded = app?.ended === true; report.candidateControllerDiagnostics = controller?.diagnostics;
+    report.failureSnapshot = await runtimeSnapshot(executable); if (handoff?.stageDirectory) { try { report.failureStage = { exists: fs.existsSync(handoff.stageDirectory), files: fs.existsSync(handoff.stageDirectory) ? fs.readdirSync(handoff.stageDirectory).slice(0, 32) : [] }; } catch (inspectionError) { report.failureStage = { inspectionError: inspectionError.message }; } } persist(); throw error;
   } finally {
     // The VM is discarded. Never force-kill consumer applications or recursively
     // delete an installation/user profile to make an acceptance failure disappear.
@@ -345,6 +434,6 @@ async function main() {
     report.disposableRunnerOnly = true; persist();
   }
 }
-module.exports = { hostedEnvironment, FROM, TO, updaterFromArchive, controllerProtocol, isCandidateControllerEntry };
+module.exports = { hostedEnvironment, FROM, TO, updaterFromArchive, controllerProtocol, isCandidateControllerEntry, diagnosticBootstrap };
 if (isCandidateControllerEntry(process.versions.electron, process.argv, __filename)) runCandidateController().catch(error => { console.error(error.message); require('electron').app.exit(1); });
 else if (!process.versions.electron && require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });

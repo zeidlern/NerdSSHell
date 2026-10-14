@@ -20,6 +20,8 @@ Validate the exact reviewed source and Windows artifact, including dependencies,
 
 Create a new version tag from reviewed `main`; never reuse a published tag for changed bytes. Release notes should identify changes, platform requirements, checksums, signing status and limitations. A source release, an unsigned Windows download and a publisher-signed Windows release are distinct distribution states.
 
+The owner-created stable tag triggers automated publication of the already-tested Windows build. The publisher requires the existing tag, exact-source successful main CI, matching version/lockfile/CHANGELOG and verified SHA-256 assets. It never creates or replaces protected tags. Recover an incomplete draft by dispatching **Publish validated release** on `main` with the same tag; conflicting assets fail rather than being overwritten. Published releases remain unchanged. See the [release process](https://github.com/zeidlern/NerdSSHell/blob/main/docs/PUBLIC-RELEASE.md) for validation, artifact retention and the optional owner-approved GitHub App route to unattended tag creation.
+
 Publish consumer assets only, rather than full diagnostics archives. Signed distribution requires an approved publisher identity, protected signing environment and valid timestamped signatures on the application and installer. Keep signing enrollment and any paid service under the owner's control.
 
 Synchronize the [Wiki](Publishing-the-Wiki.md), Help and README with the release. Delete only merged or deliberately superseded branches after verifying that their work is retained.

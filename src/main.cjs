@@ -21,6 +21,7 @@ const { installDesktopTools } = require('./desktop-tools.cjs');
 const { installLocalFiles } = require('./local-files.cjs');
 const { installPublicLinks } = require('./public-links.cjs');
 const { StartupUpdater, eligibleStartup } = require('./release-updater.cjs');
+const { createReleaseFetch } = require('./release-transport.cjs');
 const { armUpdate } = require('./update-handoff.cjs');
 const { installSessionCommands } = require('./session-commands.cjs');
 const { createSessionNotifications } = require('./session-notifications.cjs');
@@ -614,7 +615,7 @@ else {
     return window.loadURL(uiURL).then(() => {
       const currentVersion = app.getVersion(), debugging = !!app.commandLine?.getSwitchValue?.('remote-debugging-port');
       if (!eligibleStartup({ packaged: app.isPackaged, platform: process.platform, arch: process.arch, executablePath: process.execPath, debugging, currentVersion })) return;
-      startupUpdater = new StartupUpdater({ currentVersion, fetch: (url, options) => net.fetch(url, options),
+      startupUpdater = new StartupUpdater({ currentVersion, fetch: createReleaseFetch(net),
         offer: async (release, signal) => {
           const choice = await queuePrompt({ kind: 'confirmation', title: 'NerdSSHell update available', message: 'NerdSSHell ' + release.version + ' is available. Upgrade now?',
             detail: 'Published on the official GitHub repository. The Windows installer will be downloaded and checked against its published checksum. It may be unsigned; Windows security and permission prompts still apply. The app will restart, preserving saved connections and Persistent work. Standard/local consoles and unsaved notes receive their normal quit confirmations.',

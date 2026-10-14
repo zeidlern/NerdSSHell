@@ -1,0 +1,51 @@
+name: Publish validated release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing owner-created stable version tag to publish or verify
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: nerdsshell-release-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'zeidlern/NerdSSHell'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      # Execute the publisher from protected main, including recovery of older tags.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Verify publication guards
+        run: node --test test/release-publication.test.cjs
+      - name: Verify owner tag, accepted source and prepare consumer assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/Publish-Release.cjs prepare
+      - name: Preserve verified consumer assets before publication
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: NerdSSHell-release-files
+          path: ${{ runner.temp }}/consumer-release/*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish verified draft or verify immutable published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/Publish-Release.cjs publish

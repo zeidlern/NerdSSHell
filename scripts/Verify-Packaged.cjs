@@ -21,6 +21,9 @@ async function verify(directory) {
   assert.equal(sourceMetadata.build.nsis.guid, INSTALLER_GUID, 'Original installer upgrade identity must remain pinned');
   assert.equal(asar.extractFile(archive, 'src/application-identity.cjs').toString('utf8'), fs.readFileSync(path.join(__dirname, '..', 'src/application-identity.cjs'), 'utf8'), 'Packaged data compatibility selector differs from reviewed source');
   assert.equal(packagedMetadata.version, sourceMetadata.version, 'Packaged application version differs from source');
+  for (const name of ['src/main.cjs', 'src/release-updater.cjs', 'src/release-transport.cjs', 'src/update-handoff.cjs', 'src/update-runner.ps1']) {
+    assert.ok(asar.extractFile(archive, name).equals(fs.readFileSync(path.join(__dirname, '..', name))), `Packaged update source differs: ${name}`);
+  }
   const packagedPtyMetadata = JSON.parse(asar.extractFile(archive, path.join('node_modules', 'node-pty', 'package.json')).toString('utf8'));
   assert.equal(packagedPtyMetadata.version, sourceMetadata.dependencies['node-pty'], 'Packaged terminal provider must match the exact version supported by the owned-transport adapter');
   const fuses = await getCurrentFuseWire(exe);

@@ -46,6 +46,8 @@ The supported desktop platform is **Windows 11 x64**. Official installers bundle
 
 Starting with 1.1.0, packaged Windows launches offer a verified upgrade when a newer stable GitHub release is published. Upgrade is optional; quitting still confirms unsaved notes and nonpersistent work.
 
+Versions 1.1.0–1.2.2 discover updates but their Electron downloader refuses GitHub's installer redirect. They need one manual upgrade to the 1.2.3 repair or later once published; subsequent approved downloads use the repaired transport. Existing released installers are unchanged.
+
 Download Windows installers from [GitHub Releases](https://github.com/zeidlern/NerdSSHell/releases). Each release identifies available assets, checksums, signing status and known limitations. If a release contains only source archives, use the source-build instructions below. Check the exact asset's checksum and publisher status before installing; an unsigned build has no verified publisher identity. See [installation, upgrades and removal](docs/wiki/Installation.md).
 
 Remote connections require a reachable SSH server. Persistent sessions need **tmux 3.2 or newer**; file transfer needs the server's SFTP subsystem. Local consoles work without a server.

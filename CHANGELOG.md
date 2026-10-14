@@ -1,5 +1,10 @@
 # Changelog
 
+## Maintenance — Release publication
+
+- Require an owner-created protected stable tag before automated publication; reuse the exact validated main Windows build and verify consumer asset checksums. Retire the one-off 1.2.2 publisher and preserve published release/tag bytes on retries.
+- Document release recovery and the separate authorization needed for unattended tag creation. Application version and the published 1.2.2 installer remain unchanged; measured results are recorded in DEVELOPMENT-PROGRESS.md.
+
 ## 1.2.2 — Persistent-session typing latency
 
 - Combine adjacent queued printable input into acknowledged batches of at most 512 bytes. The first key sends without an added timer; high-latency links no longer build a separate round-trip backlog for every printable key.

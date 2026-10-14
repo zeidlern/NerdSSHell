@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2 — Persistent-session typing latency
+
+- Combine adjacent queued printable input into acknowledged batches of at most 512 bytes. The first key sends without an added timer; high-latency links no longer build a separate round-trip backlog for every printable key.
+- Keep Enter, other control events and multi-chunk pastes as separate acknowledgement barriers. Preserve event/byte limits, Unicode byte order, per-view/control/snapshot identity checks, input-lock invalidation and discard-after-failure behavior. Standard SSH is unchanged.
+- Add twelve deterministic latency/lifecycle regressions and a disposable real SSH/tmux delayed-reply test. At 150 ms simulated RTT, 80 keys typed over 790 ms finish echoing at 1,050 ms instead of 12,000 ms. This is not an EC2 or Windows end-to-end latency measurement. See [investigation and validation scope](docs/PERSISTENT-INPUT-LATENCY.md).
+
 ## 1.2.1 — Bounded display flush latency
 
 - Preserve the first pending output chunk’s flush deadline instead of restarting it on every arrival. Continuous small output can no longer wait for a quiet gap or the 32 KiB threshold before display delivery.

@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const os = require('node:os');
 const fs = require('node:fs'), path = require('node:path'), { randomBytes } = require('node:crypto');
 const asar = require('@electron/asar');
-const { hostedEnvironment, FROM, TO, controllerProtocol, isCandidateControllerEntry, updaterFromArchive } = require('../scripts/Published-Update-Smoke.cjs');
+const { hostedEnvironment, FROM, TO, controllerProtocol, isCandidateControllerEntry, updaterFromArchive, readPostResultObservation } = require('../scripts/Published-Update-Smoke.cjs');
 const permitted = {
   GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted', GITHUB_REPOSITORY: 'zeidlern/NerdSSHell',
   RUNNER_TEMP: os.tmpdir(), GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_ACTOR: 'zeidlern', GITHUB_REF: 'refs/heads/main'
@@ -92,4 +92,14 @@ test('updater module reads the replacement ASAR layout after a real same-path up
   fs.writeFileSync(path.join(input, 'src', 'release-updater.cjs'), 'module.exports={snapshotVersion:"1.2.2",newLayout:true};');
   const replacement = path.join(value.directory, 'replacement.asar'); await asar.createPackage(input, replacement); fs.renameSync(replacement, archive);
   const replaced = updaterFromArchive(archive); assert.equal(replaced.snapshotVersion, '1.2.2'); assert.equal(replaced.newLayout, true); asar.uncache(archive);
+});
+test('post-result reader waits for the bounded complete worker receipt and preserves refusal evidence', t => {
+  const value = protocolFixture(t), file = path.join(value.directory, 'native-worker-result.json');
+  assert.equal(readPostResultObservation(value.directory), null);
+  fs.writeFileSync(file, '{"status":"restored"'); assert.equal(readPostResultObservation(value.directory), null);
+  const restored = { status: 'restored', errors: [{ type: 'System.InvalidOperationException', message: 'Synthetic child instance still running' }] };
+  fs.writeFileSync(file, JSON.stringify(restored)); assert.deepEqual(readPostResultObservation(value.directory), restored);
+  fs.writeFileSync(file, JSON.stringify({ status: 'updated', errors: [] })); assert.equal(readPostResultObservation(value.directory).status, 'updated');
+  fs.writeFileSync(file, JSON.stringify({ status: 'unknown', errors: [] })); assert.throws(() => readPostResultObservation(value.directory), /Invalid native worker result/);
+  fs.writeFileSync(file, 'x'.repeat(16385)); assert.throws(() => readPostResultObservation(value.directory), /result file/);
 });

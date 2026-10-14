@@ -152,6 +152,29 @@ function Invoke-UpdateRunner([string]$Path,[string]$ManifestSha256,[int]$BrokerP
   const factory = `$script:PublishedOriginalWorkerFactory=(Get-Command New-UpdateWorkerBootstrap).ScriptBlock;function New-UpdateWorkerBootstrap([string]$Runner,[string]$RunnerSha256,[string]$Path,[string]$ManifestSha256,[int]$BrokerPid,[string]$Nonce){$publishedCode=& $script:PublishedOriginalWorkerFactory -Runner $Runner -RunnerSha256 $RunnerSha256 -Path $Path -ManifestSha256 $ManifestSha256 -BrokerPid $BrokerPid -Nonce $Nonce;$publishedMarker='$result=Invoke-UpdateRunner';$publishedAt=$publishedCode.IndexOf($publishedMarker,[StringComparison]::Ordinal);if($publishedAt -lt 0 -or $publishedCode.LastIndexOf($publishedMarker,[StringComparison]::Ordinal) -ne $publishedAt){throw 'Invalid observed worker entry'};$publishedObserver=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(${psquote(encodedObserver)}));return $publishedCode.Insert($publishedAt,$publishedObserver+';')};`;
   return original.replace(marker, () => factory + marker);
 }
+function postResultBootstrap(original, output) {
+  const marker = '$result=Invoke-UpdateBroker'; assert.equal(original.split(marker).length, 2);
+  const resultFile = path.join(output, 'native-worker-result.json');
+  const observation = `try{$publishedErrors=@($Error|Select-Object -First 8|ForEach-Object {$publishedMessage=[string]$_.Exception.Message;if($publishedMessage.Length -gt 1024){$publishedMessage=$publishedMessage.Substring(0,1024)};@{type=$_.Exception.GetType().FullName;message=$publishedMessage}});$publishedObservation=@{instrumentationScope='Post-result-only fixture observation after original Invoke-UpdateRunner returns; no runner/installer/instance wrappers or before-operation code';utc=[DateTime]::UtcNow.ToString('o');status=[string]$result;errors=$publishedErrors};$publishedJson=ConvertTo-Json -InputObject $publishedObservation -Depth 4 -Compress;if([Text.Encoding]::UTF8.GetByteCount($publishedJson) -le 16384){[IO.File]::WriteAllText(${psquote(resultFile)},$publishedJson)}}catch{};`;
+  const encoded = Buffer.from(observation).toString('base64');
+  const factory = `$script:PublishedPostResultWorkerFactory=(Get-Command New-UpdateWorkerBootstrap).ScriptBlock;function New-UpdateWorkerBootstrap([string]$Runner,[string]$RunnerSha256,[string]$Path,[string]$ManifestSha256,[int]$BrokerPid,[string]$Nonce){$publishedCode=& $script:PublishedPostResultWorkerFactory -Runner $Runner -RunnerSha256 $RunnerSha256 -Path $Path -ManifestSha256 $ManifestSha256 -BrokerPid $BrokerPid -Nonce $Nonce;$publishedCall='$result=Invoke-UpdateRunner -Path '+(Quote-UpdatePowerShell $Path)+' -ManifestSha256 '+(Quote-UpdatePowerShell $ManifestSha256)+' -BrokerPid '+$BrokerPid+';';$publishedAt=$publishedCode.IndexOf($publishedCall,[StringComparison]::Ordinal);if($publishedAt -lt 0 -or $publishedCode.LastIndexOf($publishedCall,[StringComparison]::Ordinal) -ne $publishedAt){throw 'Invalid original worker invocation'};$publishedObservation=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(${psquote(encoded)}));return $publishedCode.Insert($publishedAt+$publishedCall.Length,$publishedObservation)};`;
+  return original.replace(marker, () => factory + marker);
+}
+function readPostResultObservation(output) {
+  const file = path.join(output, 'native-worker-result.json'); let fd;
+  try {
+    const named = fs.lstatSync(file, { bigint: true });
+    assert.ok(named.isFile() && !named.isSymbolicLink() && named.nlink === 1n && named.size <= 16384n, 'Invalid native worker result file.');
+    fd = fs.openSync(file, 'r'); const held = fs.fstatSync(fd, { bigint: true });
+    assert.ok(held.isFile() && held.nlink === 1n && held.dev === named.dev && held.ino === named.ino && held.size <= 16384n, 'Native worker result identity changed.');
+    const bytes = Buffer.alloc(16385), length = fs.readSync(fd, bytes, 0, bytes.length, 0); assert.ok(length <= 16384);
+    let value; try { value = JSON.parse(bytes.subarray(0, length).toString('utf8')); } catch (error) { if (error instanceof SyntaxError) return null; throw error; }
+    assert.ok(value && ['updated', 'restored', 'refused', 'cancelled'].includes(value.status) && Array.isArray(value.errors) && value.errors.length <= 8, 'Invalid native worker result.');
+    assert.ok(value.errors.every(error => typeof error?.type === 'string' && typeof error.message === 'string' && error.message.length <= 1024), 'Invalid native worker result errors.');
+    return value;
+  } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  finally { if (fd !== undefined) fs.closeSync(fd); }
+}
 function candidateController(archive, plan, output) {
   const data = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), 'nerdsshell-candidate-controller-'));
   const nonce = randomBytes(32).toString('hex'), protocol = controllerProtocol(data, nonce);
@@ -200,20 +223,20 @@ async function runCandidateController() {
     report.controlledSelection = { taggedVersion: TO.version, currentVersion: FROM.version, actualLatestFeedUnmodified: true };
     ready = await updater.downloadInstaller(transport, release, FROM.version);
     report.installerSha256 = digest(ready.installerPath); assert.equal(report.installerSha256, TO.sha256);
-    report.instrumentationScope = plan.diagnostics ? 'Diagnostic-only passive bootstrap hooks delegate real runner and installer without replacing registry/process checks, payload, arguments or timeouts; timing may differ. This is not uninstrumented acceptance.' : 'Exact bundled helper bootstrap/source/arguments, with passive broker and stage observations only; no injected worker wrappers.';
+    report.instrumentationScope = plan.postResultDiagnostics ? 'Post-result-only worker observation after original invocation returns; no runner/installer/instance wrappers or before-operation code. This is not uninstrumented acceptance.' : plan.diagnostics ? 'Diagnostic-only passive bootstrap hooks delegate real runner and installer without replacing registry/process checks, payload, arguments or timeouts; timing may differ. This is not uninstrumented acceptance.' : 'Exact bundled helper bootstrap/source/arguments, with passive broker and stage observations only; no injected worker wrappers.';
     report.stageDirectory = ready.stageDirectory;
     stageSampler = setInterval(() => { try { report.stageObservation = { utc: new Date().toISOString(), exists: fs.existsSync(ready.stageDirectory), files: fs.existsSync(ready.stageDirectory) ? fs.readdirSync(ready.stageDirectory).slice(0, 32) : [] }; persist(); } catch {} }, 500);
     const diagnosticOutput = path.dirname(plan.output);
     const executeObserved = (executable, args, options) => {
       const at = args.indexOf('-EncodedCommand'); assert.ok(at > 0 && at === args.length - 2); const original = Buffer.from(args[at + 1], 'base64').toString('utf16le');
-      const observed = plan.diagnostics ? diagnosticBootstrap(original, diagnosticOutput) : original, observedArgs = [...args]; observedArgs[at + 1] = Buffer.from(observed, 'utf16le').toString('base64');
+      const observed = plan.postResultDiagnostics ? postResultBootstrap(original, diagnosticOutput) : plan.diagnostics ? diagnosticBootstrap(original, diagnosticOutput) : original, observedArgs = [...args]; observedArgs[at + 1] = Buffer.from(observed, 'utf16le').toString('base64');
       report.nativeCommandLineCharacters = executable.length + observedArgs.reduce((sum, value) => sum + value.length + 3, 0); assert.ok(report.nativeCommandLineCharacters < 32767, 'Observed helper command exceeds the Windows process command limit.');
       const child = spawn(executable, observedArgs, options); report.nativeBroker = { pid: child.pid, stderr: '' };
       child.stderr.on('data', bytes => { report.nativeBroker.stderr += bytes.toString().slice(0, Math.max(0, 16384 - report.nativeBroker.stderr.length)); persist(); });
       child.once('exit', code => { report.nativeBroker.exitCode = code; persist(); }); return child;
     };
     handoff = await packed('./update-handoff.cjs').armUpdate({ ...ready, executablePath: plan.executablePath, userDataDirectory: plan.userDataDirectory, parentPid: plan.parentPid }, plan.diagnostics ? { execute: executeObserved } : undefined);
-    report.status = 'prepared'; persist(); send({ type: 'READY', sha256: release.sha256, size: release.size, targetVersion: release.version, parentPid: plan.parentPid, candidateVersion: metadata.version, candidateAsarSha256: report.candidateAsarSha256, realLatestCheck: report.realLatestCheck, stageDirectory: ready.stageDirectory, nativeBrokerPid: report.nativeBroker?.pid, diagnosticInstrumentation: plan.diagnostics === true });
+    report.status = 'prepared'; persist(); send({ type: 'READY', sha256: release.sha256, size: release.size, targetVersion: release.version, parentPid: plan.parentPid, candidateVersion: metadata.version, candidateAsarSha256: report.candidateAsarSha256, realLatestCheck: report.realLatestCheck, stageDirectory: ready.stageDirectory, nativeBrokerPid: report.nativeBroker?.pid, diagnosticInstrumentation: plan.diagnostics === true, diagnosticMode: plan.postResultDiagnostics ? 'post-result' : plan.diagnostics ? 'full' : 'none' });
     while (true) {
       let command; await until(() => { command = protocol.takeCommand(); return !!command; }, 'Candidate controller did not receive its next command.', 1200000);
       if (command === 'GO') { assert.equal(report.status, 'prepared'); await handoff.release(); report.status = 'released'; persist(); send({ type: 'GO' }); }
@@ -371,22 +394,30 @@ async function main() {
     check('Actual legacy download refusal leaves no installer stage or installation', !fs.readdirSync(fs.realpathSync.native(os.tmpdir())).some(name => name.startsWith('nerdsshell-update-' + oldPid + '-')));
     report.legacyAutomaticInstallation = false;
     const candidateArchive = fs.realpathSync.native(path.join(process.cwd(), 'dist', 'win-unpacked', 'resources', 'app.asar'));
-    controller = candidateController(candidateArchive, { executablePath: executable, userDataDirectory: data, parentPid: oldPid, candidateVersion: canonicalVersion, diagnostics: process.env.NERDSSHELL_UPDATE_DIAGNOSTICS === '1' }, path.join(output, 'candidate-controller.json'));
+    const diagnosticMode = process.env.NERDSSHELL_UPDATE_DIAGNOSTICS;
+    controller = candidateController(candidateArchive, { executablePath: executable, userDataDirectory: data, parentPid: oldPid, candidateVersion: canonicalVersion, diagnostics: ['1', 'post-result'].includes(diagnosticMode), postResultDiagnostics: diagnosticMode === 'post-result' }, path.join(output, 'candidate-controller.json'));
     handoff = await controller.ready();
     report.handoff = handoff;
     report.candidateRealLatestCheck = handoff.realLatestCheck;
     check('Exact candidate modules return a distinct current or available result from the real latest feed', ['current', 'available'].includes(handoff.realLatestCheck?.status) && handoff.realLatestCheck.currentVersion === canonicalVersion);
     check('Exact candidate Chromium transport downloads pinned public installer and prepares real helper for original parent', handoff.sha256 === TO.sha256 && handoff.parentPid === oldPid && handoff.candidateVersion === canonicalVersion);
-    report.instrumentationScope = handoff.diagnosticInstrumentation ? 'Diagnostic-only worker wrappers delegate original operations; process/marker/version observations are passive but timing may differ. This run is not uninstrumented frozen-helper acceptance.' : 'No injected helper wrappers; exact bundled bootstrap/source/arguments. External process/marker/version observations remain passive.';
+    report.instrumentationScope = handoff.diagnosticMode === 'post-result' ? 'Post-result-only write after exact original worker call returns; no operation wrappers or before-operation worker observers. Not uninstrumented acceptance.' : handoff.diagnosticInstrumentation ? 'Diagnostic-only worker wrappers delegate original operations; process/marker/version observations are passive but timing may differ. This run is not uninstrumented frozen-helper acceptance.' : 'No injected helper wrappers; exact bundled bootstrap/source/arguments. External process/marker/version observations remain passive.';
     report.beforeGoSnapshot = await runtimeSnapshot(executable); persist();
     await controller.release();
     report.afterGoSnapshot = await runtimeSnapshot(executable); persist();
     check('Candidate helper release preserves original living parent until normal close', !app.ended && await executableVersion(executable) === FROM.version + '.0');
     await accessibleAction(oldPid, executable, 'close'); await until(() => app.ended, 'Actual legacy app did not exit after normal close.', 120000);
     report.afterParentExitSnapshot = await runtimeSnapshot(executable); persist();
-    await delay(20000);
+    const observeCompletedWorker = () => {
+      if (handoff.diagnosticMode !== 'post-result') return;
+      const result = readPostResultObservation(output); if (!result) return;
+      report.nativeWorkerResult = result; persist();
+      if (['restored', 'refused', 'cancelled'].includes(result.status)) throw new Error(('Original native worker completed ' + result.status + ': ' + result.errors.map(error => error.message).join(' | ')).slice(0, 2048));
+    };
+    const snapshotAt = Date.now() + 20000;
+    await until(() => { observeCompletedWorker(); return Date.now() >= snapshotAt; }, 'Passive native observation wait exceeded its bound.', 21000);
     try { report.nativeAt20Seconds = await nativeProcessSnapshot(handoff, output); } catch (inspectionError) { report.nativeAt20Seconds = { inspectionError: inspectionError.message }; } persist();
-    await until(async () => { try { return await executableVersion(executable) === TO.version + '.0'; } catch { return false; } }, 'Real installer did not finish exact 1.2.2 installation.', 630000);
+    await until(async () => { observeCompletedWorker(); try { return await executableVersion(executable) === TO.version + '.0'; } catch { return false; } }, 'Real installer did not finish exact 1.2.2 installation.', 630000);
     await until(async () => { restarted = (await applications({ rootWindowOnly: true })).find(value => value.pid !== oldPid && value.executable.toLowerCase() === executable.toLowerCase()); return !!restarted; }, 'Actual helper did not restart the upgraded application with its owned root window.', 120000);
     report.restartedPid = restarted.pid;
     check('Real helper waits for old app exit, installs 1.2.2 and restarts actual application', app.ended && restarted.pid !== oldPid);
@@ -437,6 +468,6 @@ async function main() {
     report.disposableRunnerOnly = true; persist();
   }
 }
-module.exports = { hostedEnvironment, FROM, TO, updaterFromArchive, controllerProtocol, isCandidateControllerEntry, diagnosticBootstrap };
+module.exports = { hostedEnvironment, FROM, TO, updaterFromArchive, controllerProtocol, isCandidateControllerEntry, diagnosticBootstrap, postResultBootstrap, readPostResultObservation };
 if (isCandidateControllerEntry(process.versions.electron, process.argv, __filename)) runCandidateController().catch(error => { console.error(error.message); require('electron').app.exit(1); });
 else if (!process.versions.electron && require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });

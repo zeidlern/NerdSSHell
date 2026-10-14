@@ -279,7 +279,7 @@ test('API failure retains actionable ruleset errors/request ID and redacts token
 test('client forbids ref/destructive writes and never sends token to public verification/CDN', async () => {
   const calls = [], client = createClient({ token: 'fixture-token', fetchImpl: async (url, options) => {
     calls.push({ url, options });
-    if (url.startsWith('https://api.github.com')) return new Response(null,
+    if (new URL(url).origin === 'https://api.github.com') return new Response(null,
       { status: 302, headers: { location: 'https://release-assets.githubusercontent.com/fixture?signature=safe' } });
     return new Response('asset');
   } });

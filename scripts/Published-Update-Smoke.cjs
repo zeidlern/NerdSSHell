@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
-const { createHash } = require('node:crypto');
+const { createHash, randomBytes } = require('node:crypto');
 const { Module, createRequire } = require('node:module');
 const asar = require('@electron/asar');
 const { readMetadata, publishedRelease, downloadInstaller, newer } = require('../src/release-updater.cjs');
@@ -69,31 +69,60 @@ function updaterFromArchive(archive) {
   loaded._compile(asar.extractFile(archive, 'src/release-updater.cjs').toString('utf8'), file);
   return loaded.exports;
 }
+function controllerProtocol(directory, nonce, { fileSystem = fs } = {}) {
+  assert.match(nonce, /^[a-f0-9]{64}$/);
+  const actual = fs.realpathSync.native(directory), owner = fs.lstatSync(directory, { bigint: true });
+  assert.ok(owner.isDirectory() && !owner.isSymbolicLink());
+  assert.equal(path.dirname(actual).toLowerCase(), fs.realpathSync.native(os.tmpdir()).toLowerCase());
+  assert.ok(path.basename(actual).startsWith('nerdsshell-candidate-controller-'));
+  const commands = new Set(['GO', 'CANCEL', 'DONE']), states = new Set(['READY', 'GO', 'CANCEL', 'DONE', 'ERROR']), consumed = new Set(); let sequence = 0;
+  const checkDirectory = () => { const now = fs.lstatSync(actual, { bigint: true }); assert.ok(now.isDirectory() && !now.isSymbolicLink() && now.dev === owner.dev && now.ino === owner.ino, 'Controller directory identity changed.'); };
+  const read = (file, limit, replaceable = false) => {
+    for (let attempt = 0; attempt < (replaceable ? 3 : 1); attempt++) {
+      checkDirectory(); let fd;
+      try { const named = fileSystem.lstatSync(file, { bigint: true }); assert.ok(named.isFile() && !named.isSymbolicLink() && named.nlink === 1n && named.size <= BigInt(limit), 'Invalid controller marker.');
+        fd = fileSystem.openSync(file, 'r'); const held = fileSystem.fstatSync(fd, { bigint: true });
+        if (replaceable && (held.dev !== named.dev || held.ino !== named.ino || held.nlink === 0n)) continue;
+        assert.ok(held.isFile() && held.nlink === 1n && held.size <= BigInt(limit) && held.dev === named.dev && held.ino === named.ino, 'Controller marker identity changed.');
+        const bytes = Buffer.alloc(limit + 1), length = fileSystem.readSync(fd, bytes, 0, bytes.length, 0); assert.ok(length <= limit); return bytes.subarray(0, length).toString('utf8');
+      } catch (error) { if (error.code === 'ENOENT') return null; throw error; } finally { if (fd !== undefined) fileSystem.closeSync(fd); }
+    }
+    throw new Error('Controller response changed repeatedly during reading.');
+  };
+  return {
+    sendCommand(kind) {
+      assert.ok(commands.has(kind), 'Invalid controller command.'); checkDirectory();
+      const final = path.join(actual, 'controller-' + kind.toLowerCase());
+      const refuseDuplicate = () => { try { fs.lstatSync(final); } catch (error) { if (error.code === 'ENOENT') return; throw error; } const error = new Error('EEXIST: Controller command was already published.'); error.code = 'EEXIST'; throw error; };
+      refuseDuplicate(); const temporary = final + '-pending-' + randomBytes(8).toString('hex'); let held, fd;
+      try { fd = fs.openSync(temporary, 'wx', 0o600); held = fs.fstatSync(fd, { bigint: true }); fs.writeFileSync(fd, kind + ' ' + nonce + '\n'); fs.fsyncSync(fd); fs.closeSync(fd); fd = undefined;
+        checkDirectory(); refuseDuplicate(); fs.renameSync(temporary, final); held = null;
+      } finally { if (fd !== undefined) fs.closeSync(fd); if (held) { try { checkDirectory(); const now = fs.lstatSync(temporary, { bigint: true }); if (now.isFile() && !now.isSymbolicLink() && now.nlink === 1n && now.dev === held.dev && now.ino === held.ino) fs.unlinkSync(temporary); } catch {} } }
+    },
+    takeCommand() { for (const kind of ['CANCEL', 'GO', 'DONE']) { if (consumed.has(kind)) continue; const text = read(path.join(actual, 'controller-' + kind.toLowerCase()), 128); if (text === null) continue; assert.equal(text, kind + ' ' + nonce + '\n', 'Invalid controller command nonce.'); consumed.add(kind); return kind; } return null; },
+    publish(value) { assert.ok(value && states.has(value.type), 'Invalid controller response.'); checkDirectory(); const bytes = JSON.stringify({ ...value, sequence: ++sequence, nonce }); assert.ok(Buffer.byteLength(bytes) <= 32768); const temporary = path.join(actual, 'controller-response-' + sequence + '.tmp'); fs.writeFileSync(temporary, bytes, { flag: 'wx', mode: 0o600 }); fs.renameSync(temporary, path.join(actual, 'controller-response.json')); },
+    response() { const text = read(path.join(actual, 'controller-response.json'), 32768, true); if (text === null) return null; let value; try { value = JSON.parse(text); } catch { return null; } assert.ok(value && states.has(value.type) && Number.isSafeInteger(value.sequence) && value.sequence > 0 && value.nonce === nonce, 'Invalid controller response nonce or identity.'); return value; }
+  };
+}
+function isCandidateControllerEntry(electron, argv, filename) {
+  return !!electron && argv[2] === '--candidate-controller' && typeof argv[1] === 'string' && path.isAbsolute(argv[1]) && path.resolve(argv[1]).toLowerCase() === path.resolve(filename).toLowerCase();
+}
 function candidateController(archive, plan, output) {
   const data = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), 'nerdsshell-candidate-controller-'));
-  const file = path.join(data, 'controller-plan.json'); fs.writeFileSync(file, JSON.stringify({ archive, ...plan, output }));
-  const child = spawn(require('electron'), [__filename, '--candidate-controller', file, '--user-data-dir=' + data], { shell: false, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
-  let buffer = '', pending, timer, closed = false, current;
-  const fail = error => { if (pending) { clearTimeout(timer); const item = pending; pending = null; item.reject(error); } };
-  child.stdout.on('data', bytes => {
-    buffer += bytes.toString(); if (buffer.length > 32768) return fail(new Error('Candidate controller protocol exceeded its bound.'));
-    while (buffer.includes('\n')) { const at = buffer.indexOf('\n'), line = buffer.slice(0, at).trim(); buffer = buffer.slice(at + 1); if (!line.startsWith('FIXTURE ')) continue;
-      try { current = JSON.parse(line.slice(8)); if (current.type === 'ERROR') fail(new Error(current.message));
-        else if (pending && current.type === pending.expected) { clearTimeout(timer); const item = pending; pending = null; item.resolve(current); }
-      } catch (error) { fail(error); }
-    }
-  });
-  child.stderr.resume(); child.stdin.on('error', fail); child.once('error', fail); child.once('close', code => { closed = true; fail(new Error('Candidate controller exited before its expected response (' + code + ').')); });
-  const wait = (expected, milliseconds = 600000) => new Promise((resolve, reject) => {
-    if (closed) return reject(new Error('Candidate controller is unavailable.')); if (pending) return reject(new Error('Candidate controller already has a pending command.'));
-    if (current?.type === 'ERROR') return reject(new Error(current.message));
-    if (current?.type === expected) return resolve(current);
-    pending = { expected, resolve, reject }; timer = setTimeout(() => fail(new Error('Candidate controller timed out awaiting ' + expected + '.')), milliseconds);
-  });
-  const command = async (name, expected) => { const result = wait(expected, 30000); child.stdin.write(name + '\n'); return result; };
-  return { ready: () => wait('READY'), release: () => command('GO', 'GO'), async complete() { await command('DONE', 'DONE'); await until(() => closed, 'Candidate SDK controller did not exit.'); },
-    async cancel() { if (!closed) { try { await command('CANCEL', 'CANCEL'); } catch {} } },
-    detach() { clearTimeout(timer); child.unref(); child.stdin.unref?.(); child.stdout.unref?.(); child.stderr.unref?.(); }
+  const nonce = randomBytes(32).toString('hex'), protocol = controllerProtocol(data, nonce);
+  const file = path.join(data, 'controller-plan.json'); fs.writeFileSync(file, JSON.stringify({ archive, ...plan, output, protocolNonce: nonce }), { flag: 'wx', mode: 0o600 });
+  const child = spawn(require('electron'), [__filename, '--candidate-controller', file, '--user-data-dir=' + data], { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  let exited = false, exitCode, stderr = '', launchError, cancelTask;
+  child.stdout.resume(); child.stderr.on('data', bytes => { stderr += bytes.toString().slice(0, Math.max(0, 16384 - stderr.length)); });
+  child.once('error', error => { launchError = error; }); child.once('exit', code => { exited = true; exitCode = code; }); child.once('close', code => { exited = true; exitCode = code; });
+  const wait = async (expected, milliseconds = 600000) => {
+    let value; await until(() => { value = protocol.response(); if (value?.type === 'ERROR') throw new Error(value.message); if (value?.type === expected) return true; if (launchError) throw launchError; if (exited) throw new Error('Candidate controller exited before ' + expected + ' (' + exitCode + '): ' + stderr.slice(0, 2048)); return false; }, 'Candidate controller timed out awaiting ' + expected + '.', milliseconds); return value;
+  };
+  const command = async (name, expected) => { protocol.sendCommand(name); return wait(expected, 30000); };
+  return { ready: () => wait('READY'), release: () => command('GO', 'GO'), async complete() { await command('DONE', 'DONE'); await until(() => exited, 'Candidate SDK controller did not exit.'); },
+    cancel() { if (!cancelTask) cancelTask = exited ? Promise.resolve() : command('CANCEL', 'CANCEL').catch(() => {}); return cancelTask; },
+    get diagnostics() { return { exited, exitCode, stderr, launchError: launchError?.message }; },
+    detach() { child.unref(); child.stdout.unref?.(); child.stderr.unref?.(); }
   };
 }
 async function runCandidateController() {
@@ -102,9 +131,9 @@ async function runCandidateController() {
   const directory = fs.realpathSync.native(path.dirname(file));
   assert.equal(path.dirname(directory).toLowerCase(), fs.realpathSync.native(os.tmpdir()).toLowerCase());
   assert.ok(path.basename(directory).startsWith('nerdsshell-candidate-controller-'));
-  const plan = JSON.parse(fs.readFileSync(file, 'utf8')), { app, net } = require('electron');
+  const plan = JSON.parse(fs.readFileSync(file, 'utf8')), { app, net } = require('electron'), protocol = controllerProtocol(directory, plan.protocolNonce);
   let handoff, ready, failure;
-  const send = value => process.stdout.write('FIXTURE ' + JSON.stringify(value) + '\n');
+  const send = value => protocol.publish(value);
   const report = { scope: 'Exact canonical candidate-ASAR modules under locked SDK with controlled current-version identity from actual installed legacy parent and pinned tagged public 1.2.2 selection. Real public HTTPS, fixed Windows helper, consent-release, old parent exit and actual NSIS; not candidate production startup.', status: 'running' };
   const persist = () => fs.writeFileSync(plan.output, JSON.stringify(report, null, 2) + '\n');
   try {
@@ -128,14 +157,13 @@ async function runCandidateController() {
     report.installerSha256 = digest(ready.installerPath); assert.equal(report.installerSha256, TO.sha256);
     handoff = await packed('./update-handoff.cjs').armUpdate({ ...ready, executablePath: plan.executablePath, userDataDirectory: plan.userDataDirectory, parentPid: plan.parentPid });
     report.status = 'prepared'; persist(); send({ type: 'READY', sha256: release.sha256, size: release.size, targetVersion: release.version, parentPid: plan.parentPid, candidateVersion: metadata.version, candidateAsarSha256: report.candidateAsarSha256, realLatestCheck: report.realLatestCheck });
-    const readline = require('node:readline').createInterface({ input: process.stdin });
-    for await (const command of readline) {
+    while (true) {
+      let command; await until(() => { command = protocol.takeCommand(); return !!command; }, 'Candidate controller did not receive its next command.', 600000);
       if (command === 'GO') { assert.equal(report.status, 'prepared'); await handoff.release(); report.status = 'released'; persist(); send({ type: 'GO' }); }
       else if (command === 'CANCEL') { await handoff.cancel(); ready = null; report.status = 'cancelled'; persist(); send({ type: 'CANCEL' }); break; }
       else if (command === 'DONE') { assert.equal(report.status, 'released'); ready = null; report.status = 'passed'; persist(); send({ type: 'DONE' }); break; }
       else throw new Error('Unexpected candidate controller command.');
     }
-    readline.close();
   } catch (error) { failure = error; report.status = 'failed'; report.failure = error.message; persist(); send({ type: 'ERROR', message: error.message }); }
   finally { if (failure && handoff) try { await handoff.cancel(); } catch {} if (ready) try { ready.cleanup(); } catch {} app.exit(failure ? 1 : 0); }
 }
@@ -303,7 +331,7 @@ async function main() {
     check('Actual fused patched application closes normally after bootstrap acceptance', (await applications()).length === 0);
     report.status = 'passed'; persist();
   } catch (error) {
-    report.status = 'failed'; report.failure = error.message; report.ownedAppStderr = app?.stderrText; report.ownedAppEnded = app?.ended === true; persist(); throw error;
+    report.status = 'failed'; report.failure = error.message; report.ownedAppStderr = app?.stderrText; report.ownedAppEnded = app?.ended === true; report.candidateControllerDiagnostics = controller?.diagnostics; persist(); throw error;
   } finally {
     // The VM is discarded. Never force-kill consumer applications or recursively
     // delete an installation/user profile to make an acceptance failure disappear.
@@ -317,8 +345,6 @@ async function main() {
     report.disposableRunnerOnly = true; persist();
   }
 }
-module.exports = { hostedEnvironment, FROM, TO, updaterFromArchive };
-if (require.main === module) {
-  if (process.versions.electron) runCandidateController().catch(error => { console.error(error.message); require('electron').app.exit(1); });
-  else main().catch(error => { console.error(error.message); process.exitCode = 1; });
-}
+module.exports = { hostedEnvironment, FROM, TO, updaterFromArchive, controllerProtocol, isCandidateControllerEntry };
+if (isCandidateControllerEntry(process.versions.electron, process.argv, __filename)) runCandidateController().catch(error => { console.error(error.message); require('electron').app.exit(1); });
+else if (!process.versions.electron && require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });

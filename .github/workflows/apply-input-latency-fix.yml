@@ -1,0 +1,36 @@
+name: Apply reviewed persistent input fix
+on:
+  push:
+    branches: [fix/persistent-input-latency-1.2.2]
+    paths:
+      - .github/patches/persistent-input-latency-1.2.2.patch.gz
+      - .github/workflows/apply-input-latency-fix.yml
+permissions:
+  contents: read
+jobs:
+  apply:
+    if: github.repository == 'zeidlern/NerdSSHell' && github.ref == 'refs/heads/fix/persistent-input-latency-1.2.2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: true
+      - name: Verify and apply reviewed patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '952038a9ea274bac913fd4459d64c1b7d715d12cd36f4661b08109cb443222b4  .github/patches/persistent-input-latency-1.2.2.patch.gz' | sha256sum -c -
+          gzip -dc .github/patches/persistent-input-latency-1.2.2.patch.gz > "$RUNNER_TEMP/input-fix.patch"
+          printf '7c046d08e2876c989b729e810ed548afbfc0fd3dbd3e3c582b5f4de6b9e799e5  %s\n' "$RUNNER_TEMP/input-fix.patch" | sha256sum -c -
+          git apply --check "$RUNNER_TEMP/input-fix.patch"
+          git apply "$RUNNER_TEMP/input-fix.patch"
+          git diff --check
+          git add -- CHANGELOG.md docs/ARCHITECTURE.md docs/PERSISTENT-INPUT-LATENCY.md package-lock.json package.json src/remote.cjs test/input-latency.test.cjs test/input-order.integration.test.cjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Fix persistent input round-trip backlog in 1.2.2"
+          git push origin HEAD:refs/heads/fix/persistent-input-latency-1.2.2

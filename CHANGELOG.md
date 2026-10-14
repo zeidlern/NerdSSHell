@@ -9,7 +9,7 @@
 ## Maintenance — Release publication
 
 - Require an owner-created protected stable tag before automated publication; reuse the exact validated main Windows build and verify consumer asset checksums. Retire the one-off 1.2.2 publisher and preserve published release/tag bytes on retries.
-- Add disposable Windows acceptance for published upgrades and document release recovery and the separate authorization needed for unattended tag creation. Application version and the published 1.2.2 installer remain unchanged; measured results are recorded in DEVELOPMENT-PROGRESS.md.
+- Add disposable Windows acceptance for published upgrades and document release recovery and the separate authorization needed for unattended tag creation. Publication tooling preserves the already published 1.2.2 installer and tag; measured results are recorded in DEVELOPMENT-PROGRESS.md.
 
 ## 1.2.2 — Persistent-session typing latency
 

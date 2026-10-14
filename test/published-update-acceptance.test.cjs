@@ -3,7 +3,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const os = require('node:os');
 const fs = require('node:fs'), path = require('node:path'), { randomBytes } = require('node:crypto');
-const { hostedEnvironment, FROM, TO, controllerProtocol, isCandidateControllerEntry } = require('../scripts/Published-Update-Smoke.cjs');
+const asar = require('@electron/asar');
+const { hostedEnvironment, FROM, TO, controllerProtocol, isCandidateControllerEntry, updaterFromArchive } = require('../scripts/Published-Update-Smoke.cjs');
 const permitted = {
   GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted', GITHUB_REPOSITORY: 'zeidlern/NerdSSHell',
   RUNNER_TEMP: os.tmpdir(), GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_ACTOR: 'zeidlern', GITHUB_REF: 'refs/heads/main'
@@ -81,4 +82,14 @@ test('immutable command replacement still fails even with identical nonce bytes'
     return fs.openSync(file, ...args);
   } } });
   assert.throws(() => reader.takeCommand(), /identity changed/);
+});
+test('updater module reads the replacement ASAR layout after a real same-path upgrade', async t => {
+  const value = protocolFixture(t), input = path.join(value.directory, 'input'), archive = path.join(value.directory, 'app.asar');
+  fs.mkdirSync(path.join(input, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(input, 'src', 'release-updater.cjs'), 'module.exports={snapshotVersion:"1.2.1"};');
+  await asar.createPackage(input, archive); assert.equal(updaterFromArchive(archive).snapshotVersion, '1.2.1');
+  fs.writeFileSync(path.join(input, 'a-new-prefix.txt'), 'NEW ARCHIVE LAYOUT\n'.repeat(500));
+  fs.writeFileSync(path.join(input, 'src', 'release-updater.cjs'), 'module.exports={snapshotVersion:"1.2.2",newLayout:true};');
+  const replacement = path.join(value.directory, 'replacement.asar'); await asar.createPackage(input, replacement); fs.renameSync(replacement, archive);
+  const replaced = updaterFromArchive(archive); assert.equal(replaced.snapshotVersion, '1.2.2'); assert.equal(replaced.newLayout, true); asar.uncache(archive);
 });

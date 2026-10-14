@@ -64,6 +64,9 @@ public static class NerdSSHellPublishedWindow {
 }
 '@;`;
 function updaterFromArchive(archive) {
+  // Real NSIS upgrades replace this same pathname with a different ASAR layout.
+  // The standalone ASAR reader caches headers by path, so discard the old map.
+  asar.uncache(archive);
   const file = path.join(archive, 'src', 'release-updater.cjs');
   const loaded = new Module(file, module); loaded.filename = file; loaded.paths = module.paths;
   loaded._compile(asar.extractFile(archive, 'src/release-updater.cjs').toString('utf8'), file);
@@ -292,7 +295,7 @@ public static class NerdSSHellPublishedDialogs {
 '@;
     $roots=ConvertFrom-Json ${psquote(JSON.stringify(roots))};$all=@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,ExecutablePath,CreationDate,Name);$ids=New-Object 'Collections.Generic.HashSet[int]';
     foreach($root in $roots){foreach($item in $all){if($item.ProcessId -eq $root.pid -and [string]::Equals($item.ExecutablePath,$root.executable,[StringComparison]::OrdinalIgnoreCase)){$ids.Add([int]$item.ProcessId)|Out-Null}}};
-    for($depth=0;$depth -lt 4;$depth++){foreach($item in $all){if($ids.Contains([int]$item.ParentProcessId) -and $ids.Count -lt 32){$ids.Add([int]$item.ProcessId)|Out-Null}}};
+    for($depth=0;$depth -lt 4;$depth++){$prior=@($ids);foreach($item in $all){if($prior -contains [int]$item.ParentProcessId -and $ids.Count -lt 32){$ids.Add([int]$item.ProcessId)|Out-Null}}};
     $records=@();foreach($item in $all){if($ids.Contains([int]$item.ProcessId)){$records+=@{pid=$item.ProcessId;parentPid=$item.ParentProcessId;name=$item.Name;executable=$item.ExecutablePath;created=$item.CreationDate.ToUniversalTime().ToString('o');windows=@([NerdSSHellPublishedDialogs]::Read([uint32]$item.ProcessId))}}};ConvertTo-Json -InputObject @($records) -Depth 6 -Compress`;
   return { utc: new Date().toISOString(), roots, processes: JSON.parse(await powershell(code)) };
 }

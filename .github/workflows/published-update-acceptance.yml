@@ -26,10 +26,14 @@ jobs:
         with:
           node-version: '22'
           package-manager-cache: false
-      - run: npm ci --ignore-scripts --omit=optional
+      - run: npm ci --omit=optional
       - name: Check workstation, runner and fork refusal before installation
         run: node --test test/published-update-acceptance.test.cjs
-      - name: Real immutable public 1.2.1 to 1.2.2 upgrade in this disposable VM
+      - run: npm run check
+      - run: node scripts/Generate-SupplyChain.cjs
+      - run: npm run dist
+      - run: npm run verify:package
+      - name: Legacy refusal and patched candidate transport with actual public NSIS in this disposable VM
         run: node scripts/Published-Update-Smoke.cjs
       - name: Preserve bounded acceptance evidence
         if: ${{ always() }}
@@ -38,5 +42,5 @@ jobs:
           name: NerdSSHell-published-update-acceptance
           retention-days: 14
           include-hidden-files: true
-          path: .local/published-update-acceptance/results.json
+          path: .local/published-update-acceptance/*.json
           if-no-files-found: warn

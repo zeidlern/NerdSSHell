@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3 — Verified updater redirects
+
+- Handle GitHub installer redirects through Chromium's explicit request redirect events. Electron's fetch wrapper canceled these manual redirects in older releases after successful discovery, preventing the approved installer download.
+- Keep every redirect subject to the existing official GitHub/CDN allowlist, credential refusal, bounded streams, declared length and SHA-256 checks. Preserve user consent, normal work/notes quit confirmations and the existing parent-exit installer handoff.
+- Versions 1.1.0 through 1.2.2 need one manual installation of this repair before automatic downloads can work. Published installers and tags retain their original bytes. Actual native/package and real GitHub validation is recorded in DEVELOPMENT-PROGRESS.md.
+
 ## Maintenance — Release publication
 
 - Require an owner-created protected stable tag before automated publication; reuse the exact validated main Windows build and verify consumer asset checksums. Retire the one-off 1.2.2 publisher and preserve published release/tag bytes on retries.

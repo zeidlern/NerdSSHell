@@ -37,6 +37,8 @@ Do not expose a home server's SSH port to the internet just to use NerdSSHell; a
 
 **Unsigned builds:** Windows may report an unknown publisher or apply reputation-based blocking. Check the release's documented provenance and signing status through your normal security process. Do not disable Defender, SmartScreen, signature checks or organizational controls. Stop on security detection or a checksum mismatch.
 
+**Updater repair:** versions 1.1.0–1.2.2 can discover a newer release but cannot download its installer through Electron's manual-redirect fetch wrapper. Install the 1.2.3 repair or later manually through Route A once available. This one-time bootstrap preserves the normal installation directory and data; later approved upgrades use the repaired Chromium transport. Published older installers retain their original bytes.
+
 ## Route B: build from reviewed source
 
 Open a normal Windows PowerShell terminal in a directory where you keep source projects. The public repository can be cloned without credentials. If a tool requests authentication for another operation, use normal Git/Git Credential Manager prompts; never embed tokens in clone URLs or AI chat.

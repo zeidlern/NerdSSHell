@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { REPO, WORKFLOWS, versionFromTag, compareVersions, validateSource, validateRun, selectRuns,
-  validateJobs, validateArtifact, validateAssets, validateInventory, createClient, createPublisher } = require('../scripts/Publish-Release.cjs');
+  validateJobs, validateArtifact, validateAssets, validateInventory, createClient, findRelease, createPublisher } = require('../scripts/Publish-Release.cjs');
 const base = `/repos/${REPO}`, sha = '1'.repeat(40), mainSha = '2'.repeat(40), version = '2.3.4', tag = 'v' + version;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const lock = { name: 'nerdsshell', version, packages: {
@@ -57,7 +57,7 @@ function fixture(t, { published = false, draft = false, newer = false } = {}) {
     release: published || draft ? { id: 44, tag_name: tag, target_commitish: sha, draft: !published, prerelease: false,
       html_url: `https://github.com/${REPO}/releases/tag/${tag}`, assets: published ? structuredClone(expected) : [] } : null,
     latest: { id: newer ? 99 : published ? 44 : 33, tag_name: newer ? 'v9.0.0' : published ? tag : 'v2.3.3', draft: false, prerelease: false },
-    calls: [], uploads: [], downloads: 0, payloads, files, expected, downloadedChange: () => {}, afterRequest: () => {} };
+    calls: [], uploads: [], downloads: 0, extraReleases: [], payloads, files, expected, downloadedChange: () => {}, afterRequest: () => {} };
   async function request(endpoint, options = {}) {
     state.calls.push({ endpoint, ...options }); let result;
     if (endpoint === `${base}/git/ref/tags/${tag}`) result = state.tagRef;
@@ -65,7 +65,7 @@ function fixture(t, { published = false, draft = false, newer = false } = {}) {
     else if (endpoint === `${base}/git/ref/heads/main`) result = { object: { sha: mainSha } };
     else if (endpoint === `${base}/compare/${sha}...${mainSha}`) result = state.lineage;
     else if (/\/actions\/runs\/\d+$/.test(endpoint)) result = state.runs.find(item => endpoint.endsWith('/' + item.id));
-    else if (endpoint === `${base}/releases/tags/${tag}`) result = state.release;
+    else if (endpoint === `${base}/releases/tags/${tag}`) result = state.release?.draft ? null : state.release;
     else if (endpoint === `${base}/releases/latest`) result = state.latest;
     else if (options.binary) {
       const item = state.release.assets.find(item => endpoint.endsWith('/' + item.id));
@@ -88,6 +88,10 @@ function fixture(t, { published = false, draft = false, newer = false } = {}) {
   }
   async function list(endpoint, key, options = {}) {
     state.calls.push({ endpoint, key, ...options });
+    if (endpoint === base + '/releases') {
+      assert.ok(!options.public, 'Public verification must never enumerate private drafts');
+      return structuredClone([...(state.release ? [state.release] : []), ...state.extraReleases]);
+    }
     if (key === 'workflow_runs') return structuredClone(state.runs.filter(item => endpoint.includes(item.path.split('/').at(-1))));
     if (key === 'jobs') {
       const selected = state.runs.find(item => endpoint.includes(`/runs/${item.id}/`));
@@ -209,11 +213,61 @@ test('new publication copies accepted installer, uploads seven assets, publishes
   assert.equal(creates.length, 1); assert.equal(creates[0].body.draft, true); assert.equal(creates[0].body.make_latest, 'false');
   assert.ok(state.calls.every(item => !/\/git\//.test(item.endpoint) || !item.method));
   assert.ok(state.calls.some(item => item.public && item.endpoint.endsWith('/releases/latest')));
+  assert.ok(state.calls.some(item => item.endpoint === base + '/releases' && !item.method), 'Newly created draft is discovered through the collection');
 });
 test('draft retry preserves identical existing asset IDs and uploads only missing files', async t => {
   const { publisher, state } = fixture(t, { draft: true }); state.release.assets = [structuredClone(state.expected[0])];
   const priorId = state.release.assets[0].id; await publisher.prepare(); await publisher.publish();
   assert.equal(state.uploads.length, 6); assert.equal(state.release.assets[0].id, priorId); assert.equal(state.release.draft, false);
+  assert.equal(state.release.id, 44); assert.ok(!state.calls.some(item => item.method === 'POST' && !item.upload), 'Existing draft is never recreated');
+});
+test('authenticated fallback rejects duplicate same-tag drafts before build or release mutation', async t => {
+  const { publisher, state } = fixture(t, { draft: true });
+  state.extraReleases = [{ ...structuredClone(state.release), id: 45 }];
+  await assert.rejects(publisher.prepare(), /Ambiguous releases/); assert.equal(state.downloads, 0);
+  assert.ok(state.calls.every(item => !item.method)); assert.equal(state.release.id, 44);
+});
+test('discovered draft with conflicting or invalid target is refused before artifact download or uploads', async t => {
+  for (const target of [mainSha, '', null, {}, 'main\n']) {
+    const { publisher, state } = fixture(t, { draft: true }); state.release.target_commitish = target;
+    await assert.rejects(publisher.prepare(), /Release source differs|Invalid release target/);
+    assert.equal(state.downloads, 0); assert.equal(state.uploads.length, 0); assert.equal(state.release.draft, true);
+    assert.ok(state.calls.every(item => !item.method));
+  }
+});
+test('draft lookup uses authenticated paginated collection when published tag endpoint returns404', async () => {
+  const calls = [], draft = { id: 44, tag_name: tag, draft: true, prerelease: false, target_commitish: sha };
+  const client = createClient({ token: 'fixture-token', fetchImpl: async (url, options) => {
+    calls.push({ url: new URL(url), options });
+    if (new URL(url).pathname.endsWith('/releases/tags/' + tag)) return new Response('{}', { status: 404 });
+    assert.equal(new URL(url).pathname, base + '/releases');
+    assert.equal(new URL(url).searchParams.get('per_page'), '100');
+    const page = new URL(url).searchParams.get('page');
+    const releases = page === '1' ? Array.from({ length: 100 }, (_, index) => ({ id: index + 100, tag_name: 'v0.0.' + index })) : [draft];
+    return new Response(JSON.stringify(releases));
+  } });
+  assert.deepEqual(await findRelease(client, tag), draft); assert.equal(calls.length, 3);
+  assert.deepEqual(calls.slice(1).map(item => item.url.searchParams.get('page')), ['1', '2']);
+  assert.ok(calls.every(item => item.options.headers.Authorization === 'Bearer fixture-token' && item.options.method === 'GET'));
+  calls.length = 0;
+  assert.equal(await findRelease(client, tag, true), null); assert.equal(calls.length, 1);
+  assert.equal(calls[0].options.headers.Authorization, undefined, 'Public lookup has no credentials or draft fallback');
+});
+test('same-tag ambiguity across collection pages is rejected rather than choosing first draft', async () => {
+  const draft = { id: 44, tag_name: tag, draft: true, prerelease: false, target_commitish: sha };
+  const client = createClient({ token: 'fixture-token', fetchImpl: async url => {
+    const request = new URL(url);
+    if (request.pathname.endsWith('/releases/tags/' + tag)) return new Response('{}', { status: 404 });
+    return new Response(JSON.stringify(request.searchParams.get('page') === '1'
+      ? [draft, ...Array.from({ length: 99 }, (_, index) => ({ id: index + 100, tag_name: 'v0.0.' + index }))]
+      : [{ ...draft, id: 45 }]));
+  } });
+  await assert.rejects(findRelease(client, tag), /Ambiguous releases/);
+});
+test('public verification cannot accept a draft even if an endpoint incorrectly exposes one', async () => {
+  let listed = false;
+  const client = { request: async () => ({ id: 44, tag_name: tag, draft: true, prerelease: false }), list: async () => { listed = true; return []; } };
+  await assert.rejects(findRelease(client, tag, true), /Drafts cannot satisfy public/); assert.equal(listed, false);
 });
 test('draft retry publishes canonical version/changelog/evidence notes instead of stale draft metadata', async t => {
   const { publisher, state } = fixture(t, { draft: true });

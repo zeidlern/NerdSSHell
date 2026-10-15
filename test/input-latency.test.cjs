@@ -73,6 +73,82 @@ for (const rtt of [1, 75, 150, 300]) test(`sustained typing does not accumulate 
   assert.equal(f.view.inputMessages, 0); assert.equal(f.view.inputBytes, 0);
 });
 
+for (const [name, key] of [['Backspace DEL', '\x7f'], ['Backspace BS', '\b'],
+  ['CSI Up', '\x1b[A'], ['SS3 Down', '\x1bOB'], ['Ctrl Left', '\x1b[1;5D'], ['Shift Right', '\x1b[1;2C']]) {
+  test(`held ${name} does not accumulate one round trip per editing key`, async t => {
+    const f = fixture(t), pending = [], count = 30, interval = 33;
+    for (let i = 0; i < count; i++) { await f.advance(i * interval); pending.push(f.input(key)); }
+    await f.drain(); await Promise.all(pending);
+    const lastKey = (count - 1) * interval, lastEcho = f.echoes.at(-1).at;
+    t.diagnostic(JSON.stringify({ key: name, simulatedRttMs: 150, events: count, lastKeyMs: lastKey, lastEchoMs: lastEcho, requests: f.commands.length }));
+    assert.deepEqual(f.sent(), Buffer.from(key.repeat(count)));
+    assert.ok(lastEcho <= lastKey + 300, `last echo ${lastEcho} ms; editing ended ${lastKey} ms`);
+    assert.equal(f.view.inputMessages, 0); assert.equal(f.view.inputBytes, 0);
+  });
+}
+
+test('whole editing events and Unicode share bounded requests in their original order', async t => {
+  const f = fixture(t), first = f.input('first'); await tick();
+  const arrows = [...'ABCD'].flatMap(direction => ['\x1b[' + direction, '\x1bO' + direction,
+    ...[2, 3, 4, 5, 6, 7, 8].map(modifier => `\x1b[1;${modifier}${direction}`)]);
+  const values = ['x'.repeat(511), '\x1b[A', 'é😀', '\x7f', '\b', ...arrows];
+  const pending = values.map(value => f.input(value)); await f.drain(); await Promise.all([first, ...pending]);
+  assert.deepEqual(f.sent(), Buffer.from('first' + values.join('')));
+  assert.equal(f.commands.length, 3, '511-byte text must leave the next whole arrow in a new batch');
+  assert.ok(f.commands.every(command => command.bytes.length <= 512));
+  assert.equal(f.commands[1].bytes.length, 511);
+  assert.deepEqual(f.commands[2].bytes, Buffer.from(values.slice(1).join('')));
+});
+
+test('editing batches preserve submission, paste and unknown escape barriers', async t => {
+  const barriers = ['\r', '\n', '\t', '\x03', '\x04', '\x1b', '\x1b[', '\x1b[1;', '\x1b[99A',
+    '\x1b[1;9A', '\x1b[200~', '\x1b[201~', 'text\x7f', '\x1b[A\r', '\x1b[A\n', '\x7f\r', '\x7f\n', '\x7f'.repeat(513)];
+  for (const barrier of barriers) {
+    const f = fixture(t), first = f.input('first'); await tick();
+    const done = Promise.all([f.input('a'), f.input('\x7f'), f.input(barrier), f.input('\x1b[A'), f.input('b')]);
+    await f.drain(); await first; await done;
+    assert.deepEqual(f.commands.map(command => command.bytes), [Buffer.from('first'), Buffer.from('a\x7f'),
+      ...Array.from({ length: Math.ceil(Buffer.byteLength(barrier) / 512) }, (_, i) => Buffer.from(barrier).subarray(i * 512, (i + 1) * 512)), Buffer.from('\x1b[Ab')]);
+  }
+});
+
+test('a failed editing batch discards later editing, Enter and typing without replay', async t => {
+  const f = fixture(t, { failures: [2] }), first = f.input('first'); await tick();
+  const values = ['a', '\x7f', '\x1b[D', '\b', '\r', '\x1b[A', 'later'];
+  const pending = Promise.allSettled(values.map(value => f.input(value))); await f.drain(); await first;
+  assert.ok((await pending).every(result => result.status === 'rejected'));
+  assert.deepEqual(f.sent(), Buffer.from('firsta\x7f\x1b[D\b'));
+  const fresh = f.input('NEW'); await f.drain(); await fresh;
+  assert.deepEqual(f.sent(), Buffer.from('firsta\x7f\x1b[D\bNEW'));
+  assert.equal(f.view.inputMessages, 0); assert.equal(f.view.inputBytes, 0);
+});
+
+for (const change of ['input lock', 'snapshot', 'view replacement', 'control replacement', 'disconnect']) {
+  test(`pending editing is discarded after ${change}`, async t => {
+    const f = fixture(t), first = f.input('first'); await tick();
+    const pending = Promise.allSettled([f.input('\x7f'), f.input('\x1b[A'), f.input('\r')]);
+    if (change === 'input lock') f.view.inputSerial = (f.view.inputSerial || 0) + 1;
+    else if (change === 'snapshot') f.view.snapshotSerial++;
+    else if (change === 'view replacement') f.remote.views.set(f.pane.key, { ...f.view });
+    else if (change === 'control replacement') f.remote.controls.set(f.pane.sessionId, { detach() { f.control.detach(); } });
+    else { const rejected = assert.rejects(first); f.remote.disconnect(); await rejected; }
+    if (change !== 'disconnect') { const rejected = assert.rejects(first); await f.drain(); await rejected; }
+    assert.ok((await pending).every(result => result.status === 'rejected'));
+    assert.deepEqual(f.sent(), Buffer.from('first'));
+    assert.equal(f.view.inputMessages, 0); assert.equal(f.view.inputBytes, 0);
+    // Restore the fixture-owned control so normal disposal can close it.
+    if (change === 'control replacement') f.remote.controls.set(f.pane.sessionId, f.control);
+  });
+}
+
+test('coalescing editing keys still charges every event against the queue limit', async t => {
+  const f = fixture(t), pending = Promise.allSettled(Array.from({ length: 256 }, () => f.input('\x7f')));
+  await assert.rejects(f.input('\x1b[A'), /queue is full/);
+  assert.equal(f.view.inputMessages, 256); assert.equal(f.view.inputBytes, 256);
+  await f.drain(); await pending;
+  assert.equal(f.sent().length, 256); assert.equal(f.view.inputMessages, 0); assert.equal(f.view.inputBytes, 0);
+});
+
 test('the first key is immediate and a waiting burst shares one acknowledged request', async t => {
   const f = fixture(t), first = f.input('a'); await tick();
   assert.equal(f.commands.length, 1); assert.equal(f.commands[0].at, 0);

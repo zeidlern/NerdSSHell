@@ -5,6 +5,7 @@
 - Batch adjacent pending Backspace and arrow-key events with typing in Persistent sessions, including normal/application cursor sequences and Shift/Alt/Ctrl arrow combinations. Preserve the first-key dispatch, exact input order, 512-byte request limit and per-event queue accounting.
 - Keep Enter, Tab, other control/unknown escape events and multi-chunk pastes as separate acknowledgement barriers. Failures, input locking, snapshots, view/control replacement and disconnect still discard queued input rather than replay it.
 - At 150 ms simulated RTT, 30 editing-key events over 957 ms finish echoing at 1,200 ms instead of 4,500 ms. This is a deterministic transport reproduction, not a measurement on the reporter's server. Actual validation and acceptance scope are recorded in DEVELOPMENT-PROGRESS.md.
+- Install this update manually using the release's Windows installer. The existing automatic-download problem remains under separate investigation; this release does not include the unfinished updater experiment.
 
 ## Maintenance — Release publication
 

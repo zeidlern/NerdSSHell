@@ -322,7 +322,7 @@ function createPublisher({ client, env = process.env, git = args => execFileSync
         `Exact protected-main source: ${source.sha}. All required main push jobs passed, including Windows package/acceptance, Linux tests/integration, dependencies, secrets and both CodeQL analyses.\n\n` +
         Object.entries(selected).map(([name, run]) => `- ${name}: https://github.com/${REPO}/actions/runs/${run.id} (attempt ${run.run_attempt})\n`).join('') +
         `\nThe Windows x64 installer is copied byte-for-byte from accepted Windows artifact ${accepted.id}; no installer is rebuilt during publication. ` +
-        `Download NerdSSHell-${source.version}-x64-Setup.exe, or approve the normal in-app upgrade offer.\n\n` +
+        `Download NerdSSHell-${source.version}-x64-Setup.exe and follow the version-specific upgrade instructions above.\n\n` +
         `This release is **unsigned**. SHA-256 verifies byte identity, not Authenticode publisher identity. Do not disable Windows or organizational security controls. ` +
         `Automated fixtures do not establish physical Windows input, real UAC, alternate-account installation or reporter-host acceptance. ` +
         `Persistent close/disconnect leaves remote work running. See the changelog and user manual for version-specific limitations.\n`);

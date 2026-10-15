@@ -8,6 +8,9 @@ const { Control } = require('./control.cjs');
 const { closeSshTransport } = require('./ssh-transport.cjs');
 const { profile, shellQuote: q, sessionName, tmuxPrefix, PANE_FORMAT, parsePanes, paneKey, fingerprint, knownHostStatus, integer, geometry,
   SESSION_IDENTITY_OPTION, LEGACY_SESSION_IDENTITY_OPTION, SESSION_IDENTITY_FORMAT, parseSessionIdentity } = require('./core.cjs');
+// Whole xterm editing events only: BS/DEL and normal/application/modifier arrows.
+// Bare Escape, arbitrary escape sequences, paste wrappers and submissions stay barriers.
+const BATCHABLE_EDITING_KEY = /^(?:[\x08\x7f]|\x1b(?:\[[ABCD]|O[ABCD]|\[1;[2-8][ABCD]))$/;
 
 function identityCondition(pane) {
   // Legacy-only pane records remain usable; never replace their stable token.
@@ -403,10 +406,10 @@ class Remote extends EventEmitter {
       (v.inputSerial || 0) === serial && v.snapshotSerial === snapshotSerial &&
       this.connected && !this.closing && this.controls.get(v.pane.sessionId) === admittedControl && !admittedControl?.closed;
     v.inputMessages = (v.inputMessages || 0) + 1; v.inputBytes = (v.inputBytes || 0) + size;
-    // Coalesce only adjacent, not-yet-dispatched typing. Enter, other control
-    // events and multi-chunk pastes remain acknowledgement barriers: a failure
-    // must never release a later submission into a partially delivered command.
-    const batchable = size <= 512 && !/[\x00-\x1f\x7f]/.test(data);
+    // Coalesce adjacent, not-yet-dispatched typing and complete editing keys.
+    // Enter, other control events and multi-chunk pastes remain acknowledgement
+    // barriers: a failure must never release a later submission into a partially delivered command.
+    const batchable = size <= 512 && (!/[\x00-\x1f\x7f]/.test(data) || BATCHABLE_EDITING_KEY.test(data));
     let batch = v.inputBatch;
     if (batchable && batch?.batchable && !batch.started && batch.serial === serial &&
       batch.snapshotSerial === snapshotSerial && batch.control === admittedControl && batch.size + size <= 512) {

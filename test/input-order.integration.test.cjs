@@ -44,7 +44,7 @@ test('real SSH: concurrent long paste and Enter preserve shell command boundarie
 
 // Delay only the control protocol's incoming bytes. The owned OpenSSH/tmux
 // server and its actual commands are real; the added reply latency is synthetic.
-test('real SSH: delayed tmux replies batch typing without changing command or session identity', {
+test('real SSH: delayed tmux replies batch typing and editing without changing command or session identity', {
   skip: !process.env.NERDSSHELL_TEST_KEY, timeout: 90000
 }, async t => {
   const host = process.env.NERDSSHELL_TEST_HOST || '127.0.0.1';
@@ -65,7 +65,9 @@ test('real SSH: delayed tmux replies batch typing without changing command or se
     try { if (r.connected) await r.exec(`${r.prefix} kill-server 2>/dev/null; rm -f ${q(proof)}`); }
     finally { r.disconnect(); }
   });
-  await r.connect(); const pane = await r.create('Input latency'); await r.open(pane.key);
+  await r.connect();
+  const pane = await r.create('Input latency', 'exec env INPUTRC=/dev/null bash --noprofile --norc -i');
+  await r.open(pane.key);
   const c = r.controls.get(pane.sessionId), feed = c.feed.bind(c), request = c.request.bind(c);
   let requests = 0;
   c.feed = chunk => {
@@ -83,10 +85,13 @@ test('real SSH: delayed tmux replies batch typing without changing command or se
   const expected = 'BATCHED-é-😀', command = `printf '%s' ${q(expected)} > ${q(proof)}`;
   const keys = [...command], started = Date.now(), pending = [r.input(pane.key, keys[0])];
   await new Promise(resolve => setImmediate(resolve));
-  pending.push(...keys.slice(1).map(key => r.input(pane.key, key)), r.input(pane.key, '\r'));
+  // Append XY, move left, erase X, move right and erase Y. Only the original
+  // complete command may execute after its separate acknowledged Enter.
+  const editing = ['X', 'Y', '\x1b[D', '\x7f', '\x1b[C', '\b'];
+  pending.push(...[...keys.slice(1), ...editing].map(key => r.input(pane.key, key)), r.input(pane.key, '\r'));
   await Promise.all(pending);
-  t.diagnostic(JSON.stringify({ addedReplyLatencyMs: 150, inputEvents: keys.length + 1, sendKeysRequests: requests, elapsedMs: Date.now() - started }));
-  assert.equal(requests, 3, 'first key, one pending typing batch, then a separately acknowledged Enter');
+  t.diagnostic(JSON.stringify({ addedReplyLatencyMs: 150, inputEvents: keys.length + editing.length + 1, sendKeysRequests: requests, elapsedMs: Date.now() - started }));
+  assert.equal(requests, 3, 'first key, one pending typing/editing batch, then a separately acknowledged Enter');
   let actual = '';
   for (let attempt = 0; attempt < 50; attempt++) {
     actual = await r.checked(`cat ${q(proof)} 2>/dev/null || true`);

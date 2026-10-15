@@ -87,3 +87,39 @@ reporter retest. Automated Windows package checks are not that acceptance.
 
 - [tmux control mode](https://github.com/tmux/tmux/wiki/Control-Mode): guarded command replies, asynchronous output and flow control.
 - [tmux manual](https://man.openbsd.org/tmux): hexadecimal `send-keys -H` and persistent sessions.
+
+## Editing-key follow-up — candidate 1.2.3, October 15, 2026
+
+The reporter's improvement for ordinary typing but continued delay when holding
+Backspace matches the 1.2.2 classification exactly: only printable events could
+join a pending batch. DEL/BS Backspace and cursor escape sequences still paid a
+separate tmux reply round trip per event.
+
+Complete DEL/BS Backspace and xterm normal/application arrow events now join
+pending typing, including Shift/Alt/Ctrl arrow combinations. The allowlist
+matches a whole event; bare/incomplete/unknown escapes, paste wrappers, mixed
+control-text events and submission keys stay barriers. The queue, 512-byte
+request bound, ownership checks, accounting and failed-input discard remain
+unchanged. No timer or local echo is added.
+
+The production Remote/Control reproduction submits 30 editing-key events 33 ms
+apart with 150 ms simulated reply latency. The last event arrives at 957 ms:
+
+| Source | Final echo | tmux input requests |
+| --- | --- | --- |
+| Unchanged 1.2.2 | 4,500 ms | 30 |
+| Candidate fix | 1,200 ms | 8 |
+
+DEL, BS, normal Up, application Down, Ctrl+Left and Shift+Right each reproduce
+the old backlog and pass with the fix. Other regressions cover all four cursor
+directions/modifiers, the 511-byte boundary, exact Unicode/input order, barriers,
+failed batches, input lock, snapshot/view/control replacement, disconnect and
+the per-event queue limit. These are simulated transport results, not a physical
+Windows or reporter-host typing measurement.
+
+Enter, Tab and other controls still require acknowledgement. Repeated Enter
+therefore remains round-trip limited; removing that boundary could submit a
+partial command after an earlier input failure. The owned real SSH/tmux fixture
+also checks cursor movement and both Backspace forms while editing a command
+before its separate Enter. Its actual execution and Windows package evidence
+must be reported separately from the deterministic tests.

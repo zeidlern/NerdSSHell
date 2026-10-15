@@ -48,7 +48,7 @@ Use **Forget password** in the connection controls to remove the saved password 
 
 Saved passwords are intended for the same Windows account on this PC. Other software running as your Windows user may be able to decrypt them; account protection does not defend against same-user malware or a compromised operating system. If Windows encryption is unavailable, NerdSSHell does not fall back to plaintext password storage. See [security and privacy](Security-and-Privacy.md).
 
-Keyboard-interactive challenges can also prompt during sign-in, but their answers and private-key passphrases cannot be remembered. Actual server authentication policy still applies; choosing a method in the UI cannot make the server accept it.
+Keyboard-interactive challenges can also prompt during sign-in. A server can accept your password and then ask for a one-time token/code in a separate dialog; no extra login mode is required. If the server uses keyboard-interactive for both factors, it may ask for the password again. Challenge answers and private-key passphrases cannot be remembered. Actual server authentication policy still applies; choosing a method in the UI cannot make the server accept it.
 
 ## Host trust: stop on changes
 

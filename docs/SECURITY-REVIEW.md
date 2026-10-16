@@ -66,6 +66,8 @@ The Chromium request adapter exposes each manual redirect for that allowlist bef
 
 A fixed checksum-bound Windows runner owns its stage/files and real parent process identity, requires explicit nonce-bound release, waits for exit, rejects conflicting registrations/reopened apps, uses an exact registered target and verifies the new version before reopening. Cancellation cannot trigger a later unrelated install. New NSIS installer and uninstaller running-app guards abort instead of killing work. The first manual upgrade from1.0.4 retains that older uninstaller's narrower acceptance limits; automatic upgrades start from the new guarded version.
 
+Before READY the runner pins original child handles, start times, canonical executable paths and Toolhelp ancestry. After the approved parent exits, only those original descendants receive a five-second shutdown wait; nonce cancellation, unknown/reopened instances and timeout stop installation. The final running-app, registration and file-integrity checks still apply. Process inspection errors require positive evidence that both matching original/current objects exited before they can be ignored.
+
 Coverage: test/release-updater.test.cjs, test/update-main.test.cjs, test/update-handoff.test.cjs and isolated Windows SDK/native startup/handoff acceptance. The controlled-transport/inert-installer fixtures do not certify live future releases, real UAC or every user-install scenario.
 
 ## Quick Connect boundaries

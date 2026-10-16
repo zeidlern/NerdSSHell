@@ -41,6 +41,8 @@ Primary documentation used for implementation:
 
 ## Validation
 
+`src/release-updater.cjs` validates the official stable release and streamed installer identity. `src/release-transport.cjs` adapts Chromium request/response events to its bounded, credentialless download interface, exposing redirects before the updater authorizes each destination. `src/update-handoff.cjs` and the bundled Windows runner retain the consent-bound normal quit, original process identity, exact registered installation and verified restart boundary.
+
 Source and disposable SSH tests cover protocol and lifecycle behavior. Native consoles, packaging, elevation and desktop interaction need Windows validation for the exact source and artifact. Use [TESTING.md](TESTING.md), preserve the [security boundaries](SECURITY-REVIEW.md), and follow the [release process](PUBLIC-RELEASE.md). Current results are recorded in [validation results](VALIDATION.md).
 
 ## Temporary network-device connections

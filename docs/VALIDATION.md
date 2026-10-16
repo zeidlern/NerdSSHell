@@ -1,3 +1,23 @@
+# Version 1.2.4 validation
+
+The updater repair has fresh local Windows 11 x64 / Node 24.19.0 evidence. Electron remains 44.5.1; dependencies and notice contents are unchanged. [PR22](https://github.com/zeidlern/NerdSSHell/pull/22) records exact hosted installation and protected CI results before merge/publication.
+
+| Check | Measured local result |
+| --- | --- |
+| Source, publication, workflow and whitespace checks | Passed |
+| Full regression suite | 1,128 passed, zero failures, one existing file-symlink privilege skip of 1,129 |
+| Original vs repaired real Chromium download | Original rejects `Redirect was cancelled`; repaired transport verifies the public 1.2.3 installer's 114,359,950 bytes and published SHA-256, then removes its stage |
+| Fresh unsigned 1.2.4 package | Fuses, ASAR integrity, native containment, exact updater source and notices passed |
+| Exact-ASAR startup dialog | 13 pointer checks passed across decline, approval and corrupt-download refusal; controlled transport/inert handoff |
+| Native helper | 143 checks passed, including real lingering-child success, cancellation, bounded refusal and a new instance during child drain; all owned processes/temporary fixtures cleaned |
+| Independent transport/helper review | No remaining blocker; 17 focused handoff regressions passed |
+
+The native fixture uses inert generated installers and replaces registry/recovery/final process enumeration. Its new child capture/drain uses real Windows snapshots, ancestry and pinned process handles. It does not establish real NSIS installation, UAC or physical desktop acceptance. The separate hosted test must use the exact candidate ASAR/helper without diagnostic worker wrappers, observe real public NSIS installation/restart/data preservation, then verify the manually bootstrapped candidate ASAR. The PR retains that receipt and its exact source identity.
+
+Local unsigned installer SHA-256: `4a09e6f0112b17297766d3dd9c0b3ea12b22425e64e93562f3187cc3685830ce`; ASAR: `98d74dcc8037db35df6ba75920f03ae921eb0117a5ed60e8072f5c88d7bdf011`. These identify the local candidate; published release bytes are separately identified by their release manifest. Versions through 1.2.3 need one manual installation of the repair.
+
+---
+
 # Version 1.2.1 validation
 
 The owner authorized merge, unsigned publication and local installation of [PR11](https://github.com/zeidlern/NerdSSHell/pull/11). These local results apply to the 1.2.1 output-buffer fix on Windows 11 x64 / Node 24.19.0. Electron remains 44.5.1 and dependency versions are unchanged. Protected hosted CI must finish before merge; its exact results and final source identity are recorded in the PR and release receipts.

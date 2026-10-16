@@ -21,7 +21,27 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 namespace NerdSSHell {
+ public static class UpdateProcesses {
+  [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] struct Entry { public uint Size,Usage,Id; public UIntPtr Heap; public uint Module,Threads,Parent; public int Priority; public uint Flags; [MarshalAs(UnmanagedType.ByValTStr,SizeConst=260)] public string Name; }
+  [DllImport("kernel32.dll",SetLastError=true)] static extern SafeFileHandle CreateToolhelp32Snapshot(uint flags,uint id);
+  [DllImport("kernel32.dll",CharSet=CharSet.Unicode,ExactSpelling=true,SetLastError=true)] static extern bool Process32FirstW(SafeFileHandle snapshot,ref Entry entry);
+  [DllImport("kernel32.dll",CharSet=CharSet.Unicode,ExactSpelling=true,SetLastError=true)] static extern bool Process32NextW(SafeFileHandle snapshot,ref Entry entry);
+  public static Dictionary<int,int> Parents() {
+   using(var snapshot=CreateToolhelp32Snapshot(2,0)) {
+    if(snapshot.IsInvalid)throw new IOException("Cannot inspect process ancestry");
+    var result=new Dictionary<int,int>();var entry=new Entry();entry.Size=(uint)Marshal.SizeOf(typeof(Entry));
+    if(!Process32FirstW(snapshot,ref entry))throw new IOException("Cannot inspect process ancestry");
+    do {if(result.Count>=65536)throw new IOException("Process ancestry exceeds limit");result[(int)entry.Id]=(int)entry.Parent;}while(Process32NextW(snapshot,ref entry));
+    if(Marshal.GetLastWin32Error()!=18)throw new IOException("Incomplete process ancestry");return result;
+   }
+  }
+  public static bool DescendsFrom(Dictionary<int,int> parents,int child,int parent) {
+   var seen=new HashSet<int>();int next;
+   while(child!=0&&seen.Count<1024&&seen.Add(child)&&parents.TryGetValue(child,out next)){if(next==parent)return true;child=next;}return false;
+  }
+ }
  public static class UpdateControl {
   // Console.In.ReadLineAsync can block synchronously on .NET Framework.
   public static Task<string> ReadCommand() { return Task.Factory.StartNew(()=>Console.In.ReadLine(),CancellationToken.None,TaskCreationOptions.LongRunning,TaskScheduler.Default); }
@@ -100,6 +120,60 @@ function Assert-NoUpdateInstances {
   foreach($name in @('NerdSSHell','BetterSSH')) {
     $processes=@([Diagnostics.Process]::GetProcessesByName($name))
     try {if($processes.Count){throw 'Application still running'}} finally {foreach($item in $processes){$item.Dispose()}}
+  }
+}
+function Get-UpdateShutdownChildren($Parent,[string]$Executable) {
+  $children=New-Object 'System.Collections.Generic.List[Diagnostics.Process]';$complete=$false
+  try {
+    # Pin candidates before the snapshot so PID reuse cannot lend a new process
+    # an old child's ancestry. Only this original application's descendants qualify.
+    foreach($name in @('NerdSSHell','BetterSSH')) {
+      foreach($item in @([Diagnostics.Process]::GetProcessesByName($name))) {
+        $adopt=$false
+        try {
+          $handle=$item.Handle;if($null -eq $handle -or $handle -eq [IntPtr]::Zero){throw 'Cannot inspect application process'}
+          if($item.HasExited -or $item.Id -eq $Parent.Id){continue}
+          $start=$item.StartTime.ToUniversalTime().Ticks
+          $file=New-Object NerdSSHell.UpdatePath($item.MainModule.FileName,$false)
+          try {if(-not (Same-UpdatePath $file.Path $Executable) -or $start -lt $Parent.StartTime.ToUniversalTime().Ticks){throw 'Another application instance is running'}}finally{$file.Dispose()}
+          $children.Add($item);$adopt=$true
+        }finally{if(-not $adopt){$item.Dispose()}}
+      }
+    }
+    $parents=[NerdSSHell.UpdateProcesses]::Parents()
+    if($Parent.HasExited){throw 'Original application ended during preparation'}
+    foreach($item in $children){if(-not $item.HasExited -and -not [NerdSSHell.UpdateProcesses]::DescendsFrom($parents,$item.Id,$Parent.Id)){throw 'Independent application instance is running'}}
+    $complete=$true;return $children.ToArray()
+  }finally{if(-not $complete){foreach($item in $children){$item.Dispose()}}}
+}
+function Assert-UpdateShutdownProcess($Current,$Originals) {
+  $original=$null;foreach($item in $Originals){if($item.Id -eq $Current.Id){$original=$item;break}}
+  try {
+    $handle=$Current.Handle;if($null -eq $handle -or $handle -eq [IntPtr]::Zero){throw 'Cannot inspect application process'};if($Current.HasExited){return}
+    # The held original retains its cached start time even if it exits between
+    # enumeration and comparison. A live reused PID has a different start time.
+    if($null -ne $original -and $Current.StartTime.ToUniversalTime().Ticks -eq $original.StartTime.ToUniversalTime().Ticks){return}
+    throw 'Application reopened during update'
+  }catch{
+    # Enumeration may race an expected child's exit before its handle opens.
+    # Only positive exit checks for both known objects can forgive that failure.
+    if($null -ne $original -and $original.HasExited -and $Current.HasExited){return}
+    throw
+  }
+}
+function Wait-UpdateShutdownChildren($Parent,$Children,[string]$Nonce,[int]$TimeoutMs=5000) {
+  $deadline=[DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
+  while($true) {
+    if(Read-UpdateMarker 'CANCEL' $Nonce){return $false}
+    $live=$false;foreach($item in $Children){if(-not $item.HasExited){$live=$true}}
+    foreach($name in @('NerdSSHell','BetterSSH')) {
+      foreach($current in @([Diagnostics.Process]::GetProcessesByName($name))) {
+        try {Assert-UpdateShutdownProcess $current (@($Parent)+@($Children))}finally{$current.Dispose()}
+      }
+    }
+    if(-not $live){return $true}
+    if([DateTime]::UtcNow -gt $deadline){throw 'Application child did not exit'}
+    Start-Sleep -Milliseconds 25
   }
 }
 function Get-UpdateRecoveryFiles([string]$Directory) {
@@ -192,7 +266,7 @@ function Add-UpdateKnownCleanupFiles($Owner,$Manifest,$Files) {
 }
 function Complete-UpdateCleanup { $files=@($script:UpdateCleanupFiles)+@($script:UpdateControlOwners.ToArray());if($script:UpdateRetainStop){$files=@($files|Where-Object {[IO.Path]::GetFileName($_.path) -cne 'update-stopped'})};Remove-UpdateOwnedStage $script:UpdateCleanupOwner $files }
 function Invoke-UpdateRunner([string]$Path,[string]$ManifestSha256,[int]$BrokerPid,[int]$CommandTimeoutMs=60000,[int]$ParentTimeoutMs=120000,[int]$InstallerTimeoutMs=600000) {
-  $leases=New-Object 'System.Collections.Generic.List[IDisposable]';$owned=@();$owner=$null;$parent=$null;$broker=$null;$installerProcess=$null;$manifest=$null;$oldIdentity=$null;$oldVersion=$null;$scope=$null;$go=$false;$parentExited=$false;$installComplete=$false;$status='refused';$phase='prepare'
+  $leases=New-Object 'System.Collections.Generic.List[IDisposable]';$owned=@();$owner=$null;$parent=$null;$broker=$null;$installerProcess=$null;$manifest=$null;$oldIdentity=$null;$oldVersion=$null;$scope=$null;$go=$false;$parentExited=$false;$installComplete=$false;$status='refused';$phase='prepare';$shutdownChildren=@()
   try {
     $manifestLease=New-Object NerdSSHell.UpdatePath($Path,$false);$leases.Add($manifestLease)
     if($ManifestSha256 -notmatch '^[a-f0-9]{64}$' -or $manifestLease.Stream.Length -lt 1 -or $manifestLease.Stream.Length -gt 16384 -or (Get-UpdateHash $manifestLease.Stream) -cne $ManifestSha256){throw 'Invalid manifest'}
@@ -214,6 +288,7 @@ function Invoke-UpdateRunner([string]$Path,[string]$ManifestSha256,[int]$BrokerP
     $oldIdentity=Get-UpdateRecoveryIdentity $directory
     $parent=[Diagnostics.Process]::GetProcessById([int]$manifest.parentPid);$script:UpdateParentLease=$parent;$parentHandle=$parent.Handle;$parentStart=$parent.StartTime.ToUniversalTime().Ticks
     $parentFile=New-Object NerdSSHell.UpdatePath($parent.MainModule.FileName,$false);try{if($parent.HasExited -or -not (Same-UpdatePath $parentFile.Path $manifest.executablePath) -or $parent.StartTime.ToUniversalTime().Ticks -ne $parentStart){throw 'Wrong parent identity'}}finally{$parentFile.Dispose()}
+    $shutdownChildren=@(Get-UpdateShutdownChildren $parent $manifest.executablePath);foreach($child in $shutdownChildren){$leases.Add($child)}
     $broker=[Diagnostics.Process]::GetProcessById($BrokerPid);$brokerHandle=$broker.Handle;$brokerStart=$broker.StartTime.ToUniversalTime().Ticks
     $script:UpdateBrokerLease=$broker
     if($BrokerPid -eq $PID -or $broker.HasExited -or -not (Same-UpdatePath $broker.MainModule.FileName ([Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)) -or $broker.StartTime.ToUniversalTime().Ticks -ne $brokerStart){throw 'Wrong broker identity'}
@@ -238,6 +313,7 @@ function Invoke-UpdateRunner([string]$Path,[string]$ManifestSha256,[int]$BrokerP
       if([DateTime]::UtcNow -gt $deadline){throw 'Parent did not exit'}
       Start-Sleep -Milliseconds 25
     }
+    $phase='shutdown';if(-not (Wait-UpdateShutdownChildren $parent $shutdownChildren $manifest.nonce)){Write-UpdateProtocol ('CANCEL '+$manifest.nonce);$status='cancelled';return $status}
     $phase='install';Assert-NoUpdateInstances
     if((Get-UpdateScope $directory) -cne $scope -or -not (Test-UpdateRecoveryIdentity $oldIdentity) -or $installer.Stream.Length -ne $manifest.size -or (Get-UpdateHash $installer.Stream) -cne $manifest.sha256){throw 'Identity changed'}
     $installerProcess=Start-UpdateInstaller $installer.Path $scope $directory

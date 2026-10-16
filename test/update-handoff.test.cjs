@@ -2,6 +2,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const { createHash } = require('node:crypto'), { EventEmitter } = require('node:events'), { PassThrough, Writable } = require('node:stream');
+const { spawnSync } = require('node:child_process');
 const { armUpdate, validatePlan, bootstrap, cleanupOwned } = require('../src/update-handoff.cjs');
 function fixture(t) {
   const stage = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), 'nerdsshell-update-'));
@@ -115,4 +116,27 @@ test('cleanup preserves unknown files and replacements and cannot traverse a sub
 test('Windows runner source keeps process lifetime, registry scope, no-kill, exact arguments and nonrecursive cleanup contracts', () => {
   const source = fs.readFileSync(path.join(__dirname, '../src/update-runner.ps1'), 'utf8');
   assert.match(source, /parent\.Handle/); assert.match(source, /parent\.StartTime/); assert.match(source, /parent\.MainModule\.FileName/); assert.match(source, /ReadLineAsync/); assert.match(source, /CANCEL /); assert.match(source, /parent\.HasExited/); assert.match(source, /Assert-NoUpdateInstances/); assert.match(source, /Registry64/); assert.match(source, /48ee049e-c2f6-57b2-ab6e-7f5df516dcc0/); assert.match(source, /\/S \/'\+\$Scope\+' \/D='/); assert.match(source, /\$held\.MarkDelete\(\)/); assert.match(source, /SetFileInformationByHandle/); assert.match(source, /manifest\.installerIdentity/); assert.match(source, /Conflicting registration/); assert.match(source, /targetVersion/); assert.doesNotMatch(source, /Stop-Process|\.Kill\(|taskkill|ExecutionPolicy|--force-run|--delete-app-data|Recurse/);
+});
+test('Windows Toolhelp snapshot proves actual parent lineage and rejects independent IDs and ancestry cycles', {skip:process.platform!=='win32'}, () => {
+  const source=path.join(__dirname,'../src/update-runner.ps1'),quote=value=>"'"+value.replaceAll("'","''")+"'";
+  const code="$ErrorActionPreference='Stop';. ([ScriptBlock]::Create([IO.File]::ReadAllText("+quote(source)+")));$parents=[NerdSSHell.UpdateProcesses]::Parents();if(-not $parents.ContainsKey($PID) -or $parents[$PID] -ne "+process.pid+" -or -not [NerdSSHell.UpdateProcesses]::DescendsFrom($parents,$PID,"+process.pid+")){throw 'Actual child lineage mismatch'};$fixture=New-Object 'System.Collections.Generic.Dictionary[int,int]';$fixture.Add(2,1);$fixture.Add(3,2);$fixture.Add(4,5);$fixture.Add(5,4);if(-not [NerdSSHell.UpdateProcesses]::DescendsFrom($fixture,3,1) -or [NerdSSHell.UpdateProcesses]::DescendsFrom($fixture,6,1) -or [NerdSSHell.UpdateProcesses]::DescendsFrom($fixture,4,1)){throw 'Independent or cyclic lineage accepted'};Write-Output 'PASS'";
+  const result=spawnSync(path.win32.join(process.env.SystemRoot||'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(code,'utf16le').toString('base64')],{windowsHide:true,shell:false,encoding:'utf8',timeout:15000});
+  assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/PASS/);
+});
+test('Windows drain accepts an original exiting during inspection but refuses reused IDs and unknown inspection failures', {skip:process.platform!=='win32'}, () => {
+  const source=path.join(__dirname,'../src/update-runner.ps1'),quote=value=>"'"+value.replaceAll("'","''")+"'";
+  const code=`$ErrorActionPreference='Stop';. ([ScriptBlock]::Create([IO.File]::ReadAllText(${quote(source)})));
+    $start=[DateTime]::UtcNow;$original=[pscustomobject]@{Id=7;StartTime=$start;HasExited=$true};
+    $current=[pscustomobject]@{Id=7;StartTime=$start;HasExited=$false;Handle=[IntPtr]1};
+    Assert-UpdateShutdownProcess $current @($original);
+    Add-Member -InputObject $current -MemberType ScriptProperty -Name Handle -Value {throw 'Process ended before handle opened'} -Force;
+    $current.HasExited=$true;Assert-UpdateShutdownProcess $current @($original);
+    function Expect-Refused($Current,$Original,[string]$Label){$refused=$false;try{Assert-UpdateShutdownProcess $Current @($Original)}catch{$refused=$true};if(-not $refused){throw ('Unsafe process identity accepted: '+$Label)}};
+    $original.HasExited=$false;$current.HasExited=$false;Expect-Refused $current $original 'known live handle error';
+    $original.HasExited=$true;$current.Id=8;Expect-Refused $current $original 'unknown handle error';
+    Add-Member -InputObject $current -MemberType NoteProperty -Name Handle -Value ([IntPtr]1) -Force;
+    $current.Id=7;$current.StartTime=$start.AddTicks(1);Expect-Refused $current $original 'reused PID';
+    Write-Output 'PASS'`;
+  const result=spawnSync(path.win32.join(process.env.SystemRoot||'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe'),['-NoLogo','-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(code,'utf16le').toString('base64')],{windowsHide:true,shell:false,encoding:'utf8',timeout:15000});
+  assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/PASS/);
 });

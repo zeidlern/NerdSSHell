@@ -59,6 +59,7 @@ const stages = [], processes = [], contexts = [];
 const digest = filename => createHash('sha256').update(fs.readFileSync(filename)).digest('hex');
 const psquote = value => "'" + value.replaceAll("'", "''") + "'";
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+const processAlive = pid => { try { process.kill(pid,0); return true; } catch(error) { if(error.code==='ESRCH')return false; throw error; } };
 const report = { status: 'running', platform: process.platform, architecture: process.arch, node: process.versions.node,
   ownedTemporaryRoot: ownedRoot, ownedRootIdentity:{dev:String(ownedRootIdentity.dev),ino:String(ownedRootIdentity.ino)}, scope: 'Native source update handoff and checksum-bound Windows PowerShell runner with generated inert EXEs. Fixture-only registration/recovery enumeration and owned-process enumeration replace those dependencies. No actual NSIS installation, UAC, registry operation, installed app or real user data.', checks: [], cases: [], registryReads: 0, registryWrites: 0, processKills: 0 };
 fs.mkdirSync(output, { recursive: true });
@@ -74,7 +75,7 @@ async function until(predicate, name, timeout = 20000) {
 }
 function track(executable, args, options) {
   const child = spawn(executable, args, { cwd: root, windowsHide: true, shell: false, stdio: ['pipe', 'pipe', 'pipe'], ...options });
-  const owner = { child, executable: fs.realpathSync.native(executable), exited: false, code: null, stdout: '', stderr: '', events: [] };
+  const owner = { child, executable: fs.realpathSync.native(executable), processExited: false, exited: false, code: null, stdout: '', stderr: '', events: [] };
   processes.push(owner);
   child.stdout.on('data', bytes => { if (owner.stdout.length < 32768) owner.stdout += bytes; });
   child.stderr.on('data', bytes => { if (owner.stderr.length < 32768) owner.stderr += bytes; });
@@ -82,6 +83,7 @@ function track(executable, args, options) {
   child.stdout.on('error', error => owner.events.push('stdout:' + error.code));
   child.stderr.on('error', error => owner.events.push('stderr:' + error.code));
   child.once('error', error => { owner.error = error.code; owner.events.push('child:' + error.code); });
+  child.once('exit', code => { owner.processExited = true; owner.code = code; });
   child.once('close', code => { owner.exited = true; owner.code = code; });
   return owner;
 }
@@ -103,7 +105,12 @@ function appSource(version) {
     '[assembly:AssemblyInformationalVersion("' + version + '")]',
     'class FixtureApplication {',
     ' [STAThread] public static int Main(string[] args) {',
-    '  if(args.Length==1 && args[0]=="--fixture-parent") {',
+    '  if(args.Length==4 && args[0]=="--fixture-child") {',
+    '   string ready=System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(args[2])),stop=System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(args[3]));',
+    '   File.WriteAllText(ready,System.Diagnostics.Process.GetCurrentProcess().Id.ToString());var until=DateTime.UtcNow.AddMilliseconds(int.Parse(args[1]));while(!File.Exists(stop)&&DateTime.UtcNow<until)System.Threading.Thread.Sleep(10);return 0;',
+    '  }',
+    '  if(args.Length>=1 && args[0]=="--fixture-parent") {',
+    '   if(args.Length==4){var options=new System.Diagnostics.ProcessStartInfo();options.FileName=System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;options.Arguments="--fixture-child "+args[1]+" "+args[2]+" "+args[3];options.UseShellExecute=false;options.CreateNoWindow=true;options.RedirectStandardInput=true;options.RedirectStandardOutput=true;options.RedirectStandardError=true;options.WindowStyle=System.Diagnostics.ProcessWindowStyle.Hidden;using(var child=System.Diagnostics.Process.Start(options)){};string ready=System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(args[2]));var until=DateTime.UtcNow.AddSeconds(10);while(!File.Exists(ready)&&DateTime.UtcNow<until)System.Threading.Thread.Sleep(10);if(!File.Exists(ready))return 91;}',
     '   Console.Out.WriteLine("FIXTURE READY"); Console.Out.Flush();',
     '   var read=System.Threading.Tasks.Task.Factory.StartNew(()=>Console.In.ReadLine()); read.Wait(90000); return 0;',
     '  }',
@@ -130,14 +137,19 @@ function installerSource(context, replacement, mode) {
     '} catch(Exception error){File.WriteAllText('+JSON.stringify(context.installLog+'.error')+',error.GetType().Name+": "+error.Message);return 73;} } }'
   ].join('\n');
 }
-async function parent(executable) {
-  const owner = track(executable, ['--fixture-parent']);
+async function parent(executable, childOptions) {
+  const owner = track(executable, ['--fixture-parent', ...(childOptions ? ['90000', Buffer.from(childOptions.ready).toString('base64'), Buffer.from(childOptions.stop).toString('base64')] : [])]);
   await until(() => owner.stdout.includes('FIXTURE READY') || owner.exited, 'Inert parent becomes ready');
   assert.ok(!owner.exited && owner.stdout.includes('FIXTURE READY'), 'The fixture parent must remain alive.');
   return owner;
 }
 async function exitParent(owner) {
-  if (!owner.exited) { owner.child.stdin.end('EXIT\n'); await until(() => owner.exited, 'Owned inert parent exits voluntarily'); }
+  if (!owner.processExited) { owner.child.stdin.end('EXIT\n'); await until(() => owner.processExited, 'Owned inert parent exits voluntarily'); }
+}
+async function exitChild(context) {
+  if(!context.childOptions)return;
+  fs.writeFileSync(context.childOptions.stop,'EXIT');
+  await until(()=>{try{process.kill(context.childPid,0);return false}catch(error){if(error.code==='ESRCH')return true;throw error}},'Owned descendant exits voluntarily');
 }
 function readLog(filename) {
   if (!fs.existsSync(filename)) return null;
@@ -149,7 +161,7 @@ function readLog(filename) {
   }
   return result;
 }
-async function fixtureContext(name, scope, binaries, mode = 'success') {
+async function fixtureContext(name, scope, binaries, mode = 'success', lingeringChild = false) {
   const caseDirectory = path.join(ownedRoot, name), installDirectory = path.join(caseDirectory, 'Installation with spaces');
   const dataDirectory = path.join(caseDirectory, 'Preserved user data with spaces');
   fs.mkdirSync(installDirectory, { recursive: true }); fs.mkdirSync(dataDirectory);
@@ -158,13 +170,15 @@ async function fixtureContext(name, scope, binaries, mode = 'success') {
   const payload = path.join(installDirectory, 'fixture-recovery-payload.dat'); fs.writeFileSync(payload, 'SYNTHETIC PROGRAM PAYLOAD');
   const stageDirectory = fs.mkdtempSync(path.join(temporaryRoot, 'nerdsshell-update-')), stageStat = fs.lstatSync(stageDirectory, { bigint: true });
   stages.push({ directory: stageDirectory, dev: stageStat.dev, ino: stageStat.ino });
-  const context = { name, scope, caseDirectory, installDirectory, dataDirectory, executable, sentinel, payload, stageDirectory,
-    parent: await parent(executable), installLog: path.join(caseDirectory, 'installer.log'), restartLog: path.join(installDirectory, 'restart.log'),
+  const childOptions = lingeringChild ? { ready: path.join(caseDirectory, 'child-ready'), stop: path.join(caseDirectory, 'child-stop') } : undefined;
+  const context = { name, scope, caseDirectory, installDirectory, dataDirectory, executable, sentinel, payload, stageDirectory, childOptions,
+    parent: await parent(executable, childOptions), installLog: path.join(caseDirectory, 'installer.log'), restartLog: path.join(installDirectory, 'restart.log'),
     statusPath: path.join(caseDirectory, 'runner-status.txt'), registrationPath: path.join(caseDirectory, 'registration.json'), processPath: path.join(caseDirectory, 'owned-processes.json'),
     oldHash: digest(executable), sentinelHash: digest(sentinel), helper: null };
   contexts.push(context);
+  if(childOptions)context.childPid=Number(fs.readFileSync(childOptions.ready,'utf8'));
   fs.writeFileSync(context.registrationPath, JSON.stringify([{ directory: installDirectory, scope }]));
-  fs.writeFileSync(context.processPath, JSON.stringify([{ pid: context.parent.child.pid, executable }]));
+  fs.writeFileSync(context.processPath, JSON.stringify([{ pid: context.parent.child.pid, executable }, ...(context.childPid ? [{pid:context.childPid,executable}] : [])]));
   const installerPath = path.join(stageDirectory, 'NerdSSHell-1.0.1-x64-Setup.exe');
   await compile(installerSource(context, mode === 'wrong-version' ? binaries.wrong : binaries.next, mode), installerPath);
   context.plan = { stageDirectory, installerPath, size: fs.statSync(installerPath).size, sha256: digest(installerPath), targetVersion: '1.0.1', executablePath: executable, userDataDirectory: dataDirectory, parentPid: context.parent.child.pid };
@@ -182,12 +196,12 @@ function dependencies(context, mutation) {
     const fixtureFunctions = [
       'function Get-UpdateRegistrations { return @(ConvertFrom-Json ([IO.File]::ReadAllText(' + psquote(context.registrationPath) + '))) }',
       'function Get-UpdateRecoveryFiles([string]$Directory) { if(-not (Same-UpdatePath $Directory ' + psquote(context.installDirectory) + ')){throw "Wrong fixture directory"}; return @(' + psquote(context.executable) + ',' + psquote(context.payload) + ') }',
-      'function Assert-NoUpdateInstances { foreach($entry in @(ConvertFrom-Json ([IO.File]::ReadAllText(' + psquote(context.processPath) + ')))) {$p=$null;try{$p=[Diagnostics.Process]::GetProcessById([int]$entry.pid)}catch [ArgumentException]{continue};try{if(-not $p.HasExited){if(-not (Same-UpdatePath $p.MainModule.FileName $entry.executable)){throw "Fixture process identity changed"};throw "Application still running"}}finally{if($null -ne $p){$p.Dispose()}}} }'
+      'function Assert-NoUpdateInstances { foreach($entry in (ConvertFrom-Json ([IO.File]::ReadAllText(' + psquote(context.processPath) + ')))) {$p=$null;try{$p=[Diagnostics.Process]::GetProcessById([int]$entry.pid)}catch [ArgumentException]{continue};try{if(-not $p.HasExited){if(-not (Same-UpdatePath $p.MainModule.FileName $entry.executable)){throw "Fixture process identity changed"};throw "Application still running"}}finally{if($null -ne $p){$p.Dispose()}}} }'
     ].join(';');
     const marker='$result=Invoke-UpdateBroker';
     assert.equal(original.split(marker).length,2,'Production bootstrap has one fixed broker entry.');
     const workerMarker='$result=Invoke-UpdateRunner',fixturesBase64=Buffer.from(fixtureFunctions,'utf8').toString('base64');
-    const workerSuffix=' -CommandTimeoutMs '+(context.commandTimeoutMs||5000)+' -ParentTimeoutMs '+(context.parentTimeoutMs||5000)+' -InstallerTimeoutMs 10000;[IO.File]::WriteAllText('+psquote(context.statusPath)+',[string]$result);[IO.File]::WriteAllText('+psquote(context.statusPath+'.workerpid')+',[string]$PID);if($Error.Count){[IO.File]::WriteAllText('+psquote(context.statusPath+'.diagnostics')+',[string]$Error[0])};';
+    const workerSuffix=' -CommandTimeoutMs '+(context.commandTimeoutMs||5000)+' -ParentTimeoutMs '+(context.parentTimeoutMs||5000)+' -InstallerTimeoutMs 10000;[IO.File]::WriteAllText('+psquote(context.statusPath)+',[string]$result);[IO.File]::WriteAllText('+psquote(context.statusPath+'.workerpid')+',[string]$PID);if($Error.Count){[IO.File]::WriteAllText('+psquote(context.statusPath+'.diagnostics')+',([string]$Error[0]+[Environment]::NewLine+$Error[0].InvocationInfo.PositionMessage+[Environment]::NewLine+$Error[0].ScriptStackTrace))};';
     const delayFixture=context.cancelDelayMs ? '$script:OwnedFixtureReadMarker=(Get-Command Read-UpdateMarker).ScriptBlock;$script:OwnedFixtureCancelDelay=$null;function Read-UpdateMarker([string]$Kind,[string]$Nonce){if($Kind -ceq "CANCEL" -and [IO.File]::Exists('+psquote(path.join(context.stageDirectory,'update-cancel'))+')){if($null -eq $script:OwnedFixtureCancelDelay){$script:OwnedFixtureCancelDelay=[DateTime]::UtcNow.AddMilliseconds('+context.cancelDelayMs+')};if([DateTime]::UtcNow -lt $script:OwnedFixtureCancelDelay){return $false}};return & $script:OwnedFixtureReadMarker $Kind $Nonce};' : '';
     const factory=[
       '$script:OwnedFixtureWorkerFactory=(Get-Command New-UpdateWorkerBootstrap).ScriptBlock',
@@ -224,7 +238,7 @@ async function completed(context) {
   await until(() => context.helper.exited, context.name + ': helper exits');
   await until(()=>fs.existsSync(context.statusPath),context.name+': independent worker finishes native operation');
   await until(()=>fs.existsSync(context.statusPath+'.workerpid'),context.name+': independent worker records its actual PID');
-  if(context.task && !context.parent.exited && ['cancelled','refused'].includes(fs.readFileSync(context.statusPath,'utf8'))) await context.task.cancel();
+  if(context.task && !context.parent.processExited && ['cancelled','refused'].includes(fs.readFileSync(context.statusPath,'utf8'))) await context.task.cancel();
   if(fs.existsSync(context.statusPath+'.workerpid')){const pid=Number(fs.readFileSync(context.statusPath+'.workerpid','utf8'));await until(()=>{try{process.kill(pid,0);return false}catch(e){if(e.code==='ESRCH')return true;throw e}},context.name+': owned independent worker exits naturally');context.workerExited=true;}
   const status = fs.existsSync(context.statusPath) ? fs.readFileSync(context.statusPath, 'utf8') : null;
   report.cases.push({ name: context.name, status, helperExitCode: context.helper.code, installerExecuted: fs.existsSync(context.installLog), restartExecuted: fs.existsSync(context.restartLog), stageRemovedByProduction: !fs.existsSync(context.stageDirectory) });
@@ -325,6 +339,30 @@ async function main() {
     check(context.name + ': native runner reports an updated target', await completed(context) === 'updated');
     checkInstaller(context); await checkRestart(context, '1.0.1');
   }
+  for(const outcome of ['success','timeout','cancel','reopened']) {
+    const context=await fixtureContext('lingering-child-'+outcome,'currentuser',binaries,'success',true),task=await prepared(context);
+    await task.release();const began=Date.now();await exitParent(context.parent);await delay(300);
+    check(context.name+': original descendant outlives its parent and blocks installer/restart',!fs.existsSync(context.installLog)&&!fs.existsSync(context.restartLog)&&!fs.existsSync(context.statusPath));
+    if(outcome==='success')await exitChild(context);
+    if(outcome==='cancel')fs.writeFileSync(path.join(context.stageDirectory,'update-cancel'),'CANCEL '+context.nonce+'\n',{flag:'wx'});
+    let reopened;
+    if(outcome==='reopened'){reopened=await parent(context.executable);const entries=JSON.parse(fs.readFileSync(context.processPath));entries.push({pid:reopened.child.pid,executable:context.executable});fs.writeFileSync(context.processPath,JSON.stringify(entries));}
+    const status=await completed(context);
+    if(outcome==='success'){check(context.name+': pinned real descendant drains before installation',status==='updated');checkInstaller(context);await checkRestart(context,'1.0.1');}
+    else {
+      check(context.name+': '+outcome+' refuses installation and never terminates the living descendant',status===(outcome==='cancel'?'cancelled':'refused')&&!fs.existsSync(context.installLog)&&!fs.existsSync(context.restartLog)&&processAlive(context.childPid));
+      if(outcome==='timeout')check(context.name+': child drain has a five-second bound',Date.now()-began>=4500&&Date.now()-began<12000);
+      if(reopened){check(context.name+': newly opened independent app is refused while original child remains alive',!reopened.processExited);await exitParent(reopened);}
+      await exitChild(context);
+    }
+  }
+  {
+    const context=await fixtureContext('independent-existing-instance','currentuser',binaries),independent=await parent(context.executable);let refused=false;
+    try{await armUpdate(context.plan,dependencies(context))}catch{refused=true}
+    await until(()=>context.helper.exited,'Independent-instance broker exits');await workerFinished(context);
+    check(context.name+': same-path independent process fails real ancestry check before READY',refused&&!context.parent.exited&&!independent.exited&&!fs.existsSync(context.installLog)&&!fs.existsSync(context.restartLog));
+    await exitParent(independent);await exitParent(context.parent);
+  }
   {
     const context=await fixtureContext('success-default-userdata','currentuser',binaries);context.defaultUserData=true;delete context.plan.userDataDirectory;
     const task=await prepared(context);await task.release();await exitParent(context.parent);
@@ -403,6 +441,7 @@ async function cleanup() {
   for (const context of contexts) {
     if(context.task && !context.parent.exited && context.helper && !context.helper.exited) try{await context.task.cancel()}catch{}
     if (context.helper && !context.helper.exited) { try { context.helper.child.stdin.end('CANCEL ' + context.nonce + '\n'); } catch {} }
+    if(context.childOptions)await exitChild(context);
     if(context.helper) await until(()=>context.helper.exited,'Owned broker completes cleanup before fixture removal');
     if(fs.existsSync(context.statusPath+'.factory')){await until(()=>fs.existsSync(context.statusPath+'.workerpid'),'Owned worker completes before fixture removal');const pid=Number(fs.readFileSync(context.statusPath+'.workerpid','utf8'));await until(()=>{try{process.kill(pid,0);return false}catch(e){if(e.code==='ESRCH')return true;throw e}},'Owned independent worker exits before fixture removal');}
     try { await exitParent(context.parent); } catch {}

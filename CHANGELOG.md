@@ -1,5 +1,10 @@
 # Changelog
 
+## Maintenance — Draft release discovery
+
+- Discover existing drafts through GitHub's authenticated paginated release list when the published-tag endpoint returns 404. Reject ambiguous drafts and conflicting source metadata, retain existing release/asset identities and keep public verification credentialless.
+- This publisher-only repair does not change application version 1.2.3 or any published tag or asset. Actual validation and publication recovery are recorded in DEVELOPMENT-PROGRESS.md.
+
 ## 1.2.3 — Persistent editing-key latency
 
 - Batch adjacent pending Backspace and arrow-key events with typing in Persistent sessions, including normal/application cursor sequences and Shift/Alt/Ctrl arrow combinations. Preserve the first-key dispatch, exact input order, 512-byte request limit and per-event queue accounting.

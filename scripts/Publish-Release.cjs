@@ -192,6 +192,25 @@ function createClient({ token, fetchImpl = fetch } = {}) {
   return { request, list };
 }
 
+async function findRelease(client, tag, publicAccess = false) {
+  versionFromTag(tag);
+  let release = await client.request(`${BASE}/releases/tags/${tag}`, { missing: true, public: publicAccess });
+  // GitHub's tag lookup exposes published releases only, including to the owner.
+  // Authenticated recovery must discover drafts through the paginated collection.
+  if (!release && !publicAccess) {
+    const matches = (await client.list(`${BASE}/releases`)).filter(item => item.tag_name === tag);
+    assert.ok(matches.length <= 1, `Ambiguous releases for ${tag}; inspect existing drafts before retrying`);
+    release = matches[0] || null;
+  }
+  if (release) {
+    assert.equal(release.tag_name, tag); assert.equal(release.prerelease, false);
+    assert.equal(typeof release.draft, 'boolean');
+    assert.ok(Number.isSafeInteger(release.id) && release.id > 0);
+    if (publicAccess) assert.equal(release.draft, false, 'Drafts cannot satisfy public release verification');
+  }
+  return release;
+}
+
 function createPublisher({ client, env = process.env, git = args => execFileSync('git', args, { encoding: 'utf8' }),
   download = (runId, dir) => execFileSync('gh', ['run', 'download', String(runId), '--repo', REPO,
     '--name', 'NerdSSHell-Windows-x64', '--dir', dir], { stdio: 'inherit' }), log = console.log } = {}) {
@@ -259,16 +278,17 @@ function createPublisher({ client, env = process.env, git = args => execFileSync
     if (prior) assert.equal(matches[0].id, prior.id, 'Accepted Windows artifact changed after preparation');
     return matches[0];
   }
-  async function releaseFor(tag, publicAccess = false) {
-    const release = await client.request(`${BASE}/releases/tags/${tag}`, { missing: true, public: publicAccess });
+  async function releaseFor(source, publicAccess = false) {
+    const release = await findRelease(client, source.tag, publicAccess);
     if (!release) return null;
-    assert.equal(release.tag_name, tag); assert.equal(release.prerelease, false);
-    assert.ok(Number.isSafeInteger(release.id) && release.id > 0);
+    verifyTarget(release, source);
     release.assets = await client.list(`${BASE}/releases/${release.id}/assets`, undefined, { public: publicAccess });
     return release;
   }
   function verifyTarget(release, source) {
     assert.equal(release.tag_name, source.tag); assert.equal(release.prerelease, false);
+    assert.ok(typeof release.target_commitish === 'string' && release.target_commitish.length > 0 &&
+      release.target_commitish.length <= 256 && !/[\x00-\x1f\x7f]/.test(release.target_commitish), 'Invalid release target');
     // target_commitish is ignored by GitHub for an existing tag; an explicit
     // conflicting SHA still indicates inconsistent release metadata.
     if (SHA.test(release.target_commitish)) assert.equal(release.target_commitish, source.sha, 'Release source differs');
@@ -291,7 +311,7 @@ function createPublisher({ client, env = process.env, git = args => execFileSync
   async function prepare() {
     const source = await context();
     fs.mkdirSync(dir); // A reused or contaminated staging directory fails closed.
-    const existing = await releaseFor(source.tag);
+    const existing = await releaseFor(source);
     let selected, accepted, expected;
     if (existing && !existing.draft) {
       expected = await remoteFiles(existing, source);
@@ -342,7 +362,7 @@ function createPublisher({ client, env = process.env, git = args => execFileSync
     }
   }
   async function verifyPublic(source, expected, releaseId, latestBefore, madeLatest) {
-    const release = await releaseFor(source.tag, true);
+    const release = await releaseFor(source, true);
     assert.ok(release && !release.draft, 'Published release must be publicly accessible');
     assert.equal(release.id, releaseId); verifyTarget(release, source); validateAssets(release.assets, expected);
     assert.equal(release.html_url, `https://github.com/${REPO}/releases/tag/${source.tag}`);
@@ -365,7 +385,7 @@ function createPublisher({ client, env = process.env, git = args => execFileSync
     const source = await context(), manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf8'));
     assert.equal(manifest.tag, source.tag); assert.equal(manifest.sha, source.sha); assert.equal(manifest.tagObject, source.tagObject);
     const expected = validateFiles(dir, source); assert.deepEqual(expected, manifest.expected, 'Prepared consumer assets changed');
-    let release = await releaseFor(source.tag);
+    let release = await releaseFor(source);
     if (release && !release.draft) {
       verifyTarget(release, source); if (manifest.publishedId) assert.equal(release.id, manifest.publishedId);
       await verifyRemote(release, expected); await verifyPublic(source, expected, release.id);
@@ -384,7 +404,10 @@ function createPublisher({ client, env = process.env, git = args => execFileSync
         target_commitish: source.sha, name: source.tag, body: notes, draft: true,
         prerelease: false, make_latest: 'false' } });
       assert.equal(release.draft, true); verifyTarget(release, source);
-      release = await releaseFor(source.tag); assert.equal(release.draft, true);
+      const createdId = release.id;
+      release = await releaseFor(source);
+      assert.ok(release, 'Created draft is not yet visible; retry with the same existing tag without replacing the draft');
+      assert.equal(release.id, createdId); assert.equal(release.draft, true);
     }
     const releaseId = release.id;
     for (const item of expected) {
@@ -393,7 +416,8 @@ function createPublisher({ client, env = process.env, git = args => execFileSync
           { method: 'POST', upload: true, body: fs.readFileSync(path.join(dir, item.name)) });
       }
     }
-    release = await releaseFor(source.tag); assert.equal(release.id, releaseId); assert.equal(release.draft, true);
+    release = await releaseFor(source); assert.ok(release, 'Prepared draft disappeared; refuse replacement');
+    assert.equal(release.id, releaseId); assert.equal(release.draft, true);
     await verifyRemote(release, expected);
     // Revalidate the exact run attempts, artifact and owner tag before publication.
     await gates(source, manifest.runs); await artifact(selected['build.yml'], manifest.artifact);
@@ -404,7 +428,8 @@ function createPublisher({ client, env = process.env, git = args => execFileSync
     release = await client.request(`${BASE}/releases/${release.id}`, { method: 'PATCH', body: {
       name: source.tag, body: notes, draft: false, make_latest: newer ? 'true' : 'false' } });
     assert.equal(release.draft, false); assert.equal(release.name, source.tag); assert.equal(release.body, notes); verifyTarget(release, source);
-    const published = await releaseFor(source.tag); assert.equal(published.id, releaseId); assert.equal(published.draft, false);
+    const published = await releaseFor(source); assert.ok(published, 'Published release is not yet visible');
+    assert.equal(published.id, releaseId); assert.equal(published.draft, false);
     await verifyRemote(published, expected);
     const final = await context(); assert.equal(final.tagObject, source.tagObject); assert.equal(final.sha, source.sha);
     await verifyPublic(source, expected, releaseId, latest, newer);
@@ -422,4 +447,4 @@ if (require.main === module) {
   });
 }
 module.exports = { REPO, WORKFLOWS, versionFromTag, compareVersions, expectedNames, validateSource, validateRun,
-  selectRuns, validateJobs, validateArtifact, validateAssets, validateInventory, validateFiles, createClient, createPublisher };
+  selectRuns, validateJobs, validateArtifact, validateAssets, validateInventory, validateFiles, createClient, findRelease, createPublisher };

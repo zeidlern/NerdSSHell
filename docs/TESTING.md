@@ -55,6 +55,12 @@ Run `node scripts/Startup-Update-Smoke.cjs` for exact-ASAR Windows SDK startup p
 
 Run `node scripts/Update-Handoff-Smoke.cjs` for owned inert Windows parent/installer/restart processes with explicit registry/process-enumeration fixtures. It must prove actual parent-exit persistence, nonce consent/cancellation, file integrity and conservative cleanup. It never modifies the installed user application or real registry. Source helper changes require a new exact-package receipt; do not infer native Windows passes from synthetic tests.
 
+## Real release updater acceptance
+
+`Published Windows update acceptance` runs only in the official disposable GitHub-hosted Windows VM. It verifies the original client's real startup offer and safe download refusal, then uses the exact candidate ASAR under the locked SDK to download a pinned public installer and exercise the real helper, normal parent exit, NSIS installation, restart and synthetic data preservation. Its controlled current-version identity does not establish an unmodified old-client upgrade. Finally it manually bootstraps the candidate installer and verifies the exact installed ASAR and production application. Diagnostic worker wrappers must be disabled for final acceptance. The workstation/self-hosted/fork guards cannot be bypassed for local installation testing.
+
+The request adapter is covered by `test/release-transport.test.cjs`: reviewed redirects, refused authentication, cancellation, truncated/error responses, bounded backpressure and Electron's early Writable close. Public bytes and Windows helper behavior require separate real transport and native receipts.
+
 ## Quick Connect acceptance
 
 Run `node --test test/generic-appliance.integration.test.cjs` on Windows or Linux for 300 real loopback appliance cycles, including password refusal, interactive MFA/cancel, transport loss and shell refusal. The fixture asserts zero exec requests, automatic input and unsolicited SFTP, then checks owned resource cleanup. This does not emulate an actual Cisco/Juniper/Arista release or prove renderer-memory behavior.

@@ -1,0 +1,473 @@
+'use strict';
+// Real consumer installation is restricted to a disposable GitHub-hosted VM.
+// Never invoke this fixture on a maintainer workstation or a self-hosted runner.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawn } = require('node:child_process');
+const { createHash, randomBytes } = require('node:crypto');
+const { Module, createRequire } = require('node:module');
+const asar = require('@electron/asar');
+const { readMetadata, publishedRelease, downloadInstaller, newer } = require('../src/release-updater.cjs');
+const canonicalVersion = require('../package.json').version;
+const { StateStore } = require('../src/storage.cjs');
+const { profile } = require('../src/core.cjs');
+
+const REPOSITORY = 'zeidlern/NerdSSHell';
+const GUID = '48ee049e-c2f6-57b2-ab6e-7f5df516dcc0';
+const FROM = Object.freeze({ version: '1.2.1', sha256: '446b31fab8a00bca32b68d2e4ca9d257392e60b21eb03e16fc7105fc91269e24' });
+const TO = Object.freeze({ version: '1.2.2', sha256: '8376baa0339283db4400098c8b68f0d6ce8dfbab2bdb576d1a3a19c85b07b74c' });
+function hostedEnvironment(environment = process.env, platform = process.platform) {
+  assert.equal(platform, 'win32', 'Real installer acceptance requires Windows.');
+  assert.equal(environment.GITHUB_ACTIONS, 'true', 'Do not run consumer installers on a workstation.');
+  assert.equal(environment.RUNNER_ENVIRONMENT, 'github-hosted', 'Self-hosted machines must never run this fixture.');
+  assert.equal(environment.GITHUB_REPOSITORY, REPOSITORY, 'Use only the official repository hosted acceptance.');
+  assert.ok(environment.RUNNER_TEMP && path.isAbsolute(environment.RUNNER_TEMP), 'A disposable runner directory is required.');
+  assert.ok(['workflow_dispatch', 'pull_request'].includes(environment.GITHUB_EVENT_NAME), 'Use only owner dispatch or an internal reviewed PR acceptance.');
+  if (environment.GITHUB_EVENT_NAME === 'workflow_dispatch') assert.equal(environment.GITHUB_REF, 'refs/heads/main', 'Dispatch only the reviewed main workflow.');
+  else assert.equal(environment.NERDSSHELL_ACCEPTANCE_HEAD_REPOSITORY, REPOSITORY, 'Fork pull requests must never run consumer installation acceptance.');
+  assert.equal(environment.GITHUB_ACTOR, 'zeidlern', 'Only the owner may dispatch real consumer installation acceptance.');
+}
+const digest = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+const psquote = value => "'" + value.replaceAll("'", "''") + "'";
+const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+async function until(operation, label, milliseconds = 30000) {
+  const end = Date.now() + milliseconds;
+  while (Date.now() < end) { if (await operation()) return; await delay(100); }
+  throw new Error(label);
+}
+function execute(file, args, { timeout = 30000, ...options } = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(file, args, { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], ...options });
+    let stdout = '', stderr = '', settled = false, timer;
+    const finish = error => { if (settled) return; settled = true; clearTimeout(timer); if (error) { child.unref(); child.stdout.unref?.(); child.stderr.unref?.(); reject(error); } else resolve(stdout.trim()); };
+    child.stdout.on('data', bytes => { if (settled) return; if (stdout.length + bytes.length > 1024 * 1024) finish(new Error('Acceptance output exceeded its bound.')); else stdout += bytes; });
+    child.stderr.on('data', bytes => { stderr += bytes.toString().slice(0, Math.max(0, 16384 - stderr.length)); });
+    child.once('error', finish);
+    timer = setTimeout(() => finish(new Error('Owned acceptance process exceeded its timeout.')), timeout);
+    child.once('close', code => finish(code === 0 ? null : new Error('Owned acceptance process failed (' + code + '): ' + stderr.slice(0, 2048))));
+  });
+}
+const powershell = (code, options) => execute(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
+  ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from("$ErrorActionPreference='Stop';" + code, 'utf16le').toString('base64')], options);
+const ownedWindowType = `Add-Type -TypeDefinition @'
+using System;using System.Text;using System.Runtime.InteropServices;
+public static class NerdSSHellPublishedWindow {
+ delegate bool Visitor(IntPtr window,IntPtr state);
+ [DllImport("user32.dll")]static extern bool EnumWindows(Visitor visitor,IntPtr state);
+ [DllImport("user32.dll")]static extern uint GetWindowThreadProcessId(IntPtr window,out uint process);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)]static extern int GetClassName(IntPtr window,StringBuilder name,int size);
+ [DllImport("user32.dll")]static extern bool PostMessage(IntPtr window,uint message,IntPtr first,IntPtr second);
+ public static IntPtr Find(uint process){IntPtr found=IntPtr.Zero;EnumWindows((window,state)=>{uint owner;GetWindowThreadProcessId(window,out owner);if(owner==process){var name=new StringBuilder(256);GetClassName(window,name,name.Capacity);if(name.ToString()=="Chrome_WidgetWin_1"){found=window;return false;}}return true;},IntPtr.Zero);return found;}
+ public static bool Close(IntPtr window,uint process){uint owner;GetWindowThreadProcessId(window,out owner);return owner==process&&PostMessage(window,0x0010,IntPtr.Zero,IntPtr.Zero);}
+}
+'@;`;
+function updaterFromArchive(archive) {
+  // Real NSIS upgrades replace this same pathname with a different ASAR layout.
+  // The standalone ASAR reader caches headers by path, so discard the old map.
+  asar.uncache(archive);
+  const file = path.join(archive, 'src', 'release-updater.cjs');
+  const loaded = new Module(file, module); loaded.filename = file; loaded.paths = module.paths;
+  loaded._compile(asar.extractFile(archive, 'src/release-updater.cjs').toString('utf8'), file);
+  return loaded.exports;
+}
+function controllerProtocol(directory, nonce, { fileSystem = fs } = {}) {
+  assert.match(nonce, /^[a-f0-9]{64}$/);
+  const actual = fs.realpathSync.native(directory), owner = fs.lstatSync(directory, { bigint: true });
+  assert.ok(owner.isDirectory() && !owner.isSymbolicLink());
+  assert.equal(path.dirname(actual).toLowerCase(), fs.realpathSync.native(os.tmpdir()).toLowerCase());
+  assert.ok(path.basename(actual).startsWith('nerdsshell-candidate-controller-'));
+  const commands = new Set(['GO', 'CANCEL', 'DONE']), states = new Set(['READY', 'GO', 'CANCEL', 'DONE', 'ERROR']), consumed = new Set(); let sequence = 0;
+  const checkDirectory = () => { const now = fs.lstatSync(actual, { bigint: true }); assert.ok(now.isDirectory() && !now.isSymbolicLink() && now.dev === owner.dev && now.ino === owner.ino, 'Controller directory identity changed.'); };
+  const read = (file, limit, replaceable = false) => {
+    for (let attempt = 0; attempt < (replaceable ? 3 : 1); attempt++) {
+      checkDirectory(); let fd;
+      try { const named = fileSystem.lstatSync(file, { bigint: true }); assert.ok(named.isFile() && !named.isSymbolicLink() && named.nlink === 1n && named.size <= BigInt(limit), 'Invalid controller marker.');
+        fd = fileSystem.openSync(file, 'r'); const held = fileSystem.fstatSync(fd, { bigint: true });
+        if (replaceable && (held.dev !== named.dev || held.ino !== named.ino || held.nlink === 0n)) continue;
+        assert.ok(held.isFile() && held.nlink === 1n && held.size <= BigInt(limit) && held.dev === named.dev && held.ino === named.ino, 'Controller marker identity changed.');
+        const bytes = Buffer.alloc(limit + 1), length = fileSystem.readSync(fd, bytes, 0, bytes.length, 0); assert.ok(length <= limit); return bytes.subarray(0, length).toString('utf8');
+      } catch (error) { if (error.code === 'ENOENT') return null; throw error; } finally { if (fd !== undefined) fileSystem.closeSync(fd); }
+    }
+    throw new Error('Controller response changed repeatedly during reading.');
+  };
+  return {
+    sendCommand(kind) {
+      assert.ok(commands.has(kind), 'Invalid controller command.'); checkDirectory();
+      const final = path.join(actual, 'controller-' + kind.toLowerCase());
+      const refuseDuplicate = () => { try { fs.lstatSync(final); } catch (error) { if (error.code === 'ENOENT') return; throw error; } const error = new Error('EEXIST: Controller command was already published.'); error.code = 'EEXIST'; throw error; };
+      refuseDuplicate(); const temporary = final + '-pending-' + randomBytes(8).toString('hex'); let held, fd;
+      try { fd = fs.openSync(temporary, 'wx', 0o600); held = fs.fstatSync(fd, { bigint: true }); fs.writeFileSync(fd, kind + ' ' + nonce + '\n'); fs.fsyncSync(fd); fs.closeSync(fd); fd = undefined;
+        checkDirectory(); refuseDuplicate(); fs.renameSync(temporary, final); held = null;
+      } finally { if (fd !== undefined) fs.closeSync(fd); if (held) { try { checkDirectory(); const now = fs.lstatSync(temporary, { bigint: true }); if (now.isFile() && !now.isSymbolicLink() && now.nlink === 1n && now.dev === held.dev && now.ino === held.ino) fs.unlinkSync(temporary); } catch {} } }
+    },
+    takeCommand() { for (const kind of ['CANCEL', 'GO', 'DONE']) { if (consumed.has(kind)) continue; const text = read(path.join(actual, 'controller-' + kind.toLowerCase()), 128); if (text === null) continue; assert.equal(text, kind + ' ' + nonce + '\n', 'Invalid controller command nonce.'); consumed.add(kind); return kind; } return null; },
+    publish(value) { assert.ok(value && states.has(value.type), 'Invalid controller response.'); checkDirectory(); const bytes = JSON.stringify({ ...value, sequence: ++sequence, nonce }); assert.ok(Buffer.byteLength(bytes) <= 32768); const temporary = path.join(actual, 'controller-response-' + sequence + '.tmp'); fs.writeFileSync(temporary, bytes, { flag: 'wx', mode: 0o600 }); fs.renameSync(temporary, path.join(actual, 'controller-response.json')); },
+    response() { const text = read(path.join(actual, 'controller-response.json'), 32768, true); if (text === null) return null; let value; try { value = JSON.parse(text); } catch { return null; } assert.ok(value && states.has(value.type) && Number.isSafeInteger(value.sequence) && value.sequence > 0 && value.nonce === nonce, 'Invalid controller response nonce or identity.'); return value; }
+  };
+}
+function isCandidateControllerEntry(electron, argv, filename) {
+  return !!electron && argv[2] === '--candidate-controller' && typeof argv[1] === 'string' && path.isAbsolute(argv[1]) && path.resolve(argv[1]).toLowerCase() === path.resolve(filename).toLowerCase();
+}
+function diagnosticBootstrap(original, output) {
+  const marker = '$result=Invoke-UpdateBroker'; assert.equal(original.split(marker).length, 2);
+  const worker = path.join(output, 'native-worker.json'), start = path.join(output, 'native-installer-start.json'), end = path.join(output, 'native-installer-exit.json'), instances = path.join(output, 'native-instances.json');
+  const observer = String.raw`Add-Type -TypeDefinition @'
+using System;using System.IO;using System.Runtime.InteropServices;using System.Threading;using System.Threading.Tasks;
+public static class NerdSSHellPublishedInstallerProbe {
+ [DllImport("kernel32.dll")]static extern IntPtr GetCurrentProcess();
+ [DllImport("kernel32.dll",SetLastError=true)]static extern bool DuplicateHandle(IntPtr owner,IntPtr source,IntPtr target,out IntPtr duplicate,uint access,bool inherit,uint options);
+ [DllImport("kernel32.dll")]static extern uint WaitForSingleObject(IntPtr handle,uint milliseconds);
+ [DllImport("kernel32.dll",SetLastError=true)]static extern bool GetExitCodeProcess(IntPtr handle,out uint code);
+ [DllImport("kernel32.dll")]static extern bool CloseHandle(IntPtr handle);
+ public static void Watch(IntPtr original,int pid,string file) {IntPtr held;if(!DuplicateHandle(GetCurrentProcess(),original,GetCurrentProcess(),out held,0,false,2))return;
+  Task.Factory.StartNew(()=>{try{uint waited=WaitForSingleObject(held,600000),code;bool known=GetExitCodeProcess(held,out code);File.WriteAllText(file,"{\"pid\":"+pid+",\"waitResult\":"+waited+",\"exitCodeKnown\":"+(known?"true":"false")+",\"exitCode\":"+code+"}");}catch{}finally{CloseHandle(held);}},CancellationToken.None,TaskCreationOptions.LongRunning,TaskScheduler.Default);
+ }
+}
+'@;
+function Write-PublishedProbe([string]$File,$Value){try{[IO.File]::WriteAllText($File,(ConvertTo-Json -InputObject $Value -Depth 5 -Compress))}catch{}}
+$script:PublishedGuardEvents=@();$script:PublishedOriginalInstanceCheck=(Get-Command Assert-NoUpdateInstances).ScriptBlock;
+function Assert-NoUpdateInstances {
+ $publishedPassed=$false;$publishedError=$null;
+ try{& $script:PublishedOriginalInstanceCheck;$publishedPassed=$true}
+ catch{$publishedError=$_.Exception.Message;throw}
+ finally{$publishedProcesses=@();foreach($publishedName in @('NerdSSHell','BetterSSH')){foreach($publishedItem in @([Diagnostics.Process]::GetProcessesByName($publishedName))){try{$publishedProcesses+=@{pid=$publishedItem.Id;name=$publishedName;start=$publishedItem.StartTime.ToUniversalTime().ToString('o');executable=$publishedItem.MainModule.FileName;hasExited=$publishedItem.HasExited}}catch{$publishedProcesses+=@{pid=$publishedItem.Id;name=$publishedName;inspectionError=$_.Exception.Message}}finally{$publishedItem.Dispose()}}};$script:PublishedGuardEvents+=@{utc=[DateTime]::UtcNow.ToString('o');passed=$publishedPassed;error=$publishedError;processes=$publishedProcesses};Write-PublishedProbe ${psquote(instances)} @($script:PublishedGuardEvents)}
+};
+$script:PublishedOriginalInstaller=(Get-Command Start-UpdateInstaller).ScriptBlock;
+function Start-UpdateInstaller([string]$Installer,[string]$Scope,[string]$Directory){
+ Write-PublishedProbe ${psquote(start)} @{phase='installer-start-request';utc=[DateTime]::UtcNow.ToString('o');scope=$Scope;installer=$Installer;directory=$Directory;arguments=('/S /'+$Scope+' /D='+$Directory)};
+ try{$publishedProcess=& $script:PublishedOriginalInstaller -Installer $Installer -Scope $Scope -Directory $Directory;$script:PublishedInstallerPid=$publishedProcess.Id;
+  [NerdSSHellPublishedInstallerProbe]::Watch($publishedProcess.Handle,$publishedProcess.Id,${psquote(end)});
+  Write-PublishedProbe ${psquote(start)} @{phase='installer-started';utc=[DateTime]::UtcNow.ToString('o');pid=$publishedProcess.Id;scope=$Scope;installer=$Installer;directory=$Directory;arguments=('/S /'+$Scope+' /D='+$Directory)};return $publishedProcess
+ }catch{Write-PublishedProbe ${psquote(start)} @{phase='installer-start-error';error=$_.Exception.Message};throw}
+};
+$script:PublishedOriginalRunner=(Get-Command Invoke-UpdateRunner).ScriptBlock;
+function Invoke-UpdateRunner([string]$Path,[string]$ManifestSha256,[int]$BrokerPid,[int]$CommandTimeoutMs=60000,[int]$ParentTimeoutMs=120000,[int]$InstallerTimeoutMs=600000){
+ $publishedResult=$null;
+ try{$publishedResult=. $script:PublishedOriginalRunner -Path $Path -ManifestSha256 $ManifestSha256 -BrokerPid $BrokerPid -CommandTimeoutMs $CommandTimeoutMs -ParentTimeoutMs $ParentTimeoutMs -InstallerTimeoutMs $InstallerTimeoutMs;return $publishedResult}
+ finally{Write-PublishedProbe ${psquote(worker)} @{instrumentationScope='Passive fixture wrapper delegates original runner/installer, preserving real registry/process checks, default timeouts, payload and args; timing may differ';utc=[DateTime]::UtcNow.ToString('o');phase=(Get-Variable phase -Scope Local -ValueOnly -ErrorAction SilentlyContinue);status=$publishedResult;go=(Get-Variable go -Scope Local -ValueOnly -ErrorAction SilentlyContinue);parentExited=(Get-Variable parentExited -Scope Local -ValueOnly -ErrorAction SilentlyContinue);installComplete=(Get-Variable installComplete -Scope Local -ValueOnly -ErrorAction SilentlyContinue);errors=@($Error|Select-Object -First 8|ForEach-Object {@{type=$_.Exception.GetType().FullName;message=$_.Exception.Message}})}}
+};`;
+  const encodedObserver = Buffer.from(observer).toString('base64');
+  const factory = `$script:PublishedOriginalWorkerFactory=(Get-Command New-UpdateWorkerBootstrap).ScriptBlock;function New-UpdateWorkerBootstrap([string]$Runner,[string]$RunnerSha256,[string]$Path,[string]$ManifestSha256,[int]$BrokerPid,[string]$Nonce){$publishedCode=& $script:PublishedOriginalWorkerFactory -Runner $Runner -RunnerSha256 $RunnerSha256 -Path $Path -ManifestSha256 $ManifestSha256 -BrokerPid $BrokerPid -Nonce $Nonce;$publishedMarker='$result=Invoke-UpdateRunner';$publishedAt=$publishedCode.IndexOf($publishedMarker,[StringComparison]::Ordinal);if($publishedAt -lt 0 -or $publishedCode.LastIndexOf($publishedMarker,[StringComparison]::Ordinal) -ne $publishedAt){throw 'Invalid observed worker entry'};$publishedObserver=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(${psquote(encodedObserver)}));return $publishedCode.Insert($publishedAt,$publishedObserver+';')};`;
+  return original.replace(marker, () => factory + marker);
+}
+function postResultBootstrap(original, output) {
+  const marker = '$result=Invoke-UpdateBroker'; assert.equal(original.split(marker).length, 2);
+  const resultFile = path.join(output, 'native-worker-result.json');
+  const observation = `try{$publishedErrors=@($Error|Select-Object -First 8|ForEach-Object {$publishedMessage=[string]$_.Exception.Message;if($publishedMessage.Length -gt 1024){$publishedMessage=$publishedMessage.Substring(0,1024)};@{type=$_.Exception.GetType().FullName;message=$publishedMessage}});$publishedObservation=@{instrumentationScope='Post-result-only fixture observation after original Invoke-UpdateRunner returns; no runner/installer/instance wrappers or before-operation code';utc=[DateTime]::UtcNow.ToString('o');status=[string]$result;errors=$publishedErrors};$publishedJson=ConvertTo-Json -InputObject $publishedObservation -Depth 4 -Compress;if([Text.Encoding]::UTF8.GetByteCount($publishedJson) -le 16384){[IO.File]::WriteAllText(${psquote(resultFile)},$publishedJson)}}catch{};`;
+  const encoded = Buffer.from(observation).toString('base64');
+  const factory = `$script:PublishedPostResultWorkerFactory=(Get-Command New-UpdateWorkerBootstrap).ScriptBlock;function New-UpdateWorkerBootstrap([string]$Runner,[string]$RunnerSha256,[string]$Path,[string]$ManifestSha256,[int]$BrokerPid,[string]$Nonce){$publishedCode=& $script:PublishedPostResultWorkerFactory -Runner $Runner -RunnerSha256 $RunnerSha256 -Path $Path -ManifestSha256 $ManifestSha256 -BrokerPid $BrokerPid -Nonce $Nonce;$publishedCall='$result=Invoke-UpdateRunner -Path '+(Quote-UpdatePowerShell $Path)+' -ManifestSha256 '+(Quote-UpdatePowerShell $ManifestSha256)+' -BrokerPid '+$BrokerPid+';';$publishedAt=$publishedCode.IndexOf($publishedCall,[StringComparison]::Ordinal);if($publishedAt -lt 0 -or $publishedCode.LastIndexOf($publishedCall,[StringComparison]::Ordinal) -ne $publishedAt){throw 'Invalid original worker invocation'};$publishedObservation=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(${psquote(encoded)}));return $publishedCode.Insert($publishedAt+$publishedCall.Length,$publishedObservation)};`;
+  return original.replace(marker, () => factory + marker);
+}
+function readPostResultObservation(output) {
+  const file = path.join(output, 'native-worker-result.json'); let fd;
+  try {
+    const named = fs.lstatSync(file, { bigint: true });
+    assert.ok(named.isFile() && !named.isSymbolicLink() && named.nlink === 1n && named.size <= 16384n, 'Invalid native worker result file.');
+    fd = fs.openSync(file, 'r'); const held = fs.fstatSync(fd, { bigint: true });
+    assert.ok(held.isFile() && held.nlink === 1n && held.dev === named.dev && held.ino === named.ino && held.size <= 16384n, 'Native worker result identity changed.');
+    const bytes = Buffer.alloc(16385), length = fs.readSync(fd, bytes, 0, bytes.length, 0); assert.ok(length <= 16384);
+    let value; try { value = JSON.parse(bytes.subarray(0, length).toString('utf8')); } catch (error) { if (error instanceof SyntaxError) return null; throw error; }
+    assert.ok(value && ['updated', 'restored', 'refused', 'cancelled'].includes(value.status) && Array.isArray(value.errors) && value.errors.length <= 8, 'Invalid native worker result.');
+    assert.ok(value.errors.every(error => typeof error?.type === 'string' && typeof error.message === 'string' && error.message.length <= 1024), 'Invalid native worker result errors.');
+    return value;
+  } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  finally { if (fd !== undefined) fs.closeSync(fd); }
+}
+function candidateController(archive, plan, output) {
+  const data = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), 'nerdsshell-candidate-controller-'));
+  const nonce = randomBytes(32).toString('hex'), protocol = controllerProtocol(data, nonce);
+  const file = path.join(data, 'controller-plan.json'); fs.writeFileSync(file, JSON.stringify({ archive, ...plan, output, protocolNonce: nonce }), { flag: 'wx', mode: 0o600 });
+  const child = spawn(require('electron'), [__filename, '--candidate-controller', file, '--user-data-dir=' + data], { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  let exited = false, exitCode, stderr = '', launchError, cancelTask;
+  child.stdout.resume(); child.stderr.on('data', bytes => { stderr += bytes.toString().slice(0, Math.max(0, 16384 - stderr.length)); });
+  child.once('error', error => { launchError = error; }); child.once('exit', code => { exited = true; exitCode = code; }); child.once('close', code => { exited = true; exitCode = code; });
+  const wait = async (expected, milliseconds = 600000) => {
+    let value; await until(() => { value = protocol.response(); if (value?.type === 'ERROR') throw new Error(value.message); if (value?.type === expected) return true; if (launchError) throw launchError; if (exited) throw new Error('Candidate controller exited before ' + expected + ' (' + exitCode + '): ' + stderr.slice(0, 2048)); return false; }, 'Candidate controller timed out awaiting ' + expected + '.', milliseconds); return value;
+  };
+  const command = async (name, expected) => { protocol.sendCommand(name); return wait(expected, 30000); };
+  return { ready: () => wait('READY'), release: () => command('GO', 'GO'), async complete() { await command('DONE', 'DONE'); await until(() => exited, 'Candidate SDK controller did not exit.'); },
+    cancel() { if (!cancelTask) cancelTask = exited ? Promise.resolve() : command('CANCEL', 'CANCEL').catch(() => {}); return cancelTask; },
+    get diagnostics() { return { pid: child.pid, exited, exitCode, stderr, launchError: launchError?.message }; },
+    detach() { child.unref(); child.stdout.unref?.(); child.stderr.unref?.(); }
+  };
+}
+async function runCandidateController() {
+  hostedEnvironment();
+  assert.equal(process.argv[2], '--candidate-controller'); const file = process.argv[3];
+  const directory = fs.realpathSync.native(path.dirname(file));
+  assert.equal(path.dirname(directory).toLowerCase(), fs.realpathSync.native(os.tmpdir()).toLowerCase());
+  assert.ok(path.basename(directory).startsWith('nerdsshell-candidate-controller-'));
+  const plan = JSON.parse(fs.readFileSync(file, 'utf8')), { app, net } = require('electron'), protocol = controllerProtocol(directory, plan.protocolNonce);
+  let handoff, ready, failure, stageSampler;
+  const send = value => protocol.publish(value);
+  const report = { scope: 'Exact canonical candidate-ASAR modules under locked SDK with controlled current-version identity from actual installed legacy parent and pinned tagged public 1.2.2 selection. Real public HTTPS, fixed Windows helper, consent-release, old parent exit and actual NSIS; not candidate production startup.', status: 'running' };
+  const persist = () => fs.writeFileSync(plan.output, JSON.stringify(report, null, 2) + '\n');
+  try {
+    await app.whenReady(); const packed = createRequire(path.join(plan.archive, 'src', 'main.cjs'));
+    const metadata = packed('../package.json');
+    assert.equal(metadata.version, plan.candidateVersion, 'Use the exact canonical candidate package.');
+    assert.ok(newer(metadata.version, TO.version), 'The patched candidate must be newer than the immutable sample.');
+    report.candidateVersion = metadata.version; report.candidateAsarSha256 = createHash('sha256').update(require('original-fs').readFileSync(plan.archive)).digest('hex');
+    const updater = packed('./release-updater.cjs');
+    // Filled with the exact candidate transport's public export; never substitute
+    // Node fetch for the Chromium API that failed in published legacy clients.
+    const transport = packed('./release-transport.cjs').createReleaseFetch(net);
+    const latest = await updater.readMetadata(transport, metadata.version);
+    report.realLatestCheck = { currentVersion: metadata.version, status: latest ? 'available' : 'current', ...(latest ? { availableVersion: latest.version, releaseId: latest.releaseId } : {}) };
+    const tagged = await transport('https://api.github.com/repos/' + REPOSITORY + '/releases/tags/v' + TO.version, { method: 'GET', redirect: 'manual', credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(15000), headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'NerdSSHell/' + metadata.version, 'X-GitHub-Api-Version': '2022-11-28' } });
+    assert.equal(tagged.status, 200); const reader = tagged.body.getReader(); let total = 0; const chunks = [];
+    try { while (true) { const part = await reader.read(); if (part.done) break; total += part.value.byteLength; assert.ok(total <= updater.MAX_METADATA); chunks.push(Buffer.from(part.value)); } } finally { await reader.cancel(); }
+    const release = updater.publishedRelease(JSON.parse(Buffer.concat(chunks, total).toString('utf8')), FROM.version); assert.equal(release.version, TO.version); assert.equal(release.sha256, TO.sha256);
+    report.controlledSelection = { taggedVersion: TO.version, currentVersion: FROM.version, actualLatestFeedUnmodified: true };
+    ready = await updater.downloadInstaller(transport, release, FROM.version);
+    report.installerSha256 = digest(ready.installerPath); assert.equal(report.installerSha256, TO.sha256);
+    report.instrumentationScope = plan.postResultDiagnostics ? 'Post-result-only worker observation after original invocation returns; no runner/installer/instance wrappers or before-operation code. This is not uninstrumented acceptance.' : plan.diagnostics ? 'Diagnostic-only passive bootstrap hooks delegate real runner and installer without replacing registry/process checks, payload, arguments or timeouts; timing may differ. This is not uninstrumented acceptance.' : 'Exact bundled helper bootstrap/source/arguments, with passive broker and stage observations only; no injected worker wrappers.';
+    report.stageDirectory = ready.stageDirectory;
+    stageSampler = setInterval(() => { try { report.stageObservation = { utc: new Date().toISOString(), exists: fs.existsSync(ready.stageDirectory), files: fs.existsSync(ready.stageDirectory) ? fs.readdirSync(ready.stageDirectory).slice(0, 32) : [] }; persist(); } catch {} }, 500);
+    const diagnosticOutput = path.dirname(plan.output);
+    const executeObserved = (executable, args, options) => {
+      const at = args.indexOf('-EncodedCommand'); assert.ok(at > 0 && at === args.length - 2); const original = Buffer.from(args[at + 1], 'base64').toString('utf16le');
+      const observed = plan.postResultDiagnostics ? postResultBootstrap(original, diagnosticOutput) : plan.diagnostics ? diagnosticBootstrap(original, diagnosticOutput) : original, observedArgs = [...args]; observedArgs[at + 1] = Buffer.from(observed, 'utf16le').toString('base64');
+      report.nativeCommandLineCharacters = executable.length + observedArgs.reduce((sum, value) => sum + value.length + 3, 0); assert.ok(report.nativeCommandLineCharacters < 32767, 'Observed helper command exceeds the Windows process command limit.');
+      const child = spawn(executable, observedArgs, options); report.nativeBroker = { pid: child.pid, stderr: '' };
+      child.stderr.on('data', bytes => { report.nativeBroker.stderr += bytes.toString().slice(0, Math.max(0, 16384 - report.nativeBroker.stderr.length)); persist(); });
+      child.once('exit', code => { report.nativeBroker.exitCode = code; persist(); }); return child;
+    };
+    handoff = await packed('./update-handoff.cjs').armUpdate({ ...ready, executablePath: plan.executablePath, userDataDirectory: plan.userDataDirectory, parentPid: plan.parentPid }, plan.diagnostics ? { execute: executeObserved } : undefined);
+    report.status = 'prepared'; persist(); send({ type: 'READY', sha256: release.sha256, size: release.size, targetVersion: release.version, parentPid: plan.parentPid, candidateVersion: metadata.version, candidateAsarSha256: report.candidateAsarSha256, realLatestCheck: report.realLatestCheck, stageDirectory: ready.stageDirectory, nativeBrokerPid: report.nativeBroker?.pid, diagnosticInstrumentation: plan.diagnostics === true, diagnosticMode: plan.postResultDiagnostics ? 'post-result' : plan.diagnostics ? 'full' : 'none' });
+    while (true) {
+      let command; await until(() => { command = protocol.takeCommand(); return !!command; }, 'Candidate controller did not receive its next command.', 1200000);
+      if (command === 'GO') { assert.equal(report.status, 'prepared'); await handoff.release(); report.status = 'released'; persist(); send({ type: 'GO' }); }
+      else if (command === 'CANCEL') { await handoff.cancel(); ready = null; report.status = 'cancelled'; persist(); send({ type: 'CANCEL' }); break; }
+      else if (command === 'DONE') { assert.equal(report.status, 'released'); ready = null; report.status = 'passed'; persist(); send({ type: 'DONE' }); break; }
+      else throw new Error('Unexpected candidate controller command.');
+    }
+  } catch (error) { failure = error; report.status = 'failed'; report.failure = error.message; persist(); send({ type: 'ERROR', message: error.message }); }
+  finally { clearInterval(stageSampler); if (failure && handoff) try { await handoff.cancel(); } catch {} if (ready) try { ready.cleanup(); } catch {} app.exit(failure ? 1 : 0); }
+}
+// Accessibility actions are scoped to the exact owned root PID and executable.
+// No debugging switch or altered ASAR is used, so startup eligibility is real.
+async function accessibleAction(pid, executable, action, requiredName = '') {
+  assert.ok(['Not now', 'Upgrade', 'close', 'inspect', 'observe'].includes(action));
+  const code = String.raw`Add-Type -AssemblyName UIAutomationClient;Add-Type -AssemblyName UIAutomationTypes;${ownedWindowType}
+    $owned=[Diagnostics.Process]::GetProcessById(${pid});try{
+      if(-not [string]::Equals($owned.MainModule.FileName,${psquote(executable)},[StringComparison]::OrdinalIgnoreCase)){throw 'Owned app identity changed'};
+      $limit=[DateTime]::UtcNow.AddSeconds(20);$root=$null;
+      while([DateTime]::UtcNow -lt $limit){$owned.Refresh();if($owned.HasExited){throw 'Owned application exited before accessibility action'};
+        $window=[NerdSSHellPublishedWindow]::Find([uint32]$owned.Id);
+        if($window -ne [IntPtr]::Zero){if(${psquote(action)} -eq 'close'){if(-not [NerdSSHellPublishedWindow]::Close($window,[uint32]$owned.Id)){throw 'Normal owned WM_CLOSE failed'};return};$root=[Windows.Automation.AutomationElement]::FromHandle($window);break};Start-Sleep -Milliseconds 100};
+      if($null -eq $root){throw 'No owned application window'};
+      $observations=0;$observedNewerOffer=$false;
+      if(${psquote(action)} -eq 'observe'){$observationClock=[Diagnostics.Stopwatch]::StartNew();$limit=[DateTime]::UtcNow.AddMilliseconds(17000)};
+      while([DateTime]::UtcNow -lt $limit){
+        $elements=$root.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition);
+        if($elements.Count -gt 5000){throw 'Accessibility tree exceeded its bound'};$names=@();$button=$null;
+        for($index=0;$index -lt $elements.Count;$index++){$element=$elements.Item($index);$current=$element.Current;
+          if($current.Name){$names+=$current.Name};if($current.Name -ceq ${psquote(action)} -and $current.ControlType -eq [Windows.Automation.ControlType]::Button){$button=$element}};
+        if(${psquote(action)} -eq 'observe'){
+          $observations++;if(@($names|Where-Object {$_.StartsWith('The update check or download could not finish.',[StringComparison]::Ordinal)}).Count){throw 'Actual fused startup displayed an update-check failure'};
+          foreach($name in $names){if($name -match '^NerdSSHell ([0-9]+\.[0-9]+\.[0-9]+) is available\. Upgrade now\?'){
+            if([version]$Matches[1] -le [version]${psquote(canonicalVersion)}){throw 'Actual fused startup offered an obsolete release'};$observedNewerOffer=$true}};
+          Start-Sleep -Milliseconds 200;continue
+        };
+        $required=${psquote(requiredName)};if($required -and @($names|Where-Object {$_.StartsWith($required,[StringComparison]::Ordinal)}).Count -eq 0){Start-Sleep -Milliseconds 100;continue};
+        if(${psquote(action)} -eq 'inspect'){@{names=$names;pid=$owned.Id}|ConvertTo-Json -Depth 3 -Compress;return};
+        if($button){if(-not $button.Current.IsEnabled){throw 'Owned consent button is disabled'};
+          $invoke=$button.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern);$invoke.Invoke();
+          @{invoked=${psquote(action)};requiredNameObserved=$true;pid=$owned.Id}|ConvertTo-Json -Compress;return};Start-Sleep -Milliseconds 100
+      };if(${psquote(action)} -eq 'observe'){@{observedMilliseconds=$observationClock.ElapsedMilliseconds;snapshots=$observations;newerOfferObserved=$observedNewerOffer;completionClaimed=$false}|ConvertTo-Json -Compress;return};throw 'Expected owned update consent was unavailable'
+    }finally{$owned.Dispose()}`;
+  const result = await powershell(code, { timeout: action === 'observe' ? 45000 : 30000 });
+  return result ? JSON.parse(result) : null;
+}
+async function registrations() {
+  return JSON.parse(await powershell(`$entries=@();foreach($hive in @([Microsoft.Win32.RegistryHive]::CurrentUser,[Microsoft.Win32.RegistryHive]::LocalMachine)){
+    $root=[Microsoft.Win32.RegistryKey]::OpenBaseKey($hive,[Microsoft.Win32.RegistryView]::Registry64);try{
+      $key=$root.OpenSubKey('Software\\${GUID}',$false);if($key){try{$entries+=@{directory=$key.GetValue('InstallLocation');scope=$hive.ToString()}}finally{$key.Dispose()}}
+    }finally{$root.Dispose()}};ConvertTo-Json -InputObject @($entries) -Compress`));
+}
+async function applications({ rootWindowOnly = false, details = false } = {}) {
+  return JSON.parse(await powershell(`${rootWindowOnly || details ? ownedWindowType : ''}$records=@();foreach($name in @('NerdSSHell','BetterSSH')){foreach($owned in @([Diagnostics.Process]::GetProcessesByName($name))){try{
+    if(${rootWindowOnly || details ? '$true' : '$false'}){$window=[NerdSSHellPublishedWindow]::Find([uint32]$owned.Id);if(${rootWindowOnly ? '$true' : '$false'} -and $window -eq [IntPtr]::Zero){continue}};
+    $record=@{pid=$owned.Id;executable=$owned.MainModule.FileName};if(${details ? '$true' : '$false'}){$record.start=$owned.StartTime.ToUniversalTime().ToString('o');$record.ownedRootWindow=($window -ne [IntPtr]::Zero);$record.hasExited=$owned.HasExited};$records+=$record
+  }finally{$owned.Dispose()}}};ConvertTo-Json -InputObject @($records) -Compress`));
+}
+async function runtimeSnapshot(executable) {
+  const values = await Promise.allSettled([executableVersion(executable), applications({ details: true }), registrations()]);
+  return { utc: new Date().toISOString(), ...Object.fromEntries(['installedProductVersion', 'nerdProcesses', 'registrations'].map((name, index) => [name, values[index].status === 'fulfilled' ? values[index].value : { inspectionError: values[index].reason.message }])) };
+}
+async function nativeProcessSnapshot(handoff, output) {
+  let installer; try { installer = JSON.parse(fs.readFileSync(path.join(output, 'native-installer-start.json'), 'utf8')); } catch {}
+  const roots = [{ pid: handoff.nativeBrokerPid, executable: path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe') }, { pid: installer?.pid, executable: installer?.installer }].filter(value => Number.isSafeInteger(value.pid) && value.pid > 0 && typeof value.executable === 'string');
+  if (!roots.length) return { utc: new Date().toISOString(), roots: [], processes: [] };
+  const code = String.raw`Add-Type -TypeDefinition @'
+using System;using System.Text;using System.Collections.Generic;using System.Runtime.InteropServices;
+public sealed class NerdSSHellPublishedDialog {public string WindowClass;public string Title;public string[] Children;}
+public static class NerdSSHellPublishedDialogs {
+ delegate bool Visitor(IntPtr window,IntPtr state);
+ [DllImport("user32.dll")]static extern bool EnumWindows(Visitor visitor,IntPtr state);
+ [DllImport("user32.dll")]static extern bool EnumChildWindows(IntPtr root,Visitor visitor,IntPtr state);
+ [DllImport("user32.dll")]static extern uint GetWindowThreadProcessId(IntPtr window,out uint process);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)]static extern int GetClassName(IntPtr window,StringBuilder name,int size);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)]static extern int GetWindowText(IntPtr window,StringBuilder text,int size);
+ static string Text(IntPtr window){var text=new StringBuilder(512);GetWindowText(window,text,text.Capacity);return text.ToString();}
+ public static NerdSSHellPublishedDialog[] Read(uint process){var result=new List<NerdSSHellPublishedDialog>();EnumWindows((window,state)=>{uint owner;GetWindowThreadProcessId(window,out owner);if(owner==process){var name=new StringBuilder(256);GetClassName(window,name,name.Capacity);var children=new List<string>();EnumChildWindows(window,(child,unused)=>{string text=Text(child);if(text.Length>0)children.Add(text);return children.Count<12;},IntPtr.Zero);result.Add(new NerdSSHellPublishedDialog{WindowClass=name.ToString(),Title=Text(window),Children=children.ToArray()});}return result.Count<4;},IntPtr.Zero);return result.ToArray();}
+}
+'@;
+    $roots=ConvertFrom-Json ${psquote(JSON.stringify(roots))};$all=@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,ExecutablePath,CreationDate,Name);$ids=New-Object 'Collections.Generic.HashSet[int]';
+    foreach($root in $roots){foreach($item in $all){if($item.ProcessId -eq $root.pid -and [string]::Equals($item.ExecutablePath,$root.executable,[StringComparison]::OrdinalIgnoreCase)){$ids.Add([int]$item.ProcessId)|Out-Null}}};
+    for($depth=0;$depth -lt 4;$depth++){$prior=@($ids);foreach($item in $all){if($prior -contains [int]$item.ParentProcessId -and $ids.Count -lt 32){$ids.Add([int]$item.ProcessId)|Out-Null}}};
+    $records=@();foreach($item in $all){if($ids.Contains([int]$item.ProcessId)){$records+=@{pid=$item.ProcessId;parentPid=$item.ParentProcessId;name=$item.Name;executable=$item.ExecutablePath;created=$item.CreationDate.ToUniversalTime().ToString('o');windows=@([NerdSSHellPublishedDialogs]::Read([uint32]$item.ProcessId))}}};ConvertTo-Json -InputObject @($records) -Depth 6 -Compress`;
+  return { utc: new Date().toISOString(), roots, processes: JSON.parse(await powershell(code)) };
+}
+async function executableVersion(executable) {
+  return powershell(`$value=[Diagnostics.FileVersionInfo]::GetVersionInfo(${psquote(executable)});if($value.ProductName -cne 'NerdSSHell'){throw 'Wrong installed product'};$value.ProductVersion`);
+}
+async function installConsumer(installer, directory) {
+  await powershell(`$options=New-Object Diagnostics.ProcessStartInfo;$options.FileName=${psquote(installer)};$options.Arguments=${psquote('/S /currentuser /D=' + directory)};$options.UseShellExecute=$true;$options.WindowStyle=[Diagnostics.ProcessWindowStyle]::Hidden;
+    $installer=[Diagnostics.Process]::Start($options);try{if(-not $installer.WaitForExit(120000)){throw 'Owned installer did not finish'};if($installer.ExitCode -ne 0){throw 'Owned installer failed'}}finally{$installer.Dispose()}`, { timeout: 150000 });
+}
+async function main() {
+  hostedEnvironment();
+  assert.equal(process.argv.length, 2, 'This immutable acceptance accepts no installer/path/version arguments.');
+  const temporary = fs.realpathSync.native(process.env.RUNNER_TEMP);
+  const fixture = fs.mkdtempSync(path.join(temporary, 'nerdsshell-published-update-'));
+  const install = path.join(fixture, 'Installation with spaces');
+  const data = path.join(fixture, 'Synthetic profile with spaces');
+  const output = path.join(process.cwd(), '.local', 'published-update-acceptance');
+  fs.mkdirSync(output, { recursive: true }); fs.mkdirSync(data);
+  const executable = path.join(install, 'NerdSSHell.exe');
+  const report = { status: 'running', scope: 'Actual published 1.2.1 startup discovers the current real latest stable release and refuses its broken legacy download safely after accessibility consent. Separate exact canonical candidate-ASAR SDK controller selects pinned tagged public 1.2.2 using a controlled current-version identity, exercises patched Chromium transport and real helper against that actual old parent, then real public NSIS/restart/data preservation. Final manual candidate NSIS bootstrap verifies the exact new installed ASAR and actual fused application. This does not claim legacy clients automatically install. Disposable GitHub-hosted Windows, synthetic data; no clipboard, remote session, UAC or physical mouse acceptance.', source: process.env.GITHUB_SHA, checks: [], from: FROM, to: TO };
+  const persist = () => fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2) + '\n');
+  const check = (name, value = true) => { assert.equal(value, true, name); report.checks.push(name); persist(); console.log(name); };
+  const staged = []; let app, restarted, controller, handoff;
+  const trackApp = () => {
+    const child = spawn(executable, ['--force-renderer-accessibility', '--user-data-dir=' + data], { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    child.stderrText = ''; child.stdout.resume(); child.stderr.on('data', bytes => { child.stderrText += bytes.toString().slice(0, Math.max(0, 16384 - child.stderrText.length)); }); child.once('error', error => { child.launchError = error; }); child.once('close', () => { child.ended = true; });
+    return child;
+  };
+  try {
+    check('Hosted runner starts without NerdSSHell registration or running applications', (await registrations()).length === 0 && (await applications()).length === 0);
+    const target = await readMetadata(fetch, FROM.version);
+    check('Unauthenticated latest endpoint offers a valid stable release to legacy 1.2.1', !!target && (target.version === TO.version || newer(target.version, TO.version)));
+    report.actualLatest = { version: target.version, releaseId: target.releaseId, sha256: target.sha256 };
+    const baselineResponse = await fetch('https://api.github.com/repos/' + REPOSITORY + '/releases/tags/v' + FROM.version, { redirect: 'error', credentials: 'omit', headers: { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } });
+    assert.equal(baselineResponse.status, 200);
+    const baseline = publishedRelease(await baselineResponse.json(), '0.0.0');
+    check('Published baseline installer digest matches immutable 1.2.1', baseline.version === FROM.version && baseline.sha256 === FROM.sha256);
+    const ready = await downloadInstaller(fetch, baseline, '0.0.0'); staged.push(ready);
+    check('Public 1.2.1 download verifies exact size, EXE magic and SHA-256', digest(ready.installerPath) === FROM.sha256);
+    await installConsumer(ready.installerPath, install);
+    check('Real current-user NSIS installs exact baseline version', (await executableVersion(executable)) === FROM.version + '.0');
+    const registration = await registrations();
+    check('Baseline registration uses only the owned installation directory', registration.length === 1 && registration[0].scope === 'CurrentUser' && path.resolve(registration[0].directory).toLowerCase() === install.toLowerCase());
+    const archive = path.join(install, 'resources', 'app.asar');
+    report.fromAsarSha256 = digest(archive);
+    const actualUpdater = updaterFromArchive(archive), packedMetadata = JSON.parse(asar.extractFile(archive, 'package.json'));
+    check('Exact installed 1.2.1 updater discovers real current latest', packedMetadata.version === FROM.version && (await actualUpdater.readMetadata(fetch, FROM.version))?.sha256 === target.sha256);
+    check('Exact installed updater recognizes real same-version latest as already current', await actualUpdater.readMetadata(fetch, target.version) === null);
+    await assert.rejects(actualUpdater.readMetadata(async () => new Response('', { status: 503 }), FROM.version));
+    await assert.rejects(actualUpdater.readMetadata(async () => new Response('{"draft":true}'), FROM.version));
+    check('Exact installed updater reports HTTP failure and invalid metadata as errors, not already current');
+    const store = new StateStore(data);
+    store.data.profiles = [profile({ id: 'published-upgrade-fixture', name: 'Synthetic preserved connection', host: '127.0.0.1', port: 65200, username: 'fixture', auth: 'agent', sessionMode: 'standard', autoConnect: false, startup: 'none', record: false, scrollback: 1000 })];
+    store.data.pins['127.0.0.1:65200'] = 'SHA256:' + createHash('sha256').update('SYNTHETIC HOST KEY ONLY').digest('base64').replace(/=+$/, '');
+    store.data.appearance.copyOnSelect = false; store.data.appearance.accent = '#123456';
+    store.data.notifications = { enabled: false, audio: false, desktop: false, visual: false };
+    store.data.sessionDefaults.autoConnect = false; store.data.sessionDefaults.startup = 'none'; store.save();
+    const original = JSON.parse(fs.readFileSync(store.file, 'utf8'));
+    const sentinel = path.join(data, 'history', 'published-upgrade-fixture', 'synthetic-sentinel.jsonl');
+    fs.mkdirSync(path.dirname(sentinel), { recursive: true }); fs.writeFileSync(sentinel, '{"text":"SYNTHETIC PRESERVATION ONLY"}\n'); const sentinelHash = digest(sentinel);
+    app = trackApp();
+    const declined = await accessibleAction(app.pid, executable, 'Not now', 'NerdSSHell ' + target.version + ' is available. Upgrade now?');
+    await delay(1000);
+    check('Actual eligible fused 1.2.1 shows update and honors native-accessibility Not now', declined.invoked === 'Not now' && !app.ended && !app.launchError && (await executableVersion(executable)) === FROM.version + '.0');
+    check('Actual Not now never creates an installer download stage', !fs.readdirSync(fs.realpathSync.native(os.tmpdir())).some(name => name.startsWith('nerdsshell-update-' + app.pid + '-')));
+    await accessibleAction(app.pid, executable, 'close'); await until(() => app.ended, 'Declined baseline app did not exit normally.');
+    app = trackApp(); const oldPid = app.pid;
+    const approved = await accessibleAction(oldPid, executable, 'Upgrade', 'NerdSSHell ' + target.version + ' is available. Upgrade now?');
+    check('Actual eligible fused application receives explicit accessibility Upgrade approval', approved.invoked === 'Upgrade');
+    const refused = await accessibleAction(oldPid, executable, 'inspect', 'The update check or download could not finish.');
+    check('Actual legacy download failure visibly preserves its running original version', refused.names.some(name => name.startsWith('The update check or download could not finish.')) && !app.ended && await executableVersion(executable) === FROM.version + '.0');
+    check('Actual legacy download refusal leaves no installer stage or installation', !fs.readdirSync(fs.realpathSync.native(os.tmpdir())).some(name => name.startsWith('nerdsshell-update-' + oldPid + '-')));
+    report.legacyAutomaticInstallation = false;
+    const candidateArchive = fs.realpathSync.native(path.join(process.cwd(), 'dist', 'win-unpacked', 'resources', 'app.asar'));
+    const diagnosticMode = process.env.NERDSSHELL_UPDATE_DIAGNOSTICS;
+    controller = candidateController(candidateArchive, { executablePath: executable, userDataDirectory: data, parentPid: oldPid, candidateVersion: canonicalVersion, diagnostics: ['1', 'post-result'].includes(diagnosticMode), postResultDiagnostics: diagnosticMode === 'post-result' }, path.join(output, 'candidate-controller.json'));
+    handoff = await controller.ready();
+    report.handoff = handoff;
+    report.candidateRealLatestCheck = handoff.realLatestCheck;
+    check('Exact candidate modules return a distinct current or available result from the real latest feed', ['current', 'available'].includes(handoff.realLatestCheck?.status) && handoff.realLatestCheck.currentVersion === canonicalVersion);
+    check('Exact candidate Chromium transport downloads pinned public installer and prepares real helper for original parent', handoff.sha256 === TO.sha256 && handoff.parentPid === oldPid && handoff.candidateVersion === canonicalVersion);
+    report.instrumentationScope = handoff.diagnosticMode === 'post-result' ? 'Post-result-only write after exact original worker call returns; no operation wrappers or before-operation worker observers. Not uninstrumented acceptance.' : handoff.diagnosticInstrumentation ? 'Diagnostic-only worker wrappers delegate original operations; process/marker/version observations are passive but timing may differ. This run is not uninstrumented frozen-helper acceptance.' : 'No injected helper wrappers; exact bundled bootstrap/source/arguments. External process/marker/version observations remain passive.';
+    report.beforeGoSnapshot = await runtimeSnapshot(executable); persist();
+    await controller.release();
+    report.afterGoSnapshot = await runtimeSnapshot(executable); persist();
+    check('Candidate helper release preserves original living parent until normal close', !app.ended && await executableVersion(executable) === FROM.version + '.0');
+    await accessibleAction(oldPid, executable, 'close'); await until(() => app.ended, 'Actual legacy app did not exit after normal close.', 120000);
+    report.afterParentExitSnapshot = await runtimeSnapshot(executable); persist();
+    const observeCompletedWorker = () => {
+      if (handoff.diagnosticMode !== 'post-result') return;
+      const result = readPostResultObservation(output); if (!result) return;
+      report.nativeWorkerResult = result; persist();
+      if (['restored', 'refused', 'cancelled'].includes(result.status)) throw new Error(('Original native worker completed ' + result.status + ': ' + result.errors.map(error => error.message).join(' | ')).slice(0, 2048));
+    };
+    const snapshotAt = Date.now() + 20000;
+    await until(() => { observeCompletedWorker(); return Date.now() >= snapshotAt; }, 'Passive native observation wait exceeded its bound.', 21000);
+    try { report.nativeAt20Seconds = await nativeProcessSnapshot(handoff, output); } catch (inspectionError) { report.nativeAt20Seconds = { inspectionError: inspectionError.message }; } persist();
+    await until(async () => { observeCompletedWorker(); try { return await executableVersion(executable) === TO.version + '.0'; } catch { return false; } }, 'Real installer did not finish exact 1.2.2 installation.', 630000);
+    await until(async () => { restarted = (await applications({ rootWindowOnly: true })).find(value => value.pid !== oldPid && value.executable.toLowerCase() === executable.toLowerCase()); return !!restarted; }, 'Actual helper did not restart the upgraded application with its owned root window.', 120000);
+    report.restartedPid = restarted.pid;
+    check('Real helper waits for old app exit, installs 1.2.2 and restarts actual application', app.ended && restarted.pid !== oldPid);
+    if (newer(target.version, TO.version)) await accessibleAction(restarted.pid, executable, 'Not now', 'NerdSSHell ' + target.version + ' is available. Upgrade now?');
+    const visible = await accessibleAction(restarted.pid, executable, 'inspect', 'Synthetic preserved connection');
+    check('Restarted actual app uses its original synthetic saved connection', visible.names.some(name => name.startsWith('Synthetic preserved connection')));
+    const after = JSON.parse(fs.readFileSync(store.file, 'utf8'));
+    check('Upgrade preserves saved profiles, host pins, preferences and archive bytes', JSON.stringify(after.profiles) === JSON.stringify(original.profiles) && JSON.stringify(after.pins) === JSON.stringify(original.pins) && JSON.stringify(after.appearance) === JSON.stringify(original.appearance) && JSON.stringify(after.notifications) === JSON.stringify(original.notifications) && JSON.stringify(after.sessionDefaults) === JSON.stringify(original.sessionDefaults) && digest(sentinel) === sentinelHash);
+    const updatedUpdater = updaterFromArchive(archive);
+    const publicSampleOffer = await updatedUpdater.readMetadata(fetch, TO.version);
+    check('Exact installed public sample correctly compares the real latest release', target.version === TO.version ? publicSampleOffer === null : publicSampleOffer?.version === target.version);
+    report.toAsarSha256 = digest(archive);
+    await accessibleAction(restarted.pid, executable, 'close');
+    await until(async () => (await applications()).length === 0, 'Owned upgraded app did not close normally.');
+    check('All actual installed application processes close normally', (await applications()).length === 0);
+    await controller.complete();
+    const candidateVersion = handoff.candidateVersion;
+    const candidateInstaller = fs.realpathSync.native(path.join(process.cwd(), 'dist', 'NerdSSHell-' + candidateVersion + '-x64-Setup.exe'));
+    report.candidateBootstrap = { version: candidateVersion, installerSha256: digest(candidateInstaller), candidateAsarSha256: handoff.candidateAsarSha256, unsigned: true };
+    check('Manual candidate bootstrap starts only after all owned production apps close', (await applications()).length === 0);
+    await installConsumer(candidateInstaller, install);
+    check('Real candidate NSIS installs exact new version and candidate-ASAR bytes', await executableVersion(executable) === candidateVersion + '.0' && digest(archive) === handoff.candidateAsarSha256);
+    app = trackApp();
+    if (newer(target.version, candidateVersion)) await accessibleAction(app.pid, executable, 'Not now', 'NerdSSHell ' + target.version + ' is available. Upgrade now?');
+    const patchedView = await accessibleAction(app.pid, executable, 'inspect', 'Synthetic preserved connection');
+    check('Actual fused patched application opens its original saved connection after bootstrap', patchedView.names.some(name => name.startsWith('Synthetic preserved connection')));
+    const startupObservation = await accessibleAction(app.pid, executable, 'observe'); report.candidateBootstrap.startupObservation = startupObservation;
+    check('Actual fused launch has bounded observation beyond the startup timeout without a visible failure or obsolete offer', startupObservation.observedMilliseconds > 15000 && startupObservation.snapshots > 0 && startupObservation.completionClaimed === false);
+    const bootstrapped = JSON.parse(fs.readFileSync(store.file, 'utf8'));
+    check('Candidate bootstrap preserves saved profiles, host pins, preferences and archive bytes', JSON.stringify(bootstrapped.profiles) === JSON.stringify(original.profiles) && JSON.stringify(bootstrapped.pins) === JSON.stringify(original.pins) && JSON.stringify(bootstrapped.appearance) === JSON.stringify(original.appearance) && JSON.stringify(bootstrapped.notifications) === JSON.stringify(original.notifications) && JSON.stringify(bootstrapped.sessionDefaults) === JSON.stringify(original.sessionDefaults) && digest(sentinel) === sentinelHash);
+    await accessibleAction(app.pid, executable, 'close'); await until(() => app.ended, 'Owned patched app did not close normally.');
+    await until(async () => (await applications()).length === 0, 'Owned patched app left production processes.');
+    check('Actual fused patched application closes normally after bootstrap acceptance', (await applications()).length === 0);
+    report.status = 'passed'; persist();
+  } catch (error) {
+    report.status = 'failed'; report.failure = error.message; report.ownedAppStderr = app?.stderrText; report.ownedAppEnded = app?.ended === true; report.candidateControllerDiagnostics = controller?.diagnostics;
+    report.failureSnapshot = await runtimeSnapshot(executable); if (handoff?.stageDirectory) { try { report.failureStage = { exists: fs.existsSync(handoff.stageDirectory), files: fs.existsSync(handoff.stageDirectory) ? fs.readdirSync(handoff.stageDirectory).slice(0, 32) : [] }; } catch (inspectionError) { report.failureStage = { inspectionError: inspectionError.message }; } } persist(); throw error;
+  } finally {
+    // The VM is discarded. Never force-kill consumer applications or recursively
+    // delete an installation/user profile to make an acceptance failure disappear.
+    for (const ready of staged) { try { ready.cleanup(); } catch {} }
+    if (report.status !== 'passed' && controller) await controller.cancel();
+    for (const pid of new Set([app && !app.ended ? app.pid : null, restarted?.pid].filter(Boolean))) {
+      try { await accessibleAction(pid, executable, 'close'); } catch {} // Only normal close requests, never forced termination.
+    }
+    controller?.detach();
+    if (app && !app.ended) { app.unref(); app.stdout.unref?.(); app.stderr.unref?.(); }
+    report.disposableRunnerOnly = true; persist();
+  }
+}
+module.exports = { hostedEnvironment, FROM, TO, updaterFromArchive, controllerProtocol, isCandidateControllerEntry, diagnosticBootstrap, postResultBootstrap, readPostResultObservation };
+if (isCandidateControllerEntry(process.versions.electron, process.argv, __filename)) runCandidateController().catch(error => { console.error(error.message); require('electron').app.exit(1); });
+else if (!process.versions.electron && require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });

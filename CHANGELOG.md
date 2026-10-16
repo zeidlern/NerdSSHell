@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.4 — Verified update downloads and installation
+
+- Handle GitHub installer redirects through Electron's request API so the updater can validate each destination and stream the installer. Preserve credential omission, cancellation, download bounds and published size/SHA-256 checks.
+- Add real public download and disposable Windows installation/restart acceptance, alongside adversarial transport and consent regressions. Validation results are recorded in DEVELOPMENT-PROGRESS.md.
+- Install 1.2.4 manually using its Windows installer once. Versions through 1.2.3 cannot download this repair through their existing updater. Future upgrades still require Upgrade approval and normal work/notes confirmations.
+
 ## Maintenance — Draft release discovery
 
 - Discover existing drafts through GitHub's authenticated paginated release list when the published-tag endpoint returns 404. Reject ambiguous drafts and conflicting source metadata, retain existing release/asset identities and keep public verification credentialless.

@@ -20,6 +20,8 @@ Do not expose a home server's SSH port to the internet just to use NerdSSHell; a
 
 ## Route A: an official installer
 
+Versions through 1.2.3 can announce a newer release but fail to download it. Download and install the 1.2.4 Windows installer manually once to receive the corrected updater. Save notes, finish local/Standard SSH work and exit normally before installing.
+
 1. Open the project's [Releases](https://github.com/zeidlern/NerdSSHell/releases) page. Choose a release whose notes describe the Windows x64 artifact, its signing status and known limitations. Download the `...-x64-Setup.exe` asset, not GitHub's automatic source-code ZIP.
 2. Compare the download's SHA-256 with the checksum published for that exact asset. In PowerShell, using your real download path:
 

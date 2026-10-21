@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.5 — GNU GPL v3 licensing
+
+- License the project-owned NerdSSHell source in this release under GNU General Public License version 3.0 only (`GPL-3.0-only`), replacing the custom source-available license for this revision. Full license text is packaged with the Windows installer and published with the release assets.
+- Permit personal and corporate use, modification and redistribution under GPLv3, including commercial redistribution subject to GPL source and notice obligations. Keep pre-1.2.5 release licensing unchanged.
+- Align package metadata, source-build guidance, contributor guidance and public documentation. No application-runtime behavior or user-data format changes; Windows artifacts remain unsigned unless a particular asset states otherwise.
+
 ## 1.2.4 — Verified update downloads and installation
 
 - Handle GitHub installer redirects through Electron's request API so the updater can validate each destination and stream the installer. Preserve credential omission, cancellation, download bounds and published size/SHA-256 checks.

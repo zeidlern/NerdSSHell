@@ -54,6 +54,6 @@ The supported desktop target is **Windows 11 x64**. Remote servers may run other
 
 Use [Releases](https://github.com/zeidlern/NerdSSHell/releases) for exact asset availability, signing status and known limitations. Source archives are source downloads, rather than Windows installers.
 
-The [repository](https://github.com/zeidlern/NerdSSHell) contains the manual sources in `docs/wiki/`. The project uses a custom [source-available license](https://github.com/zeidlern/NerdSSHell/blob/main/LICENSE). Public bugs, feature requests and focused pull requests are welcome; the owner controls official acceptance and releases. See [support](https://github.com/zeidlern/NerdSSHell/blob/main/SUPPORT.md) and [contributing](https://github.com/zeidlern/NerdSSHell/blob/main/CONTRIBUTING.md).
+The [repository](https://github.com/zeidlern/NerdSSHell) contains the manual sources in `docs/wiki/`. The current project-owned source uses the [GNU General Public License version 3.0 only](https://github.com/zeidlern/NerdSSHell/blob/main/LICENSE) (`GPL-3.0-only`); earlier releases retain their original licensing terms. Public bugs, feature requests and focused pull requests are welcome; the owner controls official acceptance and releases. See [support](https://github.com/zeidlern/NerdSSHell/blob/main/SUPPORT.md) and [contributing](https://github.com/zeidlern/NerdSSHell/blob/main/CONTRIBUTING.md).
 
 Quick Connect opens temporary network-device SSH terminals by IP/DNS, with reusable login defaults and optional Save connection. See [connections and trust](Connections-and-Trust.md).

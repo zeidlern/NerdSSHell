@@ -97,6 +97,8 @@ Windows ARM64, macOS/Linux desktop builds, mobile clients, ProxyJump, a tunnelin
 
 ## License
 
-NerdSSHell uses a custom **source-available license**. Official unmodified releases may be used personally or internally in a business. GitHub viewing and forking are governed by GitHub's terms; redistribution and publishing modified builds require the copyright holder's prior written permission. Read [LICENSE](LICENSE) for the complete terms. Third-party components retain their own licenses and [notices](docs/THIRD-PARTY-NOTICES.md).
+Copyright © 2026 Nicholas Zeidler.
 
-[Changelog](CHANGELOG.md) · [Architecture](docs/ARCHITECTURE.md) · [Security policy](SECURITY.md) · [Release process](docs/PUBLIC-RELEASE.md) · [Identity compatibility](docs/IDENTITY-COMPATIBILITY.md)
+NerdSSHell source in this revision is licensed under the **GNU General Public License version 3.0 only** (`GPL-3.0-only`). Read the complete [LICENSE](LICENSE). Personal and corporate use are permitted. Redistribution, modified versions and commercial distribution are also permitted **subject to GPLv3 obligations**, including providing the corresponding source code when distributing covered binaries. GPLv3 does **not** prohibit resale.
+
+The NerdSSHell name and logos are not a grant of trademark rights or third-party endorsement. Third-party components retain their own licenses and [notices](docs/THIRD-PARTY-NOTICES.md). Published releases through **v1.2.4** retain the license terms under which they were distributed; this change does not retroactively alter their permissions.

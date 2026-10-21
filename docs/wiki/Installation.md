@@ -6,7 +6,7 @@
 
 **Most users:** install an official Windows x64 release. Node.js, Git and Codex are not prerequisites for running an installer-built app. Electron and the application runtime are bundled.
 
-**Source builds:** build a selected revision on Windows for evaluation or contribution. This requires Git, Node.js/npm and network access for dependencies and packaging tools. Source-build instructions do not grant redistribution rights; read [LICENSE](https://github.com/zeidlern/NerdSSHell/blob/main/LICENSE).
+**Source builds:** build a selected revision on Windows for evaluation or contribution. This requires Git, Node.js/npm and network access for dependencies and packaging tools. For NerdSSHell 1.2.5, building and redistributing covered source or binaries are permitted under [GPLv3](https://github.com/zeidlern/NerdSSHell/blob/main/LICENSE), including its source-delivery and notice obligations; earlier releases may have different terms.
 
 Check [Releases](https://github.com/zeidlern/NerdSSHell/releases) for available assets, signing status and known limitations. A source archive is not a Windows installer. Use source builds when no Windows asset is available.
 

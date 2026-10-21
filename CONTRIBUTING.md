@@ -26,6 +26,6 @@ Do not commit credentials, private keys, connection profiles, user data, termina
 
 ## License and ownership
 
-The project uses the custom [NerdSSHell Source-Available License](LICENSE), rather than a permissive open-source license. GitHub viewing and forking rights are governed by GitHub's terms. Submitting a proposal does not grant general rights to redistribute source or binaries, publish modified builds, or use project branding for a third-party distribution. Obtain the copyright holder's written permission when LICENSE requires it.
+NerdSSHell's project-owned source in this revision is licensed under the [GNU General Public License version 3.0 only](LICENSE) (`GPL-3.0-only`). Individuals and businesses may use, modify, and redistribute the software under GPLv3 terms, including corresponding-source obligations for distribution. Earlier published releases retain their historical license terms.
 
-Submit only work you have the right to share and identify any third-party code or license requirements in the pull request. Third-party components retain their own licenses. No CLA or assignment is implied by this contribution guide.
+Contribute only material you have the right to license under GPLv3 and disclose any third-party licenses or attribution requirements. Contributions accepted into this GPLv3 project must be available under GPL-3.0-only; **no copyright assignment or contributor license agreement is implied** by sending a pull request. Commercial relicensing of contributed code requires the applicable rights holder's separate permission. No rights to the NerdSSHell name or logos are granted beyond applicable law.

@@ -1,3 +1,24 @@
+# Version 1.2.7 updater shutdown validation
+
+Windows 11 x64, Node 22.23.4 and npm 11.9.0; candidate branch `codex/updater-shutdown-eof-1.2.7`. The reported installed 1.2.4 client closed after accepting 1.2.6 and remained on 1.2.4. Its bundled updater sources match the released 1.2.4 implementation after newline normalization. Local event records show helper activity but do not retain the worker's final status, so they cannot prove its exact cancellation branch.
+
+An inert Windows fixture deterministically reproduces an acknowledged update being cancelled when broker stdin reaches EOF while the pinned original parent remains alive for another 250 ms. No installation or restart occurs on the original helper. The repaired broker gives only an acknowledged release a five-second parent-exit grace, preserving cancellation and all subsequent identity/instance checks.
+
+| Check | Measured local result |
+| --- | --- |
+| Fresh supported dependency install | Passed; optional packages omitted |
+| Source/publication checks | Passed |
+| Supported and complete npm lockfile audits | Both report zero vulnerabilities |
+| Full Windows regression suite | 1,128 passed, zero failures, one existing symlink-privilege skip of 1,129 |
+| Focused native EOF acceptance | 34 checks passed across timely exit, pre-release EOF, live-parent timeout and explicit cancellation |
+| Complete native handoff acceptance | 172 checks passed across 24 cases; owned processes exited and temporary fixtures were removed; zero registry operations or process kills |
+| Unsigned Windows 1.2.7 build | Built; exact-package fuses, ASAR integrity, native containment and notices passed |
+| Dependency inventories | Regenerated with npm 11.9.0; full SPDX 283 packages, runtime SPDX 11; dependency versions and third-party notice content unchanged |
+
+Native handoff fixtures use generated inert applications/installers and synthetic data. These results do not establish a real NSIS upgrade or acceptance of an installed user copy. The exact candidate's protected Windows packaging and hosted real-installer checks must be recorded before official acceptance. No repair release has been published at this checkpoint. The embedded Node limitation documented for 1.2.6 remains applicable.
+
+---
+
 # Version 1.2.6 security maintenance validation
 
 Local evidence collected October 25, 2026, from the security update based on `50bb2763dcea840a879692b0ba0414ac10280456`. The local environment is Linux x64, Node 24.22.1 and npm 11.9.0. Electron is pinned to 44.9.3. These source and dependency results do not establish Windows runtime or installer acceptance; the exact candidate's protected GitHub checks provide that separate evidence.

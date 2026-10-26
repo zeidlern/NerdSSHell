@@ -42,12 +42,13 @@ if (process.argv[2] === '--launch-probe-child') {
 
 const root = path.resolve(__dirname, '..'), temporaryRoot = fs.realpathSync.native(os.tmpdir());
 const options = new Map();
-let probeOnly=false,probeIgnore=false,probeBroker=true;
+let probeOnly=false,probeIgnore=false,probeBroker=true,eofOnly=false;
 for (let index = 2; index < process.argv.length; index++) {
   const name = process.argv[index];
   if(name==='--probe-only'){probeOnly=true;probeBroker=false;continue;}
   if(name==='--probe-ignore'){probeIgnore=true;continue;}
   if(name==='--probe-broker'){probeBroker=true;probeOnly=true;continue;}
+  if(name==='--eof-only'){eofOnly=true;continue;}
   const value = process.argv[++index];
   if (name !== '--output' || options.has(name) || !value || !path.isAbsolute(value)) throw new Error('Use --output once with an absolute path.');
   options.set(name, value);
@@ -287,6 +288,36 @@ async function main() {
     binaries[name] = path.join(folder, 'NerdSSHell.exe'); await compile(appSource(version), binaries[name]);
   }
   check('Three inert native app fixtures compile with actual NerdSSHell version resources');
+  // Actual redirected-stdin EOF can precede the original process handle becoming
+  // signalled during orderly shutdown. Keep the inert parent independently alive
+  // so this boundary is deterministic instead of relying on scheduler timing.
+  for (const outcome of ['parent-exit', 'before-go', 'parent-timeout', 'explicit-cancel']) {
+    const context = await fixtureContext('control-eof-' + outcome, 'currentuser', binaries);
+    context.parentTimeoutMs = 20000;
+    const task = await prepared(context);
+    if (outcome !== 'before-go') await task.release();
+    const began = Date.now(); context.helper.child.stdin.end();
+    await delay(250);
+    check(context.name + ': closing control stdin never installs while the actual original parent is alive', !context.parent.processExited && !fs.existsSync(context.installLog) && !fs.existsSync(context.restartLog));
+    if (outcome === 'parent-exit') {
+      await exitParent(context.parent);
+      check(context.name + ': acknowledged GO tolerates EOF immediately before natural parent exit', await completed(context) === 'updated');
+      checkInstaller(context); await checkRestart(context, '1.0.1');
+    } else {
+      if (outcome === 'explicit-cancel') await task.cancel();
+      const status = await completed(context), elapsed = Date.now() - began;
+      check(context.name + ': control loss or explicit cancellation refuses installation and keeps the living parent intact', ['cancelled', 'refused'].includes(status) && !context.parent.processExited && !fs.existsSync(context.installLog) && !fs.existsSync(context.restartLog));
+      if (outcome === 'parent-timeout') check(context.name + ': parent-exit grace expires within its five-second bound', elapsed >= 4500 && elapsed < 12000);
+      if (outcome === 'explicit-cancel') check(context.name + ': explicit cancellation takes priority during the EOF grace', status === 'cancelled' && elapsed < 4500);
+      await exitParent(context.parent); await delay(100);
+      check(context.name + ': a later unrelated parent exit cannot start a stopped update', !fs.existsSync(context.installLog) && !fs.existsSync(context.restartLog));
+    }
+  }
+  if (eofOnly) {
+    check('EOF acceptance avoids registry operations and process kills', report.registryReads === 0 && report.registryWrites === 0 && report.processKills === 0);
+    check('EOF acceptance keeps the verified helper source unchanged', report.sourceHashes.handoff === digest(path.join(root, 'src', 'update-handoff.cjs')) && report.sourceHashes.runner === digest(path.join(root, 'src', 'update-runner.ps1')));
+    report.status = 'passed'; persist(); console.log('Update handoff EOF acceptance passed (' + report.checks.length + ' checks).'); return;
+  }
   for (const afterGo of [false, true]) {
     const context = await fixtureContext(afterGo ? 'cancel-after-go' : 'cancel-before-go', 'currentuser', binaries);
     const task = await prepared(context);

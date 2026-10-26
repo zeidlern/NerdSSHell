@@ -384,6 +384,18 @@ function Invoke-UpdateBroker([string]$RunnerPath,[string]$RunnerSha256,[string]$
         while(-not (Read-UpdateMarker 'STOPPED' $manifest.nonce)){if($worker.HasExited -or [DateTime]::UtcNow -gt $limit){throw 'Worker cancellation did not finish'};Start-Sleep -Milliseconds 25}
         $stopped=$true;Write-UpdateConsoleProtocol ('CANCEL '+$manifest.nonce);return 'cancelled'
       }
+      if($null -eq $command -and $go) {
+        # Electron can close this pipe before its pinned process handle signals
+        # exit. Acknowledged GO permits only this bounded orderly-exit grace;
+        # a live parent past the bound is cancelled by the existing catch path.
+        $limit=[DateTime]::UtcNow.AddMilliseconds(5000)
+        while(-not $parent.HasExited) {
+          if(Read-UpdateMarker 'STOPPED' $manifest.nonce){$stopped=$true;throw 'Worker stopped'}
+          if((Read-UpdateMarker 'CANCEL' $manifest.nonce) -or $worker.HasExited -or [DateTime]::UtcNow -gt $limit){throw 'Control closed before parent exit'}
+          Start-Sleep -Milliseconds 25
+        }
+        return 'released'
+      }
       if($command -cne ('GO '+$manifest.nonce) -or $go){throw 'Invalid command'}
       Write-UpdateMarker 'GO' $manifest.nonce
       $read=[NerdSSHell.UpdateControl]::ReadCommand();$limit=[DateTime]::UtcNow.AddMilliseconds(10000)

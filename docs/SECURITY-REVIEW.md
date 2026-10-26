@@ -68,6 +68,8 @@ A fixed checksum-bound Windows runner owns its stage/files and real parent proce
 
 Before READY the runner pins original child handles, start times, canonical executable paths and Toolhelp ancestry. After the approved parent exits, only those original descendants receive a five-second shutdown wait; nonce cancellation, unknown/reopened instances and timeout stop installation. The final running-app, registration and file-integrity checks still apply. Process inspection errors require positive evidence that both matching original/current objects exited before they can be ignored.
 
+After acknowledged GO, a closed control pipe allows at most five seconds for the already-pinned original parent to exit. Cancellation and worker stop remain observable during that wait; an app that stays alive is cancelled and cannot install on a later quit. Pipe closure before acknowledged release still refuses immediately. The worker must still observe the original parent's actual exit and pass the existing shutdown, instance, installation and payload checks before starting an installer.
+
 Coverage: test/release-updater.test.cjs, test/update-main.test.cjs, test/update-handoff.test.cjs and isolated Windows SDK/native startup/handoff acceptance. The controlled-transport/inert-installer fixtures do not certify live future releases, real UAC or every user-install scenario.
 
 ## Quick Connect boundaries

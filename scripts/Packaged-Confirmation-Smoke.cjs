@@ -11,6 +11,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { createHash, generateKeyPairSync } = require('node:crypto');
 const root = path.resolve(__dirname, '..');
+const pinnedElectron = require(path.join(root, 'package.json')).devDependencies.electron;
 const options = new Map();
 let fixtureRuntime = false;
 for (let index = 2; index < process.argv.length; index++) {
@@ -116,7 +117,7 @@ async function runFixture() {
   let nextShell = 0;
   let evaluate, wait, send;
   try {
-    assert.equal(process.versions.electron, '44.5.1', 'Acceptance uses the current pinned Electron SDK.');
+    assert.equal(process.versions.electron, pinnedElectron, 'Acceptance uses the current pinned Electron SDK.');
     check('Canonical Windows temporary root directly owns the disposable fixture directory', samePath(path.dirname(directory), temporaryRoot));
     server = new Server({ hostKeys: [hostKey] }, peer => {
       peers.add(peer); metrics.connections++; peer.on('error', () => {}); peer.on('close', () => peers.delete(peer));

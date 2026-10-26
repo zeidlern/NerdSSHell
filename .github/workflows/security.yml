@@ -18,7 +18,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version: '22.23.4'
           package-manager-cache: false
       - name: Audit supported build graph without lifecycle scripts
         run: npm audit --package-lock-only --omit=optional --ignore-scripts --audit-level=low
@@ -48,7 +48,7 @@ jobs:
           "$RUNNER_TEMP/gitleaks" git . --log-opts='--all' --redact=100 --no-banner --no-color
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: '22'
+          node-version: '22.23.4'
           package-manager-cache: false
       - name: Redacted privacy triage of fetched history (not publication clearance)
         run: node scripts/Review-Publication-History.cjs "${{ runner.temp }}/publication-history-review.json"

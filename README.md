@@ -73,7 +73,7 @@ Disk recording is off by default. Archives, exports, saved notes and backups are
 
 ## Build from source
 
-Use Windows 11 x64, Git and a current **Node 22 x64 version at least 22.12.0**. Clone the repository and select the release tag or commit you intend to build:
+Use Windows 11 x64, Git and **Node 22 x64 version 22.23.4 or later within the 22.x line**. Node 24 x64 version 24.22.1 or later within the 24.x line is also supported. Clone the repository and select the release tag or commit you intend to build:
 
 ```powershell
 git clone https://github.com/zeidlern/NerdSSHell.git

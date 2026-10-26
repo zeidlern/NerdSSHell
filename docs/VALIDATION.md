@@ -1,3 +1,29 @@
+# Version 1.2.6 security maintenance validation
+
+Local evidence collected October 25, 2026, from the security update based on `50bb2763dcea840a879692b0ba0414ac10280456`. The local environment is Linux x64, Node 24.22.1 and npm 11.9.0. Electron is pinned to 44.9.3. These source and dependency results do not establish Windows runtime or installer acceptance; the exact candidate's protected GitHub checks provide that separate evidence.
+
+| Check | Measured local result |
+| --- | --- |
+| Fresh supported install, without lifecycle scripts | 287 packages installed; all 19 optional lockfile placements verified absent |
+| Supported and complete npm lockfile audits | Both report zero vulnerabilities, including low severity; baseline reported Electron, Undici and fast-uri |
+| Source, publication, metadata, branding and UI checks | Passed; five publication-tool regressions passed |
+| Full regression suite | 1,104 passed, zero failures, two Windows-only Toolhelp/drain cases skipped of 1,106 |
+| Real loopback appliance SSH integration | Two tests passed, including 300 lifecycle/authentication/failure cycles; zero live sockets/channels, retained secrets or pending prompts after cleanup |
+| Complete dependency installation in a disposable directory | 306 packages installed, including development and optional dependencies, without lifecycle scripts |
+| Optional build-download proxy fixture | Bootstrap, loopback forwarding, cache reuse, NO_PROXY bypass, checksum refusal and non-origin URL refusal passed; roarr/sprintf-js absent |
+| Pillow 13.0.0 requirements audit | Zero known vulnerabilities for the pinned requirement |
+| Isolated Pillow 13.0.0 branding regeneration | All 25 assets and the manifest match the committed bytes; decoded PNG, SVG raster and ICO pixels also match; original assets unchanged |
+| Build-engine range | Eleven patched/unpatched/unsupported/prerelease boundary cases passed |
+| Workflow YAML and whitespace | All six workflow files parsed; diff whitespace check passed |
+| Dependency inventories | Full SPDX regenerated with 283 packages; runtime SPDX with 11; ten runtime dependency notices unchanged |
+| Windows PowerShell helper, NSIS, fuses/ASAR and packaged desktop acceptance | Not run locally; required on the exact candidate before merge/release |
+
+The full suite ran with permission to spawn child processes and bind owned loopback listeners. Initial restricted-sandbox attempts failed on those capabilities and are not counted as passes. The appliance fixture uses actual SSH transport with a synthetic device protocol; it is not an operating-system tmux or vendor-device certification. No live server, installed user application, remote session, credential store or published release was modified by local validation.
+
+**Remaining upstream runtime gap:** Electron 44.9.3 embeds Node 24.22.0, below the October 21 security release 24.22.1. The source-based exposure assessment and follow-up requirement are in [dependency maintenance](DEPENDENCIES.md). A clean npm audit does not resolve this binary-runtime gap. No complete automated repository-security scan or absence-of-vulnerabilities certification is claimed.
+
+---
+
 # Version 1.2.4 validation
 
 The updater repair has fresh local Windows 11 x64 / Node 24.19.0 evidence. Electron remains 44.5.1; dependencies and notice contents are unchanged. [PR22](https://github.com/zeidlern/NerdSSHell/pull/22) records exact hosted installation and protected CI results before merge/publication.

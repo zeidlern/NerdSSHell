@@ -53,7 +53,7 @@ python scripts/Generate-Branding.py
 node scripts/Verify-Branding.cjs
 ```
 
-The exporter uses Pillow 12.3.0 and resizes directly from the large masters with Lanczos sampling. It preserves alpha, writes PNG files, packages the selected PNG frames into ICO, and composes exact SVG wordmark text. It does not repaint artwork, crop the source, change colors, or chain resizes. `production/manifest.json` records SHA-256 values for the masters and all 25 generated outputs.
+The exporter requires Python 3.11 or newer and Pillow 13.0.0, which includes the October 2026 image-processing security fixes. It resizes directly from the large masters with Lanczos sampling, preserves alpha, writes PNG files, packages the selected PNG frames into ICO, and composes exact SVG wordmark text. It does not repaint artwork, crop the source, change colors, or chain resizes. `production/manifest.json` records SHA-256 values for the masters and all 25 generated outputs. Ordinary app and installer builds use the committed assets and do not install or execute Pillow.
 
 Generated SVGs and their manifest use canonical UTF-8/LF bytes. The exporter writes LF explicitly on every platform, and the narrow `.gitattributes` rules preserve these files during Windows checkout even with `core.autocrlf=true`. Do not normalize line endings inside the hash verifier: a changed asset must still fail verification.
 

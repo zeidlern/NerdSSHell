@@ -6,9 +6,15 @@ if ($env:OS -ne 'Windows_NT') { throw 'Run this script on Windows.' }
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $projectRoot
 try {
-    if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw 'Install Node.js 22 or newer, then open a fresh terminal and run this script again.' }
-    $major = [int]((& node --version).Trim().TrimStart('v').Split('.')[0])
-    if ($major -lt 22) { throw 'Node.js 22 or newer is required.' }
+    if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw 'Install Node.js 22.23.4 or later in the 22.x line, or 24.22.1 or later in the 24.x line, then open a fresh terminal and run this script again.' }
+    $nodeVersionText = [string](& node --version)
+    if ($LASTEXITCODE -ne 0) { throw 'Could not determine the Node.js version.' }
+    $nodeVersionText = $nodeVersionText.Trim()
+    if ($nodeVersionText -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'A stable, supported Node.js release is required.' }
+    $nodeVersion = [version]$nodeVersionText.Substring(1)
+    $supportedNode = ($nodeVersion.Major -eq 22 -and $nodeVersion -ge [version]'22.23.4') -or
+        ($nodeVersion.Major -eq 24 -and $nodeVersion -ge [version]'24.22.1')
+    if (-not $supportedNode) { throw 'Node.js 22.23.4 or later in the 22.x line, or 24.22.1 or later in the 24.x line is required.' }
     if (-not (Test-Path package-lock.json)) { throw 'The committed package-lock.json is required for a reproducible build.' }
     $metadata = Get-Content package.json -Raw | ConvertFrom-Json
     $productName = $metadata.build.productName

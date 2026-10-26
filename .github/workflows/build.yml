@@ -27,7 +27,7 @@ jobs:
         run: |
           git archive --format=zip --output="$RUNNER_TEMP/NerdSSHell-source.zip" HEAD
           git rev-parse HEAD > "$RUNNER_TEMP/NerdSSHell-source-revision.txt"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: NerdSSHell-source
           retention-days: 14
@@ -103,7 +103,7 @@ jobs:
         run: Get-FileHash dist\*Setup.exe -Algorithm SHA256 | Format-List | Tee-Object -FilePath dist\SHA256.txt
       - name: Preserve failed disposable Windows acceptance evidence
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: NerdSSHell-Windows-failure-evidence
           include-hidden-files: true
@@ -122,7 +122,7 @@ jobs:
             .local/scratchpad-spelling-smoke/diagnostics.json
             .local/scratchpad-spelling-smoke/*.png
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: github.ref == 'refs/heads/main'
         with:
           name: NerdSSHell-Windows-x64

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.7 — Updater shutdown handoff
+
+- Fix a shutdown race where the app's update-control pipe closes just before the original app process exits, cancelling an already approved upgrade and leaving the app closed. After acknowledged release, allow up to five seconds for that same pinned process to exit before continuing the verified installation.
+- Preserve explicit cancellation, bounded refusal when the app remains alive, process and installation identity checks, and protection against installing after a later unrelated quit. Add native Windows regressions for pipe closure before/after release, a parent that remains alive, and cancellation during the shutdown grace.
+- An affected 1.2.4–1.2.6 client may need one manual installation of the latest official installer to receive this handoff repair. Older clients through 1.2.3 also require a manual upgrade for the earlier download repair.
+
 ## 1.2.6 — October dependency security updates
 
 - Update Electron from 44.5.1 to 44.9.3, including the compromised eMudhra certificate mitigation and Chromium security backports. Preserve the existing installer identity, user data, SSH trust checks and session behavior.

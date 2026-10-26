@@ -48,6 +48,8 @@ Starting with 1.1.0, packaged Windows launches offer a verified upgrade when a n
 
 Versions through 1.2.3 require a manual installer download to receive the updater repair in 1.2.4. Once installed, later upgrades use the corrected download path.
 
+Versions 1.2.4–1.2.6 can also cancel an approved upgrade during app shutdown. If the app closes without completing the upgrade or restarting, manually install the latest official installer once to receive the handoff repair introduced in 1.2.7.
+
 Download Windows installers from [GitHub Releases](https://github.com/zeidlern/NerdSSHell/releases). Each release identifies available assets, checksums, signing status and known limitations. If a release contains only source archives, use the source-build instructions below. Check the exact asset's checksum and publisher status before installing; an unsigned build has no verified publisher identity. See [installation, upgrades and removal](docs/wiki/Installation.md).
 
 Remote connections require a reachable SSH server. Persistent sessions need **tmux 3.2 or newer**; file transfer needs the server's SFTP subsystem. Local consoles work without a server.

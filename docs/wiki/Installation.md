@@ -12,7 +12,7 @@ Check [Releases](https://github.com/zeidlern/NerdSSHell/releases) for available 
 
 ## Requirements
 
-Use Windows 11 x64, a normal Windows user account, and adequate free disk space. Source builds need substantially more disk space than the installed application. The Node 22 line is used by the project's CI; use an up-to-date **Node 22 x64 build at least 22.12.0**, not an arbitrary newer major version merely because it installs. Reopen PowerShell after installing Git/Node so PATH updates take effect.
+Use Windows 11 x64, a normal Windows user account, and adequate free disk space. Source builds need substantially more disk space than the installed application. The project's CI uses **Node 22.23.4 x64**; for source builds, use **22.23.4 or later within Node 22.x**, or **24.22.1 or later within Node 24.x**, on x64. Reopen PowerShell after installing Git/Node so PATH updates take effect.
 
 For remote work, you need a reachable SSH server, an authorized username and password/key/agent. File transfer requires the server's SFTP subsystem. Persistent mode needs tmux 3.2 or newer and a suitable Unix-like shell. Local PowerShell/Command Prompt do not require a remote server.
 

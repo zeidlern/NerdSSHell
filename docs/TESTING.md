@@ -1,6 +1,6 @@
 # Development and acceptance checks
 
-Use Node 22 x64 at least 22.12.0 and the committed lockfile. Windows 11 x64 is the supported desktop target. Run from the repository root:
+Use Node 22 x64 version 22.23.4 or later within the 22.x line and the committed lockfile. Node 24 x64 version 24.22.1 or later within the 24.x line is also supported. Windows 11 x64 is the supported desktop target. Run from the repository root:
 
 ```powershell
 npm.cmd ci --omit=optional

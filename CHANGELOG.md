@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.6 — October dependency security updates
+
+- Update Electron from 44.5.1 to 44.9.3, including the compromised eMudhra certificate mitigation and Chromium security backports. Preserve the existing installer identity, user data, SSH trust checks and session behavior.
+- Update the locked build dependencies fast-uri to 3.1.9 and Undici to 6.29.1/7.30.1. Both supported and complete npm dependency audits report zero advisories at this review.
+- Pin CI to Node 22.23.4 and require patched Node 22.23.4+ or 24.22.1+ within those supported major lines for source builds. Reject older build runtimes before dependency installation. Update the optional branding exporter to Pillow 13.0.0 on Python 3.11+.
+- Keep Windows confirmation acceptance tied to the exact Electron version selected by the source, and refresh dependency inventories.
+- Known remaining upstream dependency: Electron 44.9.3 still embeds Node 24.22.0. This update does not claim to incorporate every October 21 Node.js fix; see [dependency maintenance and exposure assessment](docs/DEPENDENCIES.md). Current validation and publication status are recorded in [validation results](docs/VALIDATION.md).
+
 ## 1.2.5 — GNU GPL v3 licensing
 
 - License the project-owned NerdSSHell source in this release under GNU General Public License version 3.0 only (`GPL-3.0-only`), replacing the custom source-available license for this revision. Full license text is packaged with the Windows installer and published with the release assets.

@@ -12,7 +12,7 @@ Report vulnerabilities through [SECURITY.md](SECURITY.md), rather than a public 
 
 For a substantial change, open an issue first so its scope can be discussed. For a small fix, fork the repository, create a focused branch and submit a pull request against `main`. Explain the problem, the resulting behavior and the checks you actually ran. Keep unrelated changes separate and preserve existing profiles and upgrade compatibility.
 
-Use Windows 11 x64 and Node 22 x64 at least 22.12.0. From the repository root:
+Use Windows 11 x64 and Node 22 x64 version 22.23.4 or later within the 22.x line. Node 24 x64 version 24.22.1 or later within the 24.x line is also supported. From the repository root:
 
 ```powershell
 npm.cmd ci --omit=optional

@@ -13,9 +13,21 @@ npm audit --package-lock-only --ignore-scripts --audit-level=low
 
 `Verify-Publication.cjs` checks that optional lockfile placements are actually absent. The [full SPDX inventory](SBOM.spdx.json) includes the locked build graph. The [runtime SPDX inventory](SBOM-runtime.spdx.json) and [third-party notices](THIRD-PARTY-NOTICES.md) describe the packaged JavaScript subset; Electron/Chromium distribute their own notices beside the executable.
 
+## October 28, 2026 maintenance for 1.2.8
+
+The updated dependency set is Electron **44.10.0**, node-pty **1.2.0-beta.18**, and electron-builder **26.18.1**. Other direct runtime/build libraries and the optional Pillow 13.0.0 branding tool remain at their current stable releases. CI continues to use the current patched Node 22.23.4 release; Node 24.22.2 is also accepted by the existing 24.22.1-or-newer source-build range.
+
+[Electron 44.10.0](https://releases.electronjs.org/release/v44.10.0) includes **Node 24.22.1** and **Chromium 152.0.7977.169**. This resolves the embedded-Node version gap recorded below for 1.2.6/1.2.7. The upstream runtime now incorporates the [October Node security release](https://nodejs.org/en/blog/release/v24.22.1), including the Brotli decoder fix. This does not imply that every upstream vulnerability was reachable through NerdSSHell. The same Electron update fixes malformed ASAR handling, archive-path inconsistencies and File System Access blocklist gaps. Staying on supported Electron 44.x keeps this a maintenance update; Electron 45 is not required to obtain these fixes.
+
+The official [electron-builder 26.18.1 release](https://github.com/electron-userland/electron-builder/releases/tag/electron-builder@26.18.1) is the stable v26 maintenance channel, even though npm's default latest tag still selects 26.18.0 at this review. The update includes ASAR source/destination containment and NSIS extraction compatibility fixes, so both exact-package verification and real disposable Windows installer acceptance are required. Its internal ASAR 3.4.1 and downloader 3.1.0 remain; retain the scoped proxy override and verify the complete graph.
+
+The reviewed, registry-integrity-verified node-pty beta.18 package hardens closed ConPTY handle operations and adds an optional reparent API that NerdSSHell does not call. The shipped `conpty.node` SHA-256 is `4d2112f9316c9927145e821f20d470369c7ac8ffe63e981fb62a57c303f7f488`. Its ConPTY 1.25.260303002 DLL and OpenConsole executable are byte-identical to beta.15, preserving the elevated helper's existing binary pins. The owned worker cleanup adapter remains necessary and unchanged. Test ordinary and administrator PowerShell/CMD, shutdown and packaging against the new native module.
+
+GitHub Actions use reviewed full-SHA pins for setup-node 7.1.0, upload-artifact 7.0.2 and CodeQL 4.39.1; checkout remains 7.0.1. Required checks, fork/owner restrictions, tag protection and read-only default tokens remain enforced. See [validation results](VALIDATION.md) for measured tests and their platform limits.
+
 ## Optional build-proxy override
 
-`electron-builder 26.15.3 -> app-builder-lib 26.15.3 -> @electron/get 3.1.0` introduces the optional HTTP(S) build-download proxy. Its original `global-agent 3.0.0 -> roarr 2.15.4 -> sprintf-js 1.1.3` chain contains [GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c). The affected formatter has no patched release. It is not included in the packaged application or supported installation.
+`electron-builder 26.18.1 -> app-builder-lib 26.18.1 -> @electron/get 3.1.0` introduces the optional HTTP(S) build-download proxy. Its original `global-agent 3.0.0 -> roarr 2.15.4 -> sprintf-js 1.1.3` chain contains [GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c). The affected formatter has no patched release. It is not included in the packaged application or supported installation.
 
 The scoped `package.json` override selects **global-agent 4.1.3** only beneath `app-builder-lib`'s `@electron/get`. [Upstream 4.1.0](https://github.com/gajus/global-agent/releases/tag/v4.1.0) removes `roarr`; its formatter and unused helper dependencies consequently leave the lockfile. Electron's separate downloader, runtime SSH/terminal libraries and packaging versions remain pinned independently. No advisory is suppressed or dismissed.
 
@@ -49,7 +61,9 @@ The previous source revision still selected Electron 44.5.1. Its complete npm au
 
 The supported and complete npm lockfile audits both report zero advisories after these updates. This describes the npm advisory database at the time of the audit; it does not certify every binary dependency or future vulnerability. No PHP source, Composer manifest, PHP runtime or PHP deployment service is present in this repository, so the recent PHP server advisories do not require a NerdSSHell PHP update.
 
-### Embedded Node remains an upstream follow-up
+### Historical embedded Node gap in 1.2.6 and 1.2.7
+
+The following assessment records the October 25 dependency state. Version 1.2.8 resolves the embedded version gap with Electron 44.10.0 as described above; these older releases retain their original runtime.
 
 The [October 21 Node.js security releases](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases) are 22.23.4, 24.22.1 and 26.12.1. Updating the build machine or npm's Undici packages does not replace Electron's embedded Node. [Electron 44.9.3](https://releases.electronjs.org/release/v44.9.3) contains Chromium 152.0.7977.167 and **Node 24.22.0**, below that security release. The current stable Electron 45.0.0 also reports Node 24.22.0; an alpha is not used as a production substitute.
 

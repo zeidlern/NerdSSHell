@@ -2,22 +2,22 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "nerdsshell@1.2.7",
-  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.7-55618883-dfa0-4af0-8605-8fa2e81b0735",
+  "name": "nerdsshell@1.2.8",
+  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.8-e9340766-ad02-41ff-9bdf-9d1da92f1d7d",
   "creationInfo": {
-    "created": "2026-10-26T02:01:47.908Z",
+    "created": "2026-10-28T18:51:45.607Z",
     "creators": [
       "Tool: npm/cli-11.9.0"
     ]
   },
   "documentDescribes": [
-    "SPDXRef-Package-nerdsshell-1.2.7"
+    "SPDXRef-Package-nerdsshell-1.2.8"
   ],
   "packages": [
     {
       "name": "nerdsshell",
-      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.7",
-      "versionInfo": "1.2.7",
+      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.8",
+      "versionInfo": "1.2.8",
       "packageFileName": "",
       "description": "NerdSSHell — Built for Windows nerds with Linux problems",
       "primaryPackagePurpose": "APPLICATION",
@@ -29,7 +29,7 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/nerdsshell@1.2.7"
+          "referenceLocator": "pkg:npm/nerdsshell@1.2.8"
         }
       ]
     },
@@ -242,10 +242,10 @@
     },
     {
       "name": "@electron/rebuild",
-      "SPDXID": "SPDXRef-Package-electron.rebuild-4.2.0",
-      "versionInfo": "4.2.0",
+      "SPDXID": "SPDXRef-Package-electron.rebuild-4.2.1",
+      "versionInfo": "4.2.1",
       "packageFileName": "node_modules/@electron/rebuild",
-      "downloadLocation": "https://registry.npmjs.org/@electron/rebuild/-/rebuild-4.2.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/@electron/rebuild/-/rebuild-4.2.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -253,13 +253,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40electron/rebuild@4.2.0"
+          "referenceLocator": "pkg:npm/%40electron/rebuild@4.2.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "44a2ff3be8c6a1724cc6bc7fe7bef5cb59f4c532a616e39818ede0326c32a4133aaec1f4928bb49acc3075703626b848904e31c82eeff6f1a4d27e8d3f380ec5"
+          "checksumValue": "212e291b7072b11ac22c9f314c07ef83e2100db894a00cdd272d927e37182a72c3cb90e909d8e73dd852e597f950c7eb901db8c6ed0a0be4ea70ec60f9e1beeb"
         }
       ]
     },
@@ -398,6 +398,29 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "b996dec3536a7663c34cc27c6a1d72f9bfbd40426b7e45c593745c4d0c375f48d6ff1454bc52ac83509f41d49819d4db5d9584c6d53727771cc6d9dfc35162d2"
+        }
+      ]
+    },
+    {
+      "name": "commander",
+      "SPDXID": "SPDXRef-Package-commander-5.1.0",
+      "versionInfo": "5.1.0",
+      "packageFileName": "node_modules/@electron/universal/node_modules/commander",
+      "downloadLocation": "https://registry.npmjs.org/commander/-/commander-5.1.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/commander@5.1.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "3f40b2b0d0d0eebb55c3840842d9be311c55ebabca152be5b10bc6617656477a855348e530a1d9659830f1efbc0d26a1e140ca32a9e49d10d0cfec6e41743f66"
         }
       ]
     },
@@ -541,10 +564,10 @@
     },
     {
       "name": "@noble/hashes",
-      "SPDXID": "SPDXRef-Package-noble.hashes-2.4.0",
-      "versionInfo": "2.4.0",
+      "SPDXID": "SPDXRef-Package-noble.hashes-1.8.0",
+      "versionInfo": "1.8.0",
       "packageFileName": "node_modules/@noble/hashes",
-      "downloadLocation": "https://registry.npmjs.org/@noble/hashes/-/hashes-2.4.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/@noble/hashes/-/hashes-1.8.0.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -552,22 +575,22 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40noble/hashes@2.4.0"
+          "referenceLocator": "pkg:npm/%40noble/hashes@1.8.0"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "5f95da5566480424fb1c76469b923b6505c3c0b1be6c65ee4ab310016fbb66f97cee1d6499cd5907555244972951fa14ac6429e05928c66e6467e32cf9a5be78"
+          "checksumValue": "8c2b3d95d77b370ce98170c87fa3f7f8dac787dfec0fa0907711f28d023e87feab0cda3cf32a41c71cf8e540ee647cfdaf7b4dcfb37f5489d256855db57108e0"
         }
       ]
     },
     {
       "name": "@peculiar/asn1-schema",
-      "SPDXID": "SPDXRef-Package-peculiar.asn1-schema-2.10.0",
-      "versionInfo": "2.10.0",
+      "SPDXID": "SPDXRef-Package-peculiar.asn1-schema-2.11.1",
+      "versionInfo": "2.11.1",
       "packageFileName": "node_modules/@peculiar/asn1-schema",
-      "downloadLocation": "https://registry.npmjs.org/@peculiar/asn1-schema/-/asn1-schema-2.10.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/@peculiar/asn1-schema/-/asn1-schema-2.11.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -575,13 +598,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40peculiar/asn1-schema@2.10.0"
+          "referenceLocator": "pkg:npm/%40peculiar/asn1-schema@2.11.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "1a1a240f8d65578810aeb2d89b7c029077c13a726b9e10cc82de1778c5bc8337c4d54749a88b92c2c13e8207fcd97063517449ca5726f8a2064056b8bad2152f"
+          "checksumValue": "8da53d39a09c6d951dc97c7d84c113641f71a0d9b14c68ce185a9dddc3b02859292a7c8a77d5b1177baa8f83ef5f873238c3fd6d274783963230bdaab71fddfe"
         }
       ]
     },
@@ -633,10 +656,10 @@
     },
     {
       "name": "@peculiar/webcrypto",
-      "SPDXID": "SPDXRef-Package-peculiar.webcrypto-1.7.1",
-      "versionInfo": "1.7.1",
+      "SPDXID": "SPDXRef-Package-peculiar.webcrypto-1.7.2",
+      "versionInfo": "1.7.2",
       "packageFileName": "node_modules/@peculiar/webcrypto",
-      "downloadLocation": "https://registry.npmjs.org/@peculiar/webcrypto/-/webcrypto-1.7.1.tgz",
+      "downloadLocation": "https://registry.npmjs.org/@peculiar/webcrypto/-/webcrypto-1.7.2.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -644,13 +667,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40peculiar/webcrypto@1.7.1"
+          "referenceLocator": "pkg:npm/%40peculiar/webcrypto@1.7.2"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "3833a8bf4b0630931fde33e89ce9201aa3e49d3b2ef83750ee40fefa0cfc688f9a14c38c1c56d6000dad6aa5d755374ff8e4ce411ff39c6bd2a6691e23459361"
+          "checksumValue": "92d4d2002449e567697e31e3153d845894103da706bf570f0837c46dd9a90073b1745898a8f7b895f9d7180dc3f0383dff49073d84afc91960ba320e5654ddbd"
         }
       ]
     },
@@ -1093,10 +1116,10 @@
     },
     {
       "name": "app-builder-lib",
-      "SPDXID": "SPDXRef-Package-app-builder-lib-26.15.3",
-      "versionInfo": "26.15.3",
+      "SPDXID": "SPDXRef-Package-app-builder-lib-26.18.1",
+      "versionInfo": "26.18.1",
       "packageFileName": "node_modules/app-builder-lib",
-      "downloadLocation": "https://registry.npmjs.org/app-builder-lib/-/app-builder-lib-26.15.3.tgz",
+      "downloadLocation": "https://registry.npmjs.org/app-builder-lib/-/app-builder-lib-26.18.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -1104,13 +1127,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/app-builder-lib@26.15.3"
+          "referenceLocator": "pkg:npm/app-builder-lib@26.18.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "d959f25a4aac3f9bf95db0612f7b43e52cb1f2234f058b2853b918e12d9fcfbc20f118ff9f3b5628253318a685453bf45f07f7fc7d39f024752afb5dff7951a3"
+          "checksumValue": "1f11dc490a32f119a21424b180acade4baf0c7c1c2511879f37e1345a1c48e40e4552db056ddd19e4403906d3369065f873dddf1642d17cceff75e314a6d19a4"
         }
       ]
     },
@@ -1134,52 +1157,6 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "cf1d0422aefc5a563f9416f5b97973899983648e2e6dc09720c278b868d7cd95b49d2d7d4e348f7973c08f3cd398a425254666d126e66613ca3fbb6e4354ac13"
-        }
-      ]
-    },
-    {
-      "name": "jsonfile",
-      "SPDXID": "SPDXRef-Package-jsonfile-6.2.1",
-      "versionInfo": "6.2.1",
-      "packageFileName": "node_modules/app-builder-lib/node_modules/@electron/fuses/node_modules/jsonfile",
-      "downloadLocation": "https://registry.npmjs.org/jsonfile/-/jsonfile-6.2.1.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/jsonfile@6.2.1"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "cf039374bdeb150fe545d0679ed295397ea4e5c289c047351dd8a54fbd41584bbb278d605c8076311a7ebf176e3d2c1924f581c44cefe321f5c182c91941d7e1"
-        }
-      ]
-    },
-    {
-      "name": "universalify",
-      "SPDXID": "SPDXRef-Package-universalify-2.0.1",
-      "versionInfo": "2.0.1",
-      "packageFileName": "node_modules/app-builder-lib/node_modules/@electron/fuses/node_modules/universalify",
-      "downloadLocation": "https://registry.npmjs.org/universalify/-/universalify-2.0.1.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/universalify@2.0.1"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "829b4735082120d9dcfef4c6224d12385185357c3b255ae5454b42a2725196f6b0e83b97d303b925e928f6c5ab301861f8fb18019ee85c088e9dffd42a88328b"
         }
       ]
     },
@@ -1230,6 +1207,29 @@
       ]
     },
     {
+      "name": "jsonfile",
+      "SPDXID": "SPDXRef-Package-jsonfile-4.0.0",
+      "versionInfo": "4.0.0",
+      "packageFileName": "node_modules/app-builder-lib/node_modules/@electron/get/node_modules/jsonfile",
+      "downloadLocation": "https://registry.npmjs.org/jsonfile/-/jsonfile-4.0.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/jsonfile@4.0.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "9ba175477cfc8e395fda29901d2d907b3e6c8ca590cdbbae86e27f14a605459bcf1373ee1dc48c559cdfb0b84654e91f776d286cbe5258405ec394a196ab8dc6"
+        }
+      ]
+    },
+    {
       "name": "semver",
       "SPDXID": "SPDXRef-Package-semver-6.3.1",
       "versionInfo": "6.3.1",
@@ -1249,6 +1249,29 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "051ed5bc30951cefaadb10445ac9314ba0c9135a919dbec3c7352ba206fbd425a849f89c07162c88019df8a9749a6abf329ac6f7202b464cab4314cee978cccc"
+        }
+      ]
+    },
+    {
+      "name": "universalify",
+      "SPDXID": "SPDXRef-Package-universalify-0.1.2",
+      "versionInfo": "0.1.2",
+      "packageFileName": "node_modules/app-builder-lib/node_modules/@electron/get/node_modules/universalify",
+      "downloadLocation": "https://registry.npmjs.org/universalify/-/universalify-0.1.2.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/universalify@0.1.2"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "ac125e2390970259b2d6957eeb5ed607d27add4e9771acc71c5d9fd9d6c98b1e17ce9505d114b765b8f414620e080bdae4ffddfc604e61a002435c3ed1acd492"
         }
       ]
     },
@@ -1295,29 +1318,6 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "fa1d6590b2a164c4d88e8835544a49346ecd64959cb9cd830e4feab2a49345108e5e22e3790d5dd7fb9dad41a1a8cc5480097028d67471fdaea9a9f918bb92d8"
-        }
-      ]
-    },
-    {
-      "name": "jsonfile",
-      "SPDXID": "SPDXRef-Package-jsonfile-4.0.0",
-      "versionInfo": "4.0.0",
-      "packageFileName": "node_modules/app-builder-lib/node_modules/jsonfile",
-      "downloadLocation": "https://registry.npmjs.org/jsonfile/-/jsonfile-4.0.0.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/jsonfile@4.0.0"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "9ba175477cfc8e395fda29901d2d907b3e6c8ca590cdbbae86e27f14a605459bcf1373ee1dc48c559cdfb0b84654e91f776d286cbe5258405ec394a196ab8dc6"
         }
       ]
     },
@@ -1391,29 +1391,6 @@
       ]
     },
     {
-      "name": "universalify",
-      "SPDXID": "SPDXRef-Package-universalify-0.1.2",
-      "versionInfo": "0.1.2",
-      "packageFileName": "node_modules/app-builder-lib/node_modules/universalify",
-      "downloadLocation": "https://registry.npmjs.org/universalify/-/universalify-0.1.2.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/universalify@0.1.2"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "ac125e2390970259b2d6957eeb5ed607d27add4e9771acc71c5d9fd9d6c98b1e17ce9505d114b765b8f414620e080bdae4ffddfc604e61a002435c3ed1acd492"
-        }
-      ]
-    },
-    {
       "name": "argparse",
       "SPDXID": "SPDXRef-Package-argparse-2.0.1",
       "versionInfo": "2.0.1",
@@ -1461,10 +1438,10 @@
     },
     {
       "name": "asn1js",
-      "SPDXID": "SPDXRef-Package-asn1js-3.0.10",
-      "versionInfo": "3.0.10",
+      "SPDXID": "SPDXRef-Package-asn1js-3.1.0",
+      "versionInfo": "3.1.0",
       "packageFileName": "node_modules/asn1js",
-      "downloadLocation": "https://registry.npmjs.org/asn1js/-/asn1js-3.0.10.tgz",
+      "downloadLocation": "https://registry.npmjs.org/asn1js/-/asn1js-3.1.0.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "BSD-3-Clause",
@@ -1472,13 +1449,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/asn1js@3.0.10"
+          "referenceLocator": "pkg:npm/asn1js@3.1.0"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "4b6b3768ecad88a74545dba5c36a8f139d4cce3cd53a2b29a5c56fee354547e2b0d24c70bc5ac371803487b35da9b9a3d0790c2176166a88fb7e58bc920c757a"
+          "checksumValue": "1d6622d531e43aa82e0a23bebf08f4f59910143da4284b1e8d81c0602b57d03f345957680e7bd173d22e9175ff8de6f44fd3515899d1b6ac1d6c796d9c58f05c"
         }
       ]
     },
@@ -1760,10 +1737,10 @@
     },
     {
       "name": "builder-util",
-      "SPDXID": "SPDXRef-Package-builder-util-26.15.3",
-      "versionInfo": "26.15.3",
+      "SPDXID": "SPDXRef-Package-builder-util-26.18.1",
+      "versionInfo": "26.18.1",
       "packageFileName": "node_modules/builder-util",
-      "downloadLocation": "https://registry.npmjs.org/builder-util/-/builder-util-26.15.3.tgz",
+      "downloadLocation": "https://registry.npmjs.org/builder-util/-/builder-util-26.18.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -1771,22 +1748,22 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/builder-util@26.15.3"
+          "referenceLocator": "pkg:npm/builder-util@26.18.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "ab6867ecc6e8da714d9157a43e21c5c7a35fa37854466112ded7c19fe9393eac65d919263f7406a995211ffabd3dc87fe06d3935184f8c39558f53bcab84f1bf"
+          "checksumValue": "b7ed579f38fc8d0d859c95ad40e2950aecefdd01a3bcd844e9eafbe7ba2694a172b107b176b09523d78cfeebb8fb7f4888c0ad33697fdf43b562baaa6ede0743"
         }
       ]
     },
     {
       "name": "builder-util-runtime",
-      "SPDXID": "SPDXRef-Package-builder-util-runtime-9.7.0",
-      "versionInfo": "9.7.0",
+      "SPDXID": "SPDXRef-Package-builder-util-runtime-9.7.1",
+      "versionInfo": "9.7.1",
       "packageFileName": "node_modules/builder-util-runtime",
-      "downloadLocation": "https://registry.npmjs.org/builder-util-runtime/-/builder-util-runtime-9.7.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/builder-util-runtime/-/builder-util-runtime-9.7.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -1794,13 +1771,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/builder-util-runtime@9.7.0"
+          "referenceLocator": "pkg:npm/builder-util-runtime@9.7.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "83f911e76d208801589125d3cdc985de4a90abbc22f05e8de92cde0e066ba9304df951dd9a058ec93743d720fb0004c321dff25cbbee3f7e02c56e3afc1c0277"
+          "checksumValue": "2cb027d0376acf4608cb2b02cac064835f2a11d0333004a20034999791bc829c6caaed5126b74502aa005bdb2ec20d061ca32aaf2708485483ffd46a4a6e5dea"
         }
       ]
     },
@@ -2105,10 +2082,10 @@
     },
     {
       "name": "commander",
-      "SPDXID": "SPDXRef-Package-commander-5.1.0",
-      "versionInfo": "5.1.0",
+      "SPDXID": "SPDXRef-Package-commander-9.5.0",
+      "versionInfo": "9.5.0",
       "packageFileName": "node_modules/commander",
-      "downloadLocation": "https://registry.npmjs.org/commander/-/commander-5.1.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/commander/-/commander-9.5.0.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -2116,13 +2093,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/commander@5.1.0"
+          "referenceLocator": "pkg:npm/commander@9.5.0"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "3f40b2b0d0d0eebb55c3840842d9be311c55ebabca152be5b10bc6617656477a855348e530a1d9659830f1efbc0d26a1e140ca32a9e49d10d0cfec6e41743f66"
+          "checksumValue": "291b3b5950ca83ce8f5a2b80aa10eb0109d35d92ab69570273abc574bd78aab67f0dc5b0b91a3b5688985da9573bb4b918aa6a622544c026e01437f134728905"
         }
       ]
     },
@@ -2496,10 +2473,10 @@
     },
     {
       "name": "dmg-builder",
-      "SPDXID": "SPDXRef-Package-dmg-builder-26.15.3",
-      "versionInfo": "26.15.3",
+      "SPDXID": "SPDXRef-Package-dmg-builder-26.18.1",
+      "versionInfo": "26.18.1",
       "packageFileName": "node_modules/dmg-builder",
-      "downloadLocation": "https://registry.npmjs.org/dmg-builder/-/dmg-builder-26.15.3.tgz",
+      "downloadLocation": "https://registry.npmjs.org/dmg-builder/-/dmg-builder-26.18.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -2507,13 +2484,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/dmg-builder@26.15.3"
+          "referenceLocator": "pkg:npm/dmg-builder@26.18.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "3b7cc95055181c92a0ccfaa2a07c5fc730739520b5797092afbf6031204a04fe408238e99abc9d32c30ba2d120f5f009177eaf7549dc6fee27751371a0f76549"
+          "checksumValue": "8a10400215d44223be7c84068ab6122ee29f8066bcd7322b2338124a46e6d5f3dc134717aa7c4d2ed510831607a5ecf158e69e5f19a1f40b8f7a638d66e30a6e"
         }
       ]
     },
@@ -2634,10 +2611,10 @@
     },
     {
       "name": "electron",
-      "SPDXID": "SPDXRef-Package-electron-44.9.3",
-      "versionInfo": "44.9.3",
+      "SPDXID": "SPDXRef-Package-electron-44.10.0",
+      "versionInfo": "44.10.0",
       "packageFileName": "node_modules/electron",
-      "downloadLocation": "https://registry.npmjs.org/electron/-/electron-44.9.3.tgz",
+      "downloadLocation": "https://registry.npmjs.org/electron/-/electron-44.10.0.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -2645,22 +2622,22 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/electron@44.9.3"
+          "referenceLocator": "pkg:npm/electron@44.10.0"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "0aff7fc8c9d9c4d5ac32521ef13e2ffff34a1dd52f6deca84c9a17137048711c6eb3699e78568ef61fcfdf30797787015ee9b9d4880062b4f6423a480d62a924"
+          "checksumValue": "b2ce2909fad0295e135a4b9562d581e0799ecac3d9801f7a71260d29866fd5454244fe2f40c18d5b9a28a456efc7a05b7dc7b55ed3f9a66e510ee29e869d2cbd"
         }
       ]
     },
     {
       "name": "electron-builder",
-      "SPDXID": "SPDXRef-Package-electron-builder-26.15.3",
-      "versionInfo": "26.15.3",
+      "SPDXID": "SPDXRef-Package-electron-builder-26.18.1",
+      "versionInfo": "26.18.1",
       "packageFileName": "node_modules/electron-builder",
-      "downloadLocation": "https://registry.npmjs.org/electron-builder/-/electron-builder-26.15.3.tgz",
+      "downloadLocation": "https://registry.npmjs.org/electron-builder/-/electron-builder-26.18.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -2668,22 +2645,22 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/electron-builder@26.15.3"
+          "referenceLocator": "pkg:npm/electron-builder@26.18.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "6b528ce617aa4b7810099ce2cd7108f118c9cb7415a2050b3dd792927b7beae2c3a41216fc70c6b0c83f5e03f4ae23fa3c8f423ac46f1484ca2860ea03c7c9c4"
+          "checksumValue": "b80dd3a3d5ff0f8a33c0ff24fe8fcc09f2a2ff1113c8f5741648536aa760213ebbf6e7b1b10f10144f8f845f31e8f63c5b58c826bc3dff269d4ee3964e99807b"
         }
       ]
     },
     {
       "name": "electron-builder-squirrel-windows",
-      "SPDXID": "SPDXRef-Package-electron-builder-squirrel-windows-26.15.3",
-      "versionInfo": "26.15.3",
+      "SPDXID": "SPDXRef-Package-electron-builder-squirrel-windows-26.18.1",
+      "versionInfo": "26.18.1",
       "packageFileName": "node_modules/electron-builder-squirrel-windows",
-      "downloadLocation": "https://registry.npmjs.org/electron-builder-squirrel-windows/-/electron-builder-squirrel-windows-26.15.3.tgz",
+      "downloadLocation": "https://registry.npmjs.org/electron-builder-squirrel-windows/-/electron-builder-squirrel-windows-26.18.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -2691,22 +2668,22 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/electron-builder-squirrel-windows@26.15.3"
+          "referenceLocator": "pkg:npm/electron-builder-squirrel-windows@26.18.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "25cd7d5cf57dcbdfb66c07593e45ee54d18d204141abda681c2eb597c2afe8574aec3446dfe21cd2b7ab0b40d739a787373f325b47e0fc99c5f0641138e17930"
+          "checksumValue": "1199820683b59c96edcd33d33dc6d012aa352068aeda21880ffa9e153419b09d444cf3dd5c7652c6fbbd89ed3e5e18e34166cae09c7363252d441feac3e95255"
         }
       ]
     },
     {
       "name": "electron-publish",
-      "SPDXID": "SPDXRef-Package-electron-publish-26.15.3",
-      "versionInfo": "26.15.3",
+      "SPDXID": "SPDXRef-Package-electron-publish-26.18.1",
+      "versionInfo": "26.18.1",
       "packageFileName": "node_modules/electron-publish",
-      "downloadLocation": "https://registry.npmjs.org/electron-publish/-/electron-publish-26.15.3.tgz",
+      "downloadLocation": "https://registry.npmjs.org/electron-publish/-/electron-publish-26.18.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -2714,13 +2691,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/electron-publish@26.15.3"
+          "referenceLocator": "pkg:npm/electron-publish@26.18.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "83fd9b9fc6136af63872e4b917e8ce4bbce665b5d7055f0a67cc8729f26314fa0ab7306aae909d34fc41777b6a741c0fec155dd251b37fb064dacd0a7ac599e1"
+          "checksumValue": "565024331f6480f3ff4c69f9ab9b200926302ad3145c11a15d3d97c058b7a7794c2590e0088584ae291605a23ab4983c3db31e5d9eaf2b5791dbe0f3719b1be7"
         }
       ]
     },
@@ -3967,6 +3944,29 @@
       ]
     },
     {
+      "name": "jsonfile",
+      "SPDXID": "SPDXRef-Package-jsonfile-6.2.1",
+      "versionInfo": "6.2.1",
+      "packageFileName": "node_modules/jsonfile",
+      "downloadLocation": "https://registry.npmjs.org/jsonfile/-/jsonfile-6.2.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/jsonfile@6.2.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "cf039374bdeb150fe545d0679ed295397ea4e5c289c047351dd8a54fbd41584bbb278d605c8076311a7ebf176e3d2c1924f581c44cefe321f5c182c91941d7e1"
+        }
+      ]
+    },
+    {
       "name": "keyv",
       "SPDXID": "SPDXRef-Package-keyv-4.5.4",
       "versionInfo": "4.5.4",
@@ -4382,10 +4382,10 @@
     },
     {
       "name": "node-abi",
-      "SPDXID": "SPDXRef-Package-node-abi-4.35.0",
-      "versionInfo": "4.35.0",
+      "SPDXID": "SPDXRef-Package-node-abi-4.40.0",
+      "versionInfo": "4.40.0",
       "packageFileName": "node_modules/node-abi",
-      "downloadLocation": "https://registry.npmjs.org/node-abi/-/node-abi-4.35.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/node-abi/-/node-abi-4.40.0.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -4393,13 +4393,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/node-abi@4.35.0"
+          "referenceLocator": "pkg:npm/node-abi@4.40.0"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "ca6938688cf174fa29c36822bfc16cd4473abf26c69239b2c54c15aa1908e0c0b2dad55f5dd90e1865a27965632f44c7807fbb6bc95175ebf2ba9a188f726cfd"
+          "checksumValue": "1aebeabedace93e002dbb462741c41b0ccd5364c0d97b3e31e07383576e676f4952e02148e96aa706d458cd4589edd989fd62dabe2e7dfb5ec05a82551cb5eff"
         }
       ]
     },
@@ -4566,10 +4566,10 @@
     },
     {
       "name": "node-pty",
-      "SPDXID": "SPDXRef-Package-node-pty-1.2.0-beta.15",
-      "versionInfo": "1.2.0-beta.15",
+      "SPDXID": "SPDXRef-Package-node-pty-1.2.0-beta.18",
+      "versionInfo": "1.2.0-beta.18",
       "packageFileName": "node_modules/node-pty",
-      "downloadLocation": "https://registry.npmjs.org/node-pty/-/node-pty-1.2.0-beta.15.tgz",
+      "downloadLocation": "https://registry.npmjs.org/node-pty/-/node-pty-1.2.0-beta.18.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -4577,13 +4577,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/node-pty@1.2.0-beta.15"
+          "referenceLocator": "pkg:npm/node-pty@1.2.0-beta.18"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "bce452cc75e2e0e7e5ec77a6556a6eb9d2ea08f75a41be0b7e94425291391cfc61a78258b1c97ccd9c31875d69dbabf6c2f5b6e163309cc7cb8e144b8b1adfc4"
+          "checksumValue": "dd17a3dfbf3c3a76ac030a12993661942794ada27d09095db4be5be7bd5bf7edcdbf8efe3dac40e553c818e3acfb5e8e61078f4eb0b52ebb3c6bdfdd7f958f46"
         }
       ]
     },
@@ -4888,10 +4888,10 @@
     },
     {
       "name": "pkijs",
-      "SPDXID": "SPDXRef-Package-pkijs-3.4.1",
-      "versionInfo": "3.4.1",
+      "SPDXID": "SPDXRef-Package-pkijs-3.4.3",
+      "versionInfo": "3.4.3",
       "packageFileName": "node_modules/pkijs",
-      "downloadLocation": "https://registry.npmjs.org/pkijs/-/pkijs-3.4.1.tgz",
+      "downloadLocation": "https://registry.npmjs.org/pkijs/-/pkijs-3.4.3.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "BSD-3-Clause",
@@ -4899,36 +4899,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/pkijs@3.4.1"
+          "referenceLocator": "pkg:npm/pkijs@3.4.3"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "3a8fcd65c49671cabc2b2a06ee02c4f5f9e5b601e7b3ea4d0a3080a7f5a68ec5324a2fac5fbcb8cf85eabb87d56f8d820c7cd13e5df77e3cd3d79575c2f73284"
-        }
-      ]
-    },
-    {
-      "name": "@noble/hashes",
-      "SPDXID": "SPDXRef-Package-noble.hashes-1.8.0",
-      "versionInfo": "1.8.0",
-      "packageFileName": "node_modules/pkijs/node_modules/@noble/hashes",
-      "downloadLocation": "https://registry.npmjs.org/@noble/hashes/-/hashes-1.8.0.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40noble/hashes@1.8.0"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "8c2b3d95d77b370ce98170c87fa3f7f8dac787dfec0fa0907711f28d023e87feab0cda3cf32a41c71cf8e540ee647cfdaf7b4dcfb37f5489d256855db57108e0"
+          "checksumValue": "57d90ecda22dc0382a96bca15f2b10b005d410a8b93bb92a59468fddd5c8ecc2ef90fa9658c6f8c156f5400b6610308a23e5c800836c66834a30517bb196f57a"
         }
       ]
     },
@@ -4975,29 +4952,6 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "6fd11bf21d9e56a344f1e76f29dc2a92b63a3bb900c2623c91c9c1bf535272895825ba39f57505d27a05abe9716c2d72376d1b982d160446c30b91ffec049bd0"
-        }
-      ]
-    },
-    {
-      "name": "commander",
-      "SPDXID": "SPDXRef-Package-commander-9.5.0",
-      "versionInfo": "9.5.0",
-      "packageFileName": "node_modules/postject/node_modules/commander",
-      "downloadLocation": "https://registry.npmjs.org/commander/-/commander-9.5.0.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/commander@9.5.0"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "291b3b5950ca83ce8f5a2b80aa10eb0109d35d92ab69570273abc574bd78aab67f0dc5b0b91a3b5688985da9573bb4b918aa6a622544c026e01437f134728905"
         }
       ]
     },
@@ -6198,6 +6152,29 @@
       ]
     },
     {
+      "name": "universalify",
+      "SPDXID": "SPDXRef-Package-universalify-2.0.1",
+      "versionInfo": "2.0.1",
+      "packageFileName": "node_modules/universalify",
+      "downloadLocation": "https://registry.npmjs.org/universalify/-/universalify-2.0.1.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/universalify@2.0.1"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "829b4735082120d9dcfef4c6224d12385185357c3b255ae5454b42a2725196f6b0e83b97d303b925e928f6c5ab301861f8fb18019ee85c088e9dffd42a88328b"
+        }
+      ]
+    },
+    {
       "name": "unzipper",
       "SPDXID": "SPDXRef-Package-unzipper-0.12.5",
       "versionInfo": "0.12.5",
@@ -6523,57 +6500,57 @@
   "relationships": [
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DESCRIBES"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.xterm-6.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-fit-0.11.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-search-0.16.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ssh2-1.17.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-node-pty-1.2.0-beta.15",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "spdxElementId": "SPDXRef-Package-node-pty-1.2.0-beta.18",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.asar-4.3.1",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.fuses-2.1.3",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron-44.9.3",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "spdxElementId": "SPDXRef-Package-electron-44.10.0",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron-builder-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "spdxElementId": "SPDXRef-Package-electron-builder-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-resedit-3.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.7",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
@@ -6703,32 +6680,32 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-malept.cross-spawn-promise-2.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.0",
+      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-debug-4.4.3",
-      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.0",
+      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-node-abi-4.35.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.0",
+      "spdxElementId": "SPDXRef-Package-node-abi-4.40.0",
+      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-node-api-version-0.2.1",
-      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.0",
+      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-node-gyp-12.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.0",
+      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-read-binary-file-arch-1.0.6",
-      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.0",
+      "relatedSpdxElement": "SPDXRef-Package-electron.rebuild-4.2.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -6913,17 +6890,17 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-peculiar.utils-2.0.3",
-      "relatedSpdxElement": "SPDXRef-Package-peculiar.asn1-schema-2.10.0",
+      "relatedSpdxElement": "SPDXRef-Package-peculiar.asn1-schema-2.11.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-asn1js-3.0.10",
-      "relatedSpdxElement": "SPDXRef-Package-peculiar.asn1-schema-2.10.0",
+      "spdxElementId": "SPDXRef-Package-asn1js-3.1.0",
+      "relatedSpdxElement": "SPDXRef-Package-peculiar.asn1-schema-2.11.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
-      "relatedSpdxElement": "SPDXRef-Package-peculiar.asn1-schema-2.10.0",
+      "relatedSpdxElement": "SPDXRef-Package-peculiar.asn1-schema-2.11.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -6937,28 +6914,28 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-peculiar.asn1-schema-2.10.0",
-      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.1",
+      "spdxElementId": "SPDXRef-Package-peculiar.asn1-schema-2.11.1",
+      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-peculiar.json-schema-1.1.12",
-      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.1",
+      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-peculiar.utils-2.0.3",
-      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.1",
+      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
-      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.1",
+      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-webcrypto-core-1.9.2",
-      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.1",
+      "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7037,218 +7014,218 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-dmg-builder-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-dmg-builder-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "PREREQUISITE_FOR"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron-builder-squirrel-windows-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-electron-builder-squirrel-windows-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "PREREQUISITE_FOR"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.asar-3.4.1",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.fuses-1.8.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.get-3.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.notarize-2.5.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.osx-sign-1.3.3",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron.rebuild-4.2.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-electron.rebuild-4.2.1",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.universal-2.0.3",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-malept.flatpak-bundler-0.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-noble.hashes-2.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-noble.hashes-1.8.0",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-peculiar.webcrypto-1.7.1",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-peculiar.webcrypto-1.7.2",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.fs-extra-9.0.13",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ajv-8.20.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-asn1js-3.0.10",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-asn1js-3.1.0",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-async-exit-hook-2.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-builder-util-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-builder-util-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-builder-util-runtime-9.7.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-builder-util-runtime-9.7.1",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-chromium-pickle-js-0.2.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ci-info-4.3.1",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-debug-4.4.3",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-dotenv-16.6.1",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-dotenv-expand-11.0.7",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ejs-3.1.10",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron-publish-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-electron-publish-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-fs-extra-10.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-hosted-git-info-4.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-isbinaryfile-5.0.7",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-jiti-2.7.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-js-yaml-4.3.2",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-json5-2.2.3",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-lazy-val-1.0.5",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-minimatch-10.2.6",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-pkijs-3.4.1",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "spdxElementId": "SPDXRef-Package-pkijs-3.4.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-plist-3.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-proper-lockfile-4.1.2",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-resedit-1.7.2",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-semver-7.7.4",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-tar-7.5.22",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-temp-file-3.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-tiny-async-pool-1.3.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-unzipper-0.12.5",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-which-5.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7307,16 +7284,6 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-universalify-2.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-jsonfile-6.2.1",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
-      "relatedSpdxElement": "SPDXRef-Package-jsonfile-6.2.1",
-      "relationshipType": "OPTIONAL_DEPENDENCY_OF"
-    },
-    {
       "spdxElementId": "SPDXRef-Package-debug-4.4.3",
       "relatedSpdxElement": "SPDXRef-Package-electron.get-3.1.0",
       "relationshipType": "DEPENDENCY_OF"
@@ -7372,6 +7339,11 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "relatedSpdxElement": "SPDXRef-Package-jsonfile-4.0.0",
+      "relationshipType": "OPTIONAL_DEPENDENCY_OF"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
       "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
       "relationshipType": "DEPENDENCY_OF"
@@ -7380,11 +7352,6 @@
       "spdxElementId": "SPDXRef-Package-concat-map-0.0.1",
       "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
       "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
-      "relatedSpdxElement": "SPDXRef-Package-jsonfile-4.0.0",
-      "relationshipType": "OPTIONAL_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-pe-library-0.4.1",
@@ -7398,17 +7365,17 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-pvtsutils-1.3.6",
-      "relatedSpdxElement": "SPDXRef-Package-asn1js-3.0.10",
+      "relatedSpdxElement": "SPDXRef-Package-asn1js-3.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-pvutils-1.2.0",
-      "relatedSpdxElement": "SPDXRef-Package-asn1js-3.0.10",
+      "relatedSpdxElement": "SPDXRef-Package-asn1js-3.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
-      "relatedSpdxElement": "SPDXRef-Package-asn1js-3.0.10",
+      "relatedSpdxElement": "SPDXRef-Package-asn1js-3.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7423,82 +7390,82 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-types.debug-4.1.13",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-builder-util-runtime-9.7.0",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "spdxElementId": "SPDXRef-Package-builder-util-runtime-9.7.1",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-chalk-4.1.2",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-cross-spawn-7.0.6",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-debug-4.4.3",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-fs-extra-10.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-http-proxy-agent-7.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-https-proxy-agent-7.0.6",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-js-yaml-4.3.2",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-sanitize-filename-1.6.4",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-source-map-support-0.5.21",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-stat-mode-1.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-temp-file-3.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-tiny-async-pool-1.3.0",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-debug-4.4.3",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-runtime-9.7.0",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-runtime-9.7.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-sax-1.6.1",
-      "relatedSpdxElement": "SPDXRef-Package-builder-util-runtime-9.7.0",
+      "relatedSpdxElement": "SPDXRef-Package-builder-util-runtime-9.7.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7682,23 +7649,23 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-app-builder-lib-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-dmg-builder-26.15.3",
+      "spdxElementId": "SPDXRef-Package-app-builder-lib-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-dmg-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-builder-util-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-dmg-builder-26.15.3",
+      "spdxElementId": "SPDXRef-Package-builder-util-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-dmg-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-fs-extra-10.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-dmg-builder-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-dmg-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-js-yaml-4.3.2",
-      "relatedSpdxElement": "SPDXRef-Package-dmg-builder-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-dmg-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7733,127 +7700,127 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-electron-internal.extract-zip-1.0.5",
-      "relatedSpdxElement": "SPDXRef-Package-electron-44.9.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.get-5.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-44.9.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.node-24.19.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-44.9.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-app-builder-lib-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "spdxElementId": "SPDXRef-Package-app-builder-lib-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-builder-util-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "spdxElementId": "SPDXRef-Package-builder-util-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-builder-util-runtime-9.7.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "spdxElementId": "SPDXRef-Package-builder-util-runtime-9.7.1",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-chalk-4.1.2",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ci-info-4.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-dmg-builder-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "spdxElementId": "SPDXRef-Package-dmg-builder-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-fs-extra-10.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-lazy-val-1.0.5",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-simple-update-notifier-2.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-yargs-17.7.3",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-app-builder-lib-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-squirrel-windows-26.15.3",
+      "spdxElementId": "SPDXRef-Package-app-builder-lib-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-squirrel-windows-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-builder-util-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-squirrel-windows-26.15.3",
+      "spdxElementId": "SPDXRef-Package-builder-util-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-squirrel-windows-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron-winstaller-5.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-builder-squirrel-windows-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-builder-squirrel-windows-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.fs-extra-9.0.13",
-      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-aws4-1.13.2",
-      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-builder-util-26.15.3",
-      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.15.3",
+      "spdxElementId": "SPDXRef-Package-builder-util-26.18.1",
+      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-builder-util-runtime-9.7.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.15.3",
+      "spdxElementId": "SPDXRef-Package-builder-util-runtime-9.7.1",
+      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-chalk-4.1.2",
-      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-form-data-4.0.6",
-      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-fs-extra-10.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-lazy-val-1.0.5",
-      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-mime-2.6.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.15.3",
+      "relatedSpdxElement": "SPDXRef-Package-electron-publish-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8348,7 +8315,7 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-semver-7.8.5",
-      "relatedSpdxElement": "SPDXRef-Package-node-abi-4.35.0",
+      "relatedSpdxElement": "SPDXRef-Package-node-abi-4.40.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8413,7 +8380,7 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-node-addon-api-7.1.1",
-      "relatedSpdxElement": "SPDXRef-Package-node-pty-1.2.0-beta.15",
+      "relatedSpdxElement": "SPDXRef-Package-node-pty-1.2.0-beta.18",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8443,32 +8410,32 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-noble.hashes-1.8.0",
-      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.1",
+      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.3",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-asn1js-3.0.10",
-      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.1",
+      "spdxElementId": "SPDXRef-Package-asn1js-3.1.0",
+      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.3",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-bytestreamjs-2.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.1",
+      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.3",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-pvtsutils-1.3.6",
-      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.1",
+      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.3",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-pvutils-1.2.0",
-      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.1",
+      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.3",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
-      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.1",
+      "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.3",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8782,7 +8749,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-peculiar.asn1-schema-2.10.0",
+      "spdxElementId": "SPDXRef-Package-peculiar.asn1-schema-2.11.1",
       "relatedSpdxElement": "SPDXRef-Package-webcrypto-core-1.9.2",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8797,7 +8764,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-asn1js-3.0.10",
+      "spdxElementId": "SPDXRef-Package-asn1js-3.1.0",
       "relatedSpdxElement": "SPDXRef-Package-webcrypto-core-1.9.2",
       "relationshipType": "DEPENDENCY_OF"
     },

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.8 — Embedded runtime and dependency security maintenance
+
+- Update Electron from 44.9.3 to 44.10.0, incorporating Node 24.22.1 and Chromium 152.0.7977.169. This closes the embedded-Node security follow-up recorded for 1.2.6 and 1.2.7 and includes upstream malformed-ASAR, archive-path and File System Access fixes.
+- Update node-pty from 1.2.0-beta.15 to 1.2.0-beta.18 and pin the reviewed native module bytes. The ConPTY DLL and OpenConsole executable are byte-identical; preserve elevated-provider integrity, session ownership and shutdown protections.
+- Update electron-builder from 26.15.3 to 26.18.1, including ASAR path-containment and NSIS extraction fixes. Refresh the lockfile, dependency inventories and runtime notices while retaining the scoped optional build-proxy override.
+- Update the full-SHA pins for setup-node 7.1.0, upload-artifact 7.0.2 and CodeQL 4.39.1. Retain required Linux/Windows, dependency, secret and code-analysis gates; repeat exact Windows package and real-installer acceptance for the new dependencies.
+- Preserve user data, installer identity, host verification, persistent sessions and the 1.2.7 updater shutdown repair. Versions through 1.2.6 may need one manual installation of the latest official installer. Release artifacts remain unsigned; current evidence and acceptance limits are recorded in [validation results](docs/VALIDATION.md).
+
 ## 1.2.7 — Updater shutdown handoff
 
 - Fix a shutdown race where the app's update-control pipe closes just before the original app process exits, cancelling an already approved upgrade and leaving the app closed. After acknowledged release, allow up to five seconds for that same pinned process to exit before continuing the verified installation.

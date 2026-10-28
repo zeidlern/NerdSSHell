@@ -1,3 +1,32 @@
+# Version 1.2.8 dependency security maintenance validation
+
+Local evidence collected October 28, 2026, on Linux x64 with Node 24.22.1 and npm 11.9.0, based on main `dadcea841626b4fc86cda9341cd8fabc58660e54`. The candidate uses Electron 44.10.0, node-pty 1.2.0-beta.18 and electron-builder 26.18.1. This section records local candidate evidence; exact hosted source, Windows build/acceptance and publication receipts belong to the maintenance pull request and release.
+
+| Check | Measured local result |
+| --- | --- |
+| Fresh supported dependency install without lifecycle scripts | 286 packages installed; all 19 optional lockfile placements verified absent |
+| Source/publication, version, branding and UI checks | Passed, including all five publication-tool regressions |
+| Full Linux regression suite | 1,104 passed, zero failures, two Windows-only cases skipped of 1,106 |
+| Real loopback appliance SSH integration | Two tests passed, including 300 lifecycle/authentication/failure cycles; zero live sockets/channels, retained secrets, pending tasks or pending prompts after cleanup |
+| Supported and complete npm lockfile audits | Both report zero vulnerabilities, including low severity; the pre-update npm graph also audited clean |
+| Complete dependency install in a disposable directory | 305 packages installed without lifecycle scripts |
+| Optional build-download proxy fixture | Bootstrap, actual loopback forwarding, cache reuse, NO_PROXY bypass, checksum refusal and non-origin URL refusal passed; roarr/sprintf-js remain absent |
+| Native provider identity | Reviewed beta.18 conpty.node SHA-256 matches; ConPTY DLL and OpenConsole bytes match their existing pins |
+| Dependency inventories and installed graph | Publisher validation passed for 282 full SPDX packages and 11 runtime packages; ten runtime notices refreshed; npm ls reports no missing/invalid supported dependencies |
+| Workflow YAML and whitespace | All six workflows parsed; diff whitespace check passed; changed Action pins independently matched official release tags |
+| Independent review | Manual source review found no confirmed new vulnerability in the examined trust boundaries; independent patch/native/package review found no blocker |
+| Windows executable, fuses/ASAR, DPAPI, native consoles and NSIS installation | Not run on this Linux host; require fresh successful protected Windows and real-installer acceptance for this candidate |
+
+Electron 44.10.0 includes Node 24.22.1 and Chromium 152.0.7977.169, resolving the embedded-Node version gap recorded for 1.2.6/1.2.7. The advisory database, source review and regression tests have distinct scope; a clean npm audit does not certify bundled native code or absence of vulnerabilities. The packaged confirmation receipt records the actual Electron and Node runtime versions.
+
+The manual source review examined main/preload IPC, the application resource protocol and renderer restrictions, SSH trust/authentication, saved-password binding, persistent lifecycle/input, SFTP/local file boundaries, release transport/download and Windows update/elevation helpers. Required Codex Security plugin workflow resources were unavailable; no completed plugin scan is claimed. Existing SFTP v3 concurrency limitations and same-user/OS-compromise exclusions remain documented.
+
+The updated real-installer workflow now also triggers for package manifests and package-verifier changes while preserving its official-repository/owner/disposable-VM guards. Its successful result is required before accepting this builder/runtime change. Protected main still requires fresh Linux/Windows, supported/full dependency, secret-history and both CodeQL jobs; publication reuses the exact accepted main Windows artifact.
+
+Automated native fixtures do not establish physical desktop interaction, genuine UAC or alternate-account behavior, every clean-user Windows setup, or vendor-device interoperability. The application and installer remain unsigned. No owner installation, user data or production SSH session was changed by local validation.
+
+---
+
 # Version 1.2.7 updater shutdown validation
 
 Windows 11 x64, Node 22.23.4 and npm 11.9.0; candidate branch `codex/updater-shutdown-eof-1.2.7`. The reported installed 1.2.4 client closed after accepting 1.2.6 and remained on 1.2.4. Its bundled updater sources match the released 1.2.4 implementation after newline normalization. Local event records show helper activity but do not retain the worker's final status, so they cannot prove its exact cancellation branch.

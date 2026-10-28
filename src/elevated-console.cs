@@ -396,7 +396,7 @@ namespace NerdSSHell {
       } catch { }
     }
 
-    // These are the reviewed node-pty 1.2.0-beta.15 / ConPTY 1.25.260303002
+    // These are the reviewed node-pty 1.2.0-beta.18 / ConPTY 1.25.260303002
     // x64 bytes, not caller-provided digests. Never load conpty.node elevated.
     const string ConptySha256 = "3319b484b80bb53d1f4d0a9eb0ea60fd0f61da69db7280ca43b84215f19245ff";
     const string OpenConsoleSha256 = "7f68c840226505004215c0b82d4e502c24b5bc3f4b93c4baaaa19bd679c0def8";

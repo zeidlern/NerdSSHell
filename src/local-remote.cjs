@@ -11,10 +11,10 @@ const { spawnElevatedPty } = require('./elevated-pty.cjs');
 const { consoleText } = require('./console-text.cjs');
 const { windowsPowerShellEnvironment } = require('./powershell-environment.cjs');
 const NATIVE_HASHES = Object.freeze({
-  "conpty.node": "ec2fd8545c30e051ee3fa17d26127f7e615919814879c7f746cf4c80845226e0",
+  "conpty.node": "4d2112f9316c9927145e821f20d470369c7ac8ffe63e981fb62a57c303f7f488",
   "conpty/conpty.dll": "3319b484b80bb53d1f4d0a9eb0ea60fd0f61da69db7280ca43b84215f19245ff",
   "conpty/OpenConsole.exe": "7f68c840226505004215c0b82d4e502c24b5bc3f4b93c4baaaa19bd679c0def8"
-}); // Filled from the reviewed, integrity-checked node-pty 1.2.0-beta.15 tarball.
+}); // Filled from the reviewed, integrity-checked node-pty 1.2.0-beta.18 tarball.
 function installedShells({ platform = process.platform, env = process.env, exists = fs.existsSync } = {}) {
   if (platform !== 'win32') return [];
   const windows = env.SystemRoot || 'C:\\Windows', programs = env.ProgramFiles || 'C:\\Program Files';
@@ -78,7 +78,7 @@ function launchArguments(command, shellId = 'local:powershell') {
 class PtyChannel extends Duplex {
   constructor(pty) {
     super({ highWaterMark: 65536, autoDestroy: true }); this.pty = pty; this.exited = false;
-    // Pinned node-pty 1.2.0-beta.15 leaves its DLL-mode conout worker's server alive
+    // Pinned node-pty 1.2.0-beta.18 leaves its DLL-mode conout worker's server alive
     // after EOF, and its kill path only disposes that worker on later output.
     // Capture only this PTY's transport; never enumerate processes or workers.
     const agent = pty._agent;

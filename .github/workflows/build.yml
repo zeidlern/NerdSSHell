@@ -114,7 +114,7 @@ jobs:
             .local/packaged-password/results.json
             .local/packaged-confirmation/results.json
             .local/startup-update-ui/*.json
-            .local/update-handoff-smoke/*.json
+            .local/update-handoff/results.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json
@@ -139,7 +139,7 @@ jobs:
             .local/packaged-password/results.json
             .local/packaged-confirmation/results.json
             .local/startup-update-ui/*.json
-            .local/update-handoff-smoke/*.json
+            .local/update-handoff/results.json
             .local/packaged-per-pane/results.json
             .local/packaged-per-pane/*.png
             .local/scratchpad-spelling-smoke/report.json

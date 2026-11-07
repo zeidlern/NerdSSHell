@@ -35,7 +35,7 @@ const output = options.has('--output') ? path.resolve(options.get('--output')) :
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-per-pane-'));
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const metrics = { logins: 0, shells: 0, closedShells: 0, exec: 0, inspections: 0, unexpectedExec: 0, sftp: 0, closedSftp: 0, directories: [], resize: [], terminalBaud: [] };
-const peers = new Set(), report = { status: 'running', started: new Date().toISOString(), executable: exe, expectedVersion: metadata.version, visibleFixture, appPID: null, checks: [], screenshots: [], layoutGeometry: [], metrics, nativeDialogs: 'Unverified: upload/download native dialogs and transfer bytes are covered separately.' };
+const peers = new Set(), report = { status: 'running', started: new Date().toISOString(), executable: exe, expectedVersion: metadata.version, visibleFixture, appPID: null, checks: [], screenshots: [], layoutGeometry: [], fileViewportRegression: [], metrics, nativeDialogs: 'Unverified: upload/download native dialogs and transfer bytes are covered separately.' };
 let server, launcher, appPID, ws;
 async function freePort() { const s = net.createServer(); await new Promise(resolve => s.listen(0, '127.0.0.1', resolve)); const p = s.address().port; await new Promise(resolve => s.close(resolve)); return p; }
 async function fixture() {
@@ -162,6 +162,64 @@ function fileLayoutGeometry() {
     }) };
   });
 }
+// Synchronous renderer fixture: no IPC, event handlers, or private text in its result.
+function fileViewportRegression() {
+  const rect = node => { const r = node.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; };
+  const viewport = node => { const r = rect(node), left = r.left + node.clientLeft, top = r.top + node.clientTop; return { left, top, right: left + node.clientWidth, bottom: top + node.clientHeight }; };
+  const records = [...views.values()].filter(v => !v.wrapper.hidden).flatMap(v => ['local', 'remote'].map(side => {
+    const drawer = v.wrapper.querySelector('.file-drawer'), column = drawer.querySelector('.file-' + side), list = column.querySelector('.file-list'), status = column.querySelector('.file-status');
+    return { key: v.pane.key, side, drawer, column, list, status, view: column.querySelector('.file-view'), controls: column.querySelector('.file-controls'), actions: column.querySelector('.file-actions'), listNodes: [...list.childNodes], statusNodes: [...status.childNodes] };
+  }));
+  const scrolls = new Map();
+  for (const r of records) for (const start of [r.list, r.status]) for (let node = start; node; node = node.parentElement) if (!scrolls.has(node)) scrolls.set(node, { left: node.scrollLeft, top: node.scrollTop });
+  const sample = r => {
+    const list = rect(r.list), view = viewport(r.view), actions = rect(r.actions), maxStatus = Number.parseFloat(getComputedStyle(r.status).maxHeight);
+    return { list, view, actionsTop: actions.top, listFitsView: list.width > 0 && list.height > 0 && list.left >= view.left - 1 && list.right <= view.right + 1 && list.top >= view.top - 1 && list.bottom <= view.bottom + 1, viewDoesNotOverflow: r.view.scrollHeight <= r.view.clientHeight + 1, actionsBelow: Math.max(list.bottom, view.bottom, rect(r.controls).bottom) <= actions.top + 1, statusCapped: Number.isFinite(maxStatus) && Math.abs(rect(r.status).height - maxStatus) <= 1 && r.status.scrollHeight > r.status.clientHeight, viewWidth: r.view.clientWidth, viewHeight: r.view.clientHeight, listWidth: r.list.clientWidth, listHeight: r.list.clientHeight, listScrollHeight: r.list.scrollHeight, drawerWidth: r.drawer.clientWidth, drawerHeight: r.drawer.clientHeight, drawerScrollWidth: r.drawer.scrollWidth, drawerScrollHeight: r.drawer.scrollHeight };
+  };
+  const appendRows = (list, start) => {
+    const fragment = document.createDocumentFragment();
+    for (let i = start; i < start + 100; i++) {
+      const row = document.createElement('button'); row.type = 'button'; row.className = 'file-entry';
+      for (const [name, text] of [['file-kind', 'FILE'], ['file-name', 'Synthetic row ' + String(i).padStart(3, '0')], ['file-size', '1 KiB'], ['file-modified', 'Synthetic date']]) { const span = document.createElement('span'); span.className = name; span.textContent = text; row.append(span); }
+      fragment.append(row);
+    }
+    list.append(fragment);
+  };
+  const revealPoint = (drawer, point) => {
+    const p = point(), box = viewport(drawer);
+    drawer.scrollBy({ left: p.x - (box.left + box.right) / 2, top: p.y - (box.top + box.bottom) / 2, behavior: 'instant' });
+    const next = point(), visible = viewport(drawer);
+    return { ...next, inside: next.x >= visible.left && next.x < visible.right && next.y >= visible.top && next.y < visible.bottom && next.x >= 0 && next.x < innerWidth && next.y >= 0 && next.y < innerHeight };
+  };
+  const columns = []; let restored = false;
+  try {
+    for (const r of records) { r.status.textContent = 'Synthetic wrapped layout status. '.repeat(80); r.list.replaceChildren(); appendRows(r.list, 0); }
+    const initial = records.map(sample);
+    for (const r of records) appendRows(r.list, 100);
+    const expanded = records.map(sample);
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i], before = initial[i], after = expanded[i];
+      const bounded = ['viewWidth', 'viewHeight', 'listWidth', 'listHeight', 'drawerWidth', 'drawerHeight', 'drawerScrollWidth', 'drawerScrollHeight'].every(key => Math.abs(before[key] - after[key]) <= 1);
+      r.list.scrollTo({ left: 0, top: r.list.scrollHeight, behavior: 'instant' });
+      const last = r.list.lastElementChild, point = revealPoint(r.drawer, () => { const row = rect(last), box = viewport(r.list); return { x: (Math.max(row.left, box.left) + Math.min(row.right, box.right)) / 2, y: (row.top + row.bottom) / 2 }; });
+      const row = rect(last), box = viewport(r.list);
+      const lastRow = { insideList: row.height > 0 && row.top >= box.top - 1 && row.bottom <= box.bottom + 1 && Math.min(row.right, box.right) > Math.max(row.left, box.left), insideDrawer: point.inside, hit: point.inside && last.contains(document.elementFromPoint(point.x, point.y)), rowTop: row.top, rowBottom: row.bottom, viewportTop: box.top, viewportBottom: box.bottom, scrollTop: r.list.scrollTop };
+      const actionHits = [...r.actions.querySelectorAll('button')].map((button, index) => {
+        const target = revealPoint(r.drawer, () => { const b = rect(button); return { x: (b.left + b.right) / 2, y: (b.top + b.bottom) / 2 }; });
+        return { index, insideDrawer: target.inside, hit: target.inside && button.contains(document.elementFromPoint(target.x, target.y)) };
+      });
+      columns.push({ key: r.key, side: r.side, initial: before, expanded: after, bounded, scrollable: before.listScrollHeight > before.listHeight && after.listScrollHeight > before.listScrollHeight, lastRow, actionHits });
+    }
+  } finally {
+    for (const r of records) { r.list.replaceChildren(...r.listNodes); r.status.replaceChildren(...r.statusNodes); }
+    // Restore after the original content has its original layout again.
+    void document.documentElement.offsetHeight;
+    for (const [node, position] of scrolls) node.scrollTo({ ...position, behavior: 'instant' });
+    const sameNodes = (node, saved) => node.childNodes.length === saved.length && saved.every((child, i) => node.childNodes[i] === child);
+    restored = records.every(r => sameNodes(r.list, r.listNodes) && sameNodes(r.status, r.statusNodes)) && [...scrolls].every(([node, position]) => Math.abs(node.scrollLeft - position.left) <= 1 && Math.abs(node.scrollTop - position.top) <= 1);
+  }
+  return { columns, restored };
+}
 async function main() {
   if (process.platform !== 'win32') throw new Error('This acceptance harness requires Windows.');
   fs.mkdirSync(output, { recursive: true }); assert.ok(fs.existsSync(exe), 'Run npm run pack first.');
@@ -267,6 +325,16 @@ async function main() {
       }
       check(`${dimensions.join('x')}: ${name} file controls do not overlap transfer actions`, controlGeometry.every(g => g.listBottom <= g.actionsTop + 1 && g.controlsBottom <= g.actionsTop + 1));
       await screenshot(dimensions.join('x') + '-' + name);
+      // Let live listings and transient fixture notices finish before hit testing.
+      await wait(`[...views.values()].filter(v=>!v.wrapper.hidden).every(v=>!v.files.loading&&!v.wrapper.querySelector('[data-local="refresh"]').disabled)&&$('notice').hidden`, 'File layout fixture did not become idle.');
+      const regression = { dimensions, layout: name, ...await evaluate(`(${fileViewportRegression.toString()})()`) };
+      report.fileViewportRegression.push(regression); fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2));
+      console.log('File viewport regression ' + JSON.stringify(regression));
+      check(`${dimensions.join('x')}: ${name} Local and Remote list viewports fit with maximum wrapped status`, regression.columns.length > 0 && regression.columns.every(c => [c.initial, c.expanded].every(g => g.listFitsView && g.viewDoesNotOverflow && g.actionsBelow && g.statusCapped)));
+      check(`${dimensions.join('x')}: ${name} growing directories retain bounded list and drawer geometry`, regression.columns.every(c => c.bounded && c.scrollable));
+      check(`${dimensions.join('x')}: ${name} last synthetic rows remain visible and reachable`, regression.columns.every(c => c.lastRow.insideList && c.lastRow.insideDrawer && c.lastRow.hit));
+      check(`${dimensions.join('x')}: ${name} transfer action centers remain reachable after drawer scrolling`, regression.columns.every(c => c.actionHits.length > 0 && c.actionHits.every(h => h.insideDrawer && h.hit)));
+      check(`${dimensions.join('x')}: ${name} layout fixture restores original nodes and scroll positions`, regression.restored);
     }
     await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,shiftKey:true,bubbles:true,cancelable:true})); views.get(active).wrapper.querySelector('.pane-title').dispatchEvent(new MouseEvent('dblclick',{bubbles:true})); true`);
     check(`${dimensions.join('x')}: removed focus shortcut and title double-click cannot hide split panes`, await evaluate(`layout===4 && [...views.values()].filter(v=>!v.wrapper.hidden).length===4 && views.get(active).files.visible`));

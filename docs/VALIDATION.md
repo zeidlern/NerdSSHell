@@ -1,6 +1,6 @@
 # Version 1.2.9 dependency security and AGPLv3 validation
 
-Local evidence collected November 7, 2026, on Linux x64 with Node 24.22.1 and npm 11.9.0, based on main `a8a94c78f2d0caf9fd877e75bd405c3edee1b37b`. The candidate uses Electron 44.10.2, node-pty 1.2.0-beta.18 and electron-builder 26.18.1. These results identify the local candidate; protected checks, native Windows acceptance and official publication remain separate gates.
+Local evidence collected November 7, 2026, on Linux x64 with Node 24.22.1 and npm 11.9.0. The dependency/licensing work started from main `a8a94c78f2d0caf9fd877e75bd405c3edee1b37b`; the compact-panel follow-up starts from its merged main commit `63d69c0b2d0b28043bc101263ca4d0d26bcc093f`. The candidate uses Electron 44.10.2, node-pty 1.2.0-beta.18 and electron-builder 26.18.1. These results identify local candidates; protected checks, native Windows acceptance and official publication remain separate gates.
 
 | Check | Measured local result |
 | --- | --- |
@@ -31,19 +31,27 @@ The Windows directory package was cross-built on Linux, then statically verified
 
 | Local candidate file | SHA-256 |
 | --- | --- |
-| NerdSSHell.exe | 72518c2da260900e3665ec708ae53799177ddc8359812bcdd39014843491ec8b |
-| resources/app.asar | d9e7e4b2e779218767707c9fdfe758a8878d5eed9499af5a0e9adfb64d477891 |
+| NerdSSHell.exe | ce4755d043baaacdf38f42fba9281314c41c629887227b0d244f0760785ea010 |
+| resources/app.asar | d44701b77ec6a9a3a282aaeace2fe2e90b9f390eecef8e17aa43d7fd8438d766 |
 | LICENSE | 0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0 |
 
 The November 7 GitHub Security dashboard showed zero open Dependabot, code-scanning and secret-scanning alerts. Its dependency check was dated October 28, so that view did not substitute for the fresh local audits that found the two new advisories. Dependency alerts, security updates, secret scanning/push protection and private vulnerability reporting were enabled. No new CodeQL scan was run locally or claimed from this dashboard observation.
 
 The manual source review examined IPC sender/frame/origin and consent binding, SSH host verification/authentication, saved-password lifetime, persistent lifecycle/input, SFTP/local-file grants and cancellation, release origins/redirects/download bounds, and the Windows update/elevation helpers. Required managed Codex Security workflow resources were unavailable; no completed managed scan is claimed. Native Windows paths received static review only. Existing SFTP v3 concurrency and same-user/OS-compromise limitations remain documented. Secret scanning and text-history review do not certify every historical binary or image.
 
-The owner selected AGPL-3.0-only for 1.2.9 after the initial local candidate. The complete 34,523-byte [GNU AGPLv3 license text](https://www.gnu.org/licenses/agpl-3.0.txt) was copied verbatim. Local source/regression checks and the Windows directory build, exact-package and license checks were repeated with the updated metadata and license; the hashes above identify this AGPL candidate. Earlier published releases retain their original terms.
+The owner selected AGPL-3.0-only for 1.2.9 after the initial local candidate. The complete 34,523-byte [GNU AGPLv3 license text](https://www.gnu.org/licenses/agpl-3.0.txt) was copied verbatim. Local source/regression checks and the Windows directory build, exact-package and license checks were repeated with the updated metadata and license. The hashes above identify the later AGPL candidate including the compact-panel CSS correction; all 83 packaged tracked source/UI files match that local source exactly. The earlier AGPL candidate hashes remain in the [initial merged validation record](https://github.com/zeidlern/NerdSSHell/blob/63d69c0b2d0b28043bc101263ca4d0d26bcc093f/docs/VALIDATION.md). Earlier published releases retain their original terms.
 
 After the owner authorized GitHub Actions, the initial [PR39 Linux run](https://github.com/zeidlern/NerdSSHell/actions/runs/42407330621) passed all 13 real integration tests, resolving the environment-blocked OpenSSH/tmux cases for that source. The separate [Windows updater acceptance](https://github.com/zeidlern/NerdSSHell/actions/runs/42407330631) also passed its pinned public-installer fixture; it does not establish a literal 1.2.8-to-1.2.9 upgrade. The primary Windows test job exposed a new fixture's attempt to execute the macOS-only universal ASAR merger with Windows path separators. That fixture is explicitly skipped on Windows; its real merger/allowlist coverage remains active on Linux, and the supported Windows ASAR/builder and advisory checks remain active.
 
-Protected main requires fresh Linux/Windows build, dependency, secret-history and both CodeQL checks from GitHub Actions, with no bypass. Local evidence cannot satisfy those integration-bound checks. The final reviewed candidate, including AGPL metadata and the fixture correction, must pass fresh exact-source acceptance and publication gates before creating the protected version tag; publication must reuse the accepted main Windows artifact. The pull request and release retain the final hosted receipts.
+### Compact file-panel follow-up
+
+The final AGPL [PR39 build](https://github.com/zeidlern/NerdSSHell/actions/runs/42408268953) passed Linux/Windows acceptance. Its [merged-main build](https://github.com/zeidlern/NerdSSHell/actions/runs/42409246339) then failed the 900x600 side-by-side Local file-list geometry assertion, so no release artifact or tag was accepted. An unchanged-assertion [diagnostic run](https://github.com/zeidlern/NerdSSHell/actions/runs/42410792271) passed the existing checks but measured a separate coverage gap: the Remote list extended 15 pixels below its clipped view at 900x600, with a 121-pixel client height and 140-pixel scroll height. Visible transfer buttons still received their hit tests. The original assertion inspected only the Local column; its success did not establish that the Remote list viewport was intact.
+
+The correction lets file views size for wrapped controls/status text while containing each list's intrinsic size, so additional entries scroll inside the list instead of increasing the drawer height. Packaged acceptance retains the original assertions and adds both-column checks using long synthetic status text and 100 then 200 inert rows: complete list containment, bounded sizing, last-row reachability and transfer-button hit targets. Exact original nodes and scroll positions are restored after each synchronous layout check; no transfer or file-writing operation is part of that synthetic fixture. Geometry diagnostics include status lengths and bounds, not original text, names or paths; screenshots retain their Local-panel privacy mask.
+
+The existing sandbox-enabled offline Chromium fixture was attempted locally, but process-singleton socket creation failed with `EPERM` before any page opened. It produced no UI geometry result. Execution controls were unchanged; fresh Windows acceptance remains necessary for the CSS correction.
+
+Protected main requires fresh Linux/Windows build, dependency, secret-history and both CodeQL checks from GitHub Actions, with no bypass. Local evidence cannot satisfy those integration-bound checks. The final reviewed candidate, including AGPL metadata and the compact-panel correction, must pass fresh exact-source acceptance and publication gates before creating the protected version tag; publication must reuse the accepted main Windows artifact. The pull request and release retain the final hosted receipts.
 
 ---
 

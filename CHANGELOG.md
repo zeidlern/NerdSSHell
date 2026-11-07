@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.9 — Dependency security maintenance and AGPLv3 licensing
+
+- Update Electron from 44.10.0 to 44.10.2 on the supported 44.x line. The runtime now includes Node 24.22.2 and additional Chromium, V8 and related upstream fixes.
+- Repair the build dependency graph for CVE-2026-118773 (glob cancellation does not stop filesystem traversal) and CVE-2026-118764 (minimatch pattern amplification). Use version-qualified overrides for glob 14.0.4 and minimatch 11.0.5, preserving older unaffected API consumers and the existing optional build-proxy repair.
+- Exercise the actual ASAR and electron-builder consumers with focused compatibility and adversarial regressions, and regenerate the full and runtime dependency inventories.
+- Update the SHA-pinned CodeQL Action from 4.39.1 to 4.39.3, including its fix for missed alerts in changed paths containing spaces, special characters or non-ASCII characters.
+- License the project-owned source in this release under GNU Affero General Public License version 3.0 only (`AGPL-3.0-only`). Include the complete license in the application, installer and release assets, and align package metadata and current documentation. The [matching source archive](https://github.com/zeidlern/NerdSSHell/archive/refs/tags/v1.2.9.zip) includes the [build instructions](https://github.com/zeidlern/NerdSSHell/blob/v1.2.9/README.md#build-from-source). Earlier releases retain their original terms; third-party components retain their respective licenses.
+- Record local validation, GitHub alert observations and remaining Windows/release gates in [validation results](docs/VALIDATION.md). The announced November 11 Node security releases are not yet available and are not claimed as included; see [dependency maintenance](docs/DEPENDENCIES.md).
+
 ## 1.2.8 — Embedded runtime and dependency security maintenance
 
 - Update Electron from 44.9.3 to 44.10.0, incorporating Node 24.22.1 and Chromium 152.0.7977.169. This closes the embedded-Node security follow-up recorded for 1.2.6 and 1.2.7 and includes upstream malformed-ASAR, archive-path and File System Access fixes.

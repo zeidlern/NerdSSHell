@@ -13,6 +13,29 @@ npm audit --package-lock-only --ignore-scripts --audit-level=low
 
 `Verify-Publication.cjs` checks that optional lockfile placements are actually absent. The [full SPDX inventory](SBOM.spdx.json) includes the locked build graph. The [runtime SPDX inventory](SBOM-runtime.spdx.json) and [third-party notices](THIRD-PARTY-NOTICES.md) describe the packaged JavaScript subset; Electron/Chromium distribute their own notices beside the executable.
 
+## November 7, 2026 maintenance for 1.2.9
+
+Electron is updated from **44.10.0 to 44.10.2**, the current maintenance release on the supported 44.x line. Its [official release notes](https://releases.electronjs.org/release/v44.10.2) identify Node **24.22.2**, Chromium **152.0.7977.169**, and backported fixes from ANGLE, Chromium, libaom, libvpx, PDFium, Skia, V8 and WebRTC. The preceding [44.10.1 release](https://releases.electronjs.org/release/v44.10.1) also carries Chromium/Dawn/Skia/V8 fixes and `net.fetch()` improvements. Electron 45.2.3 is the newer major line; this maintenance update retains 44.x to limit compatibility changes.
+
+The baseline lockfile audit reported **eight moderate dependency entries from two underlying advisories**, in both the supported and complete graphs. There were no high or critical entries. These packages are development/build dependencies, not part of the packaged JavaScript runtime:
+
+| Advisory | Affected locked packages | Repair |
+| --- | --- | --- |
+| [CVE-2026-118773 / GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) | glob 13.0.6, beneath direct @electron/asar 4.3.1 | Override only glob versions `>=9.0.0 <14.0.2` to 14.0.4 |
+| [CVE-2026-118764 / GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249) | minimatch 10.2.6 and 9.0.9, used by ASAR and builder tooling | Override only minimatch versions `>=7.0.0 <11.0.1` to 11.0.5 |
+
+The glob issue continues filesystem I/O after an asynchronous walk is cancelled; it is an availability issue, not a demonstrated escape from a filesystem root. The minimatch issue amplifies attacker-controlled patterns when `optimizationLevel >= 2`, consuming CPU and memory. NerdSSHell's build tooling uses repository-controlled patterns; this review did not establish an attack through an SSH connection. Updating the build graph removes the vulnerable packages rather than suppressing the advisories.
+
+The fixes cross the dependency consumers' declared major-version ranges. `test/build-dependencies.test.cjs` therefore exercises the installed ASAR and electron-builder APIs, application inclusion/exclusion and unpack patterns, Windows path matching, hostile pattern handling and cancellation. Keep those checks when refreshing the overrides. The version qualifiers deliberately leave glob 7 and minimatch 3/5 consumers alone; those older APIs are outside these two advisory ranges. The scoped global-agent override described below remains necessary. Remove an override only after its upstream consumer adopts a patched compatible dependency and the same tests pass.
+
+The other direct npm dependencies remain at their reviewed current versions: @xterm/xterm 6.0.0, addon-fit 0.11.0, addon-search 0.16.0, ssh2 1.17.0, node-pty 1.2.0-beta.18, @electron/asar 4.3.1, @electron/fuses 2.1.3, electron-builder 26.18.1 and resedit 3.1.0. The deliberate node-pty beta pin and native-provider hashes remain unchanged. Pillow 13.0.0, used only for optional branding generation, is current and has no known advisory in the November 7 requirements audit.
+
+The [CodeQL Action 4.39.3 release](https://github.com/github/codeql-action/releases/tag/v4.39.3) fixes diff-based alert filtering for paths containing spaces, special characters or non-ASCII characters; both workflow uses are pinned to its official commit `33d7b85da1a04171e211befe2c739303b9a4c066`. Checkout 7.0.1, setup-node 7.1.0 and upload-artifact 7.0.2 remain their current releases. Changing an Action pin does not establish that the workflow ran; actual local checks and any outstanding protected checks are recorded in [validation results](VALIDATION.md).
+
+### Announced upstream follow-up
+
+Node has [announced security releases for November 11, 2026](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases), with high-severity issues affecting the supported 22.x, 24.x and 26.x lines. Those fixes are not released as of this review. Reassess both the source-build Node minimum/CI pin and Electron's embedded Node after upstream publishes the fixes. Installing a newer standalone Node does not update the Node runtime inside an Electron application. This release does not claim to include the pending fixes or establish their eventual application-specific reachability.
+
 ## October 28, 2026 maintenance for 1.2.8
 
 The updated dependency set is Electron **44.10.0**, node-pty **1.2.0-beta.18**, and electron-builder **26.18.1**. Other direct runtime/build libraries and the optional Pillow 13.0.0 branding tool remain at their current stable releases. CI continues to use the current patched Node 22.23.4 release; Node 24.22.2 is also accepted by the existing 24.22.1-or-newer source-build range.

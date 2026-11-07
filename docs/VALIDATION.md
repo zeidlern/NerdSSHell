@@ -1,3 +1,46 @@
+# Version 1.2.9 dependency security maintenance validation
+
+Local evidence collected November 7, 2026, on Linux x64 with Node 24.22.1 and npm 11.9.0, based on main `a8a94c78f2d0caf9fd877e75bd405c3edee1b37b`. The candidate uses Electron 44.10.2, node-pty 1.2.0-beta.18 and electron-builder 26.18.1. These results identify the local candidate; protected checks, native Windows acceptance and official publication remain separate gates.
+
+| Check | Measured local result |
+| --- | --- |
+| Fresh supported dependency install | 285 packages installed with lifecycle scripts enabled; all 19 optional lockfile placements verified absent |
+| Source/publication, version, branding and UI checks | Passed, including all five publication-tool regressions and validation of 16 Wiki pages |
+| Full Linux regression suite | 1,113 passed, zero failures, two Windows-only Toolhelp/drain cases skipped of 1,115 |
+| New build-dependency regressions | Nine passed against the actual ASAR, builder and universal-package consumers; includes Windows path/pattern compatibility, packed/unpacked bytes, link containment, bounded hostile patterns and cancellation |
+| Advisory negative controls | The original locked graph fails the bounded minimatch amplification and asynchronous glob cancellation regressions; the repaired graph passes both. The synchronous cancellation case also passes on the original graph and provides compatibility coverage |
+| Supported and complete npm lockfile audits | Both report zero vulnerabilities at every severity; baseline was eight moderate affected entries from two underlying build-dependency advisories |
+| Complete dependency install in a disposable directory | 304 packages installed without lifecycle scripts; no missing/invalid supported dependencies reported by npm ls |
+| Optional build-download proxy fixture | Bootstrap, actual loopback forwarding, cache reuse, NO_PROXY bypass, checksum refusal and non-origin URL refusal passed; roarr/sprintf-js remain absent |
+| Pillow 13.0.0 requirements audit | Zero known vulnerabilities for the pinned optional branding requirement |
+| Dependency inventories | Regenerated and validated: 282 full SPDX packages, 11 runtime packages and ten runtime notices; packaged runtime dependency versions and notice contents are unchanged |
+| Windows x64 directory cross-build | Passed with the existing unsigned configuration and Electron 44.10.2; exact-package verification passed PE branding/version, Electron fuses, Windows ASAR integrity, source containment and native-provider hashes |
+| Packaged license verification | Passed for the project license, inventory, ten exact packaged JavaScript license files and Electron/Chromium notices |
+| Real loopback appliance SSH integration | Two tests passed on the final candidate, including 300 authentication/lifecycle/failure cycles; zero automatic input, exec or subsystem requests and zero retained sockets, channels, provider maps, secrets, tasks, prompts or ready listeners after cleanup |
+| Real OpenSSH/tmux integration | Full six-file run: two passed and 11 failed of 13. Both OpenSSH endpoints authenticate with strict host verification, but PTY ownership and tmux Unix socket operations are blocked by this execution environment; these cases remain unvalidated |
+| Secret/history review | Gitleaks 8.30.1 found no leaks in reachable history (32 commit changes scanned) or the working tree; publication history review covered 34 commits and 702 text blobs, with examples, test fixtures and upstream attribution matches manually triaged |
+| Workflow syntax and patch hygiene | actionlint 1.7.12 and git diff --check passed; the CodeQL 4.39.3 pin matches the official release commit |
+| Independent review | Manual source review found no confirmed new runtime vulnerability in the examined trust boundaries; independent dependency/test/patch review found no blocker and reran all nine new regressions successfully |
+
+The build-dependency repairs address [CVE-2026-118773 and CVE-2026-118764](DEPENDENCIES.md#november-7-2026-maintenance-for-129). Their vulnerable packages are build tooling, not the shipped SSH/terminal JavaScript runtime. A clean npm audit does not certify Electron's bundled native libraries or absence of vulnerabilities. Node has announced additional security releases for November 11; those fixes are not yet available and are not claimed as included.
+
+The real OpenSSH preflight failed PTY allocation with `chown(/dev/pts/0, 1000, 5) failed: Invalid argument`. After correcting the fixture's overly long socket path, tmux still refused an isolated short socket path with `Operation not permitted`. No system settings or execution controls were changed. All owned servers, temporary authorized-key directories and disposable private keys were cleaned up. The successful appliance fixture uses real TCP SSH with a modeled device protocol; it does not establish operating-system tmux or vendor-device interoperability.
+
+The Windows directory package was cross-built on Linux, then statically verified. An unchanged-configuration NSIS attempt was stopped before the Wine-dependent uninstaller stage; no complete installer was produced. No native Windows executable, DPAPI, console/UAC, updater handoff, real NSIS upgrade or physical desktop acceptance ran locally. The directory executable remains unsigned. These hashes identify the local candidate only, not official release artifacts:
+
+| Local candidate file | SHA-256 |
+| --- | --- |
+| NerdSSHell.exe | 039a7e88360fbcbb6650630e39b1363ecb0767ba8b64c04180b9680ec1d2514a |
+| resources/app.asar | d76ebf3d7c16653ec2e5c86e18beeee9b6a0ca27255d0a95f0761d5ee7c4dc9d |
+
+The November 7 GitHub Security dashboard showed zero open Dependabot, code-scanning and secret-scanning alerts. Its dependency check was dated October 28, so that view did not substitute for the fresh local audits that found the two new advisories. Dependency alerts, security updates, secret scanning/push protection and private vulnerability reporting were enabled. No new CodeQL scan was run locally or claimed from this dashboard observation.
+
+The manual source review examined IPC sender/frame/origin and consent binding, SSH host verification/authentication, saved-password lifetime, persistent lifecycle/input, SFTP/local-file grants and cancellation, release origins/redirects/download bounds, and the Windows update/elevation helpers. Required managed Codex Security workflow resources were unavailable; no completed managed scan is claimed. Native Windows paths received static review only. Existing SFTP v3 concurrency and same-user/OS-compromise limitations remain documented. Secret scanning and text-history review do not certify every historical binary or image.
+
+Protected main requires fresh Linux/Windows build, dependency, secret-history and both CodeQL checks from GitHub Actions, with no bypass. Local evidence cannot satisfy those integration-bound checks. No Actions run was requested during this local validation. The reviewed candidate must pass the repository's exact-source acceptance and publication gates before creating the protected version tag; publication must reuse the accepted main Windows artifact.
+
+---
+
 # Version 1.2.8 dependency security maintenance validation
 
 Local evidence collected October 28, 2026, on Linux x64 with Node 24.22.1 and npm 11.9.0, based on main `dadcea841626b4fc86cda9341cd8fabc58660e54`. The candidate uses Electron 44.10.0, node-pty 1.2.0-beta.18 and electron-builder 26.18.1. This section records local candidate evidence; exact hosted source, Windows build/acceptance and publication receipts belong to the maintenance pull request and release.

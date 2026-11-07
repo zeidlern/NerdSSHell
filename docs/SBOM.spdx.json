@@ -2,22 +2,22 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "nerdsshell@1.2.8",
-  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.8-e9340766-ad02-41ff-9bdf-9d1da92f1d7d",
+  "name": "nerdsshell@1.2.9",
+  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.9-e5489be0-52a3-4077-acf0-9537bb4a5296",
   "creationInfo": {
-    "created": "2026-10-28T18:51:45.607Z",
+    "created": "2026-11-07T19:22:15.408Z",
     "creators": [
       "Tool: npm/cli-11.9.0"
     ]
   },
   "documentDescribes": [
-    "SPDXRef-Package-nerdsshell-1.2.8"
+    "SPDXRef-Package-nerdsshell-1.2.9"
   ],
   "packages": [
     {
       "name": "nerdsshell",
-      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.8",
-      "versionInfo": "1.2.8",
+      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.9",
+      "versionInfo": "1.2.9",
       "packageFileName": "",
       "description": "NerdSSHell — Built for Windows nerds with Linux problems",
       "primaryPackagePurpose": "APPLICATION",
@@ -29,7 +29,7 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/nerdsshell@1.2.8"
+          "referenceLocator": "pkg:npm/nerdsshell@1.2.9"
         }
       ]
     },
@@ -81,10 +81,10 @@
     },
     {
       "name": "glob",
-      "SPDXID": "SPDXRef-Package-glob-13.0.6",
-      "versionInfo": "13.0.6",
+      "SPDXID": "SPDXRef-Package-glob-14.0.4",
+      "versionInfo": "14.0.4",
       "packageFileName": "node_modules/@electron/asar/node_modules/glob",
-      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-13.0.6.tgz",
+      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-14.0.4.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "BlueOak-1.0.0",
@@ -92,13 +92,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/glob@13.0.6"
+          "referenceLocator": "pkg:npm/glob@14.0.4"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "5a3972ae89669bcb83a66fe8806c976576f567e09ad81f0d6c9c2a0558346b12bd19b05ea12ef2195eaf8d79d87469ba5f9de27a112ec716f288aa7c42637857"
+          "checksumValue": "98c8b034aa096781c0211549c68b4ee8bb0d451780df4810c0ff44dbfa7de2d7cbbfe8f28023692838e18522fa38b63a2c4dfbd44666e4401fed1a58b94aa5b3"
         }
       ]
     },
@@ -379,29 +379,6 @@
       ]
     },
     {
-      "name": "brace-expansion",
-      "SPDXID": "SPDXRef-Package-brace-expansion-2.1.7",
-      "versionInfo": "2.1.7",
-      "packageFileName": "node_modules/@electron/universal/node_modules/brace-expansion",
-      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-2.1.7.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/brace-expansion@2.1.7"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "b996dec3536a7663c34cc27c6a1d72f9bfbd40426b7e45c593745c4d0c375f48d6ff1454bc52ac83509f41d49819d4db5d9584c6d53727771cc6d9dfc35162d2"
-        }
-      ]
-    },
-    {
       "name": "commander",
       "SPDXID": "SPDXRef-Package-commander-5.1.0",
       "versionInfo": "5.1.0",
@@ -448,29 +425,6 @@
       ]
     },
     {
-      "name": "minimatch",
-      "SPDXID": "SPDXRef-Package-minimatch-9.0.9",
-      "versionInfo": "9.0.9",
-      "packageFileName": "node_modules/@electron/universal/node_modules/minimatch",
-      "downloadLocation": "https://registry.npmjs.org/minimatch/-/minimatch-9.0.9.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "ISC",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/minimatch@9.0.9"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "381c0137d00be1daa61139694b6cdab31faf4de59c956ce46e57d993b2930398f78de38e373fed4429d9a26532bcd83cdf02f966ff52b3a1cc2570202fc47662"
-        }
-      ]
-    },
-    {
       "name": "@electron/windows-sign",
       "SPDXID": "SPDXRef-Package-electron.windows-sign-1.2.2",
       "versionInfo": "1.2.2",
@@ -513,6 +467,29 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "c209bd1219768e97aa3f7cf0ffb9a8de4447169e4c10386a01dc32d5f4c69070309e418e56c829bd084bf01e67d6a95bd358d5de7fdb23465f669e65580d64e3"
+        }
+      ]
+    },
+    {
+      "name": "@isaacs/nonrecursive-glob-match",
+      "SPDXID": "SPDXRef-Package-isaacs.nonrecursive-glob-match-1.1.0",
+      "versionInfo": "1.1.0",
+      "packageFileName": "node_modules/@isaacs/nonrecursive-glob-match",
+      "downloadLocation": "https://registry.npmjs.org/@isaacs/nonrecursive-glob-match/-/nonrecursive-glob-match-1.1.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40isaacs/nonrecursive-glob-match@1.1.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "18f9bf0dbbe4e512e68519f15c86bb9d3a4ad31b65e04d308f432c96cb8d889d45211394fb6fbd960502fdd805ec4cb84025a17c4b20c6294c44c09d1cf7c37f"
         }
       ]
     },
@@ -2611,10 +2588,10 @@
     },
     {
       "name": "electron",
-      "SPDXID": "SPDXRef-Package-electron-44.10.0",
-      "versionInfo": "44.10.0",
+      "SPDXID": "SPDXRef-Package-electron-44.10.2",
+      "versionInfo": "44.10.2",
       "packageFileName": "node_modules/electron",
-      "downloadLocation": "https://registry.npmjs.org/electron/-/electron-44.10.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/electron/-/electron-44.10.2.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -2622,13 +2599,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/electron@44.10.0"
+          "referenceLocator": "pkg:npm/electron@44.10.2"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "b2ce2909fad0295e135a4b9562d581e0799ecac3d9801f7a71260d29866fd5454244fe2f40c18d5b9a28a456efc7a05b7dc7b55ed3f9a66e510ee29e869d2cbd"
+          "checksumValue": "073f8657ef578fefb7456f793587f3a795a08af7fad418164cf071613394113cad541d6e2d400e752337f439ff5773c661e19313a2d87824d1e520a2bb7051d8"
         }
       ]
     },
@@ -3089,6 +3066,29 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "e608b2d8f90b618d5c3f7f69d7b11c87edb19694d12fd1cbb2939f1209b42fa0b005705382c2b9a2ed09b7362e7a9c64690fedbe1085209e6e5e8d0eaccd83c4"
+        }
+      ]
+    },
+    {
+      "name": "brace-expansion",
+      "SPDXID": "SPDXRef-Package-brace-expansion-2.1.7",
+      "versionInfo": "2.1.7",
+      "packageFileName": "node_modules/filelist/node_modules/brace-expansion",
+      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-2.1.7.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/brace-expansion@2.1.7"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b996dec3536a7663c34cc27c6a1d72f9bfbd40426b7e45c593745c4d0c375f48d6ff1454bc52ac83509f41d49819d4db5d9584c6d53727771cc6d9dfc35162d2"
         }
       ]
     },
@@ -4221,10 +4221,10 @@
     },
     {
       "name": "minimatch",
-      "SPDXID": "SPDXRef-Package-minimatch-10.2.6",
-      "versionInfo": "10.2.6",
+      "SPDXID": "SPDXRef-Package-minimatch-11.0.5",
+      "versionInfo": "11.0.5",
       "packageFileName": "node_modules/minimatch",
-      "downloadLocation": "https://registry.npmjs.org/minimatch/-/minimatch-10.2.6.tgz",
+      "downloadLocation": "https://registry.npmjs.org/minimatch/-/minimatch-11.0.5.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "BlueOak-1.0.0",
@@ -4232,13 +4232,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/minimatch@10.2.6"
+          "referenceLocator": "pkg:npm/minimatch@11.0.5"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "be92d012cf952c2af59d4d015d2d3b99a628170943007d209e042ebadb71230bad0c510c1ead9b957fbcbe98310dd2b72753f08c22627a9efb3a2b536782e5d4"
+          "checksumValue": "b273e5569a4571859f2cb1501a10f153205c1cdb4c9569a7de3b63ee911a3be0cff29a8bd08bc0cd784c6269f5cfd01236d826c0b05d17149fe2d31407439328"
         }
       ]
     },
@@ -4773,10 +4773,10 @@
     },
     {
       "name": "path-scurry",
-      "SPDXID": "SPDXRef-Package-path-scurry-2.0.2",
-      "versionInfo": "2.0.2",
+      "SPDXID": "SPDXRef-Package-path-scurry-3.0.0",
+      "versionInfo": "3.0.0",
       "packageFileName": "node_modules/path-scurry",
-      "downloadLocation": "https://registry.npmjs.org/path-scurry/-/path-scurry-2.0.2.tgz",
+      "downloadLocation": "https://registry.npmjs.org/path-scurry/-/path-scurry-3.0.0.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "BlueOak-1.0.0",
@@ -4784,13 +4784,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/path-scurry@2.0.2"
+          "referenceLocator": "pkg:npm/path-scurry@3.0.0"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "dcefe2555b0900fb0e9e9c1621e0fe77acffecf9aa029c9078f52d0a77636ad8fff48e4bca51efb79aa5b856814f7239877af57a37d1d39e9cf850aff8d9cd5e"
+          "checksumValue": "d694db42a1f5c08c0c8bf7a5790e657854d30a4cc5b0f7205cd8f0380f181865bf5b8fe41d3dddb2c13b67a347fb3baa34b3b3381d2e683eb5ca5edc01c56182"
         }
       ]
     },
@@ -6500,82 +6500,82 @@
   "relationships": [
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DESCRIBES"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.xterm-6.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-fit-0.11.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-search-0.16.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ssh2-1.17.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-node-pty-1.2.0-beta.18",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.asar-4.3.1",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.fuses-2.1.3",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron-44.10.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "spdxElementId": "SPDXRef-Package-electron-44.10.2",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron-builder-26.18.1",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-resedit-3.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.8",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-glob-13.0.6",
+      "spdxElementId": "SPDXRef-Package-glob-14.0.4",
       "relatedSpdxElement": "SPDXRef-Package-electron.asar-4.3.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-minimatch-10.2.6",
+      "spdxElementId": "SPDXRef-Package-minimatch-11.0.5",
       "relatedSpdxElement": "SPDXRef-Package-electron.asar-4.3.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-minimatch-10.2.6",
-      "relatedSpdxElement": "SPDXRef-Package-glob-13.0.6",
+      "spdxElementId": "SPDXRef-Package-minimatch-11.0.5",
+      "relatedSpdxElement": "SPDXRef-Package-glob-14.0.4",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-minipass-7.1.3",
-      "relatedSpdxElement": "SPDXRef-Package-glob-13.0.6",
+      "relatedSpdxElement": "SPDXRef-Package-glob-14.0.4",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-path-scurry-2.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-glob-13.0.6",
+      "spdxElementId": "SPDXRef-Package-path-scurry-3.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-14.0.4",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -6734,7 +6734,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-minimatch-9.0.9",
+      "spdxElementId": "SPDXRef-Package-minimatch-11.0.5",
       "relatedSpdxElement": "SPDXRef-Package-electron.universal-2.0.3",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6774,11 +6774,6 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-2.1.7",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
       "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-11.4.1",
       "relationshipType": "DEPENDENCY_OF"
@@ -6791,11 +6786,6 @@
     {
       "spdxElementId": "SPDXRef-Package-universalify-2.0.1",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-11.4.1",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-brace-expansion-2.1.7",
-      "relatedSpdxElement": "SPDXRef-Package-minimatch-9.0.9",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7174,7 +7164,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-minimatch-10.2.6",
+      "spdxElementId": "SPDXRef-Package-minimatch-11.0.5",
       "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7700,17 +7690,17 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-electron-internal.extract-zip-1.0.5",
-      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.0",
+      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.get-5.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.0",
+      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.node-24.19.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.0",
+      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8299,8 +8289,13 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
+      "spdxElementId": "SPDXRef-Package-isaacs.nonrecursive-glob-match-1.1.0",
+      "relatedSpdxElement": "SPDXRef-Package-minimatch-11.0.5",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-brace-expansion-5.0.12",
-      "relatedSpdxElement": "SPDXRef-Package-minimatch-10.2.6",
+      "relatedSpdxElement": "SPDXRef-Package-minimatch-11.0.5",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8400,12 +8395,12 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-lru-cache-11.5.3",
-      "relatedSpdxElement": "SPDXRef-Package-path-scurry-2.0.2",
+      "relatedSpdxElement": "SPDXRef-Package-path-scurry-3.0.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-minipass-7.1.3",
-      "relatedSpdxElement": "SPDXRef-Package-path-scurry-2.0.2",
+      "relatedSpdxElement": "SPDXRef-Package-path-scurry-3.0.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {

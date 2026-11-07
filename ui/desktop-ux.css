@@ -48,8 +48,9 @@ button.danger,.error,.connection-status.disconnected{color:var(--danger,#ff9298)
 /* Let the drawer scroll in short panes; never shrink a file list into its actions. */
 .pane-body[data-file-dock] .file-dual{flex:1 0 auto;min-height:300px;overflow:visible}
 .pane-body[data-file-dock] .file-dual>.file-local,.pane-body[data-file-dock] .file-dual>.file-remote{flex:1 0 240px;min-width:240px;overflow:visible}
-.pane-body[data-file-dock] .file-dual .file-view{flex:1 0 120px;min-height:120px;overflow:hidden}
-.pane-body[data-file-dock] .file-dual .file-list{flex:1 1 58px;min-height:58px}
+/* Reserve wrapped controls/status height; rows scroll inside a size-contained list. */
+.pane-body[data-file-dock] .file-dual .file-view{flex:1 0 auto;min-height:120px;overflow:hidden}
+.pane-body[data-file-dock] .file-dual .file-list{flex:1 1 58px;min-height:58px;contain:size;margin-inline:0}
 @media(max-width:1000px){.action-config-layout{grid-template-columns:1fr}#actionConfigList{max-height:28vh}#actionCode{min-height:150px}}
 
 @media(max-width:850px){.brand-name{font-size:17px}.brand-tagline{font-size:9px}.brand{gap:7px}#titlebar{padding:0 10px}.brand img{width:32px;height:32px}}

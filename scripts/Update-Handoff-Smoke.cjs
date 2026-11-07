@@ -185,6 +185,44 @@ async function fixtureContext(name, scope, binaries, mode = 'success', lingering
   context.plan = { stageDirectory, installerPath, size: fs.statSync(installerPath).size, sha256: digest(installerPath), targetVersion: '1.0.1', executablePath: executable, userDataDirectory: dataDirectory, parentPid: context.parent.child.pid };
   return context;
 }
+function cancelDelayWrapper(milliseconds, startedPath) {
+  // Authenticate once before deciding whether to delay. A separate existence
+  // check could miss a CANCEL published just before the authenticated read.
+  return '$script:OwnedFixtureReadMarker=(Get-Command Read-UpdateMarker).ScriptBlock;$script:OwnedFixtureCancelDelay=$null;'+
+    'function Read-UpdateMarker([string]$Kind,[string]$Nonce){$validated=& $script:OwnedFixtureReadMarker $Kind $Nonce;'+
+    'if($Kind -ceq "CANCEL" -and $validated){if($null -eq $script:OwnedFixtureCancelDelay){$script:OwnedFixtureCancelDelay=[DateTime]::UtcNow.AddMilliseconds('+milliseconds+');[IO.File]::WriteAllText('+psquote(startedPath)+',$script:OwnedFixtureCancelDelay.AddMilliseconds(-'+milliseconds+').ToString("o"))};if([DateTime]::UtcNow -lt $script:OwnedFixtureCancelDelay){return $false}};return $validated};';
+}
+async function checkCancellationDelaySeam() {
+  const directory=path.join(ownedRoot,'cancellation-delay-seam');fs.mkdirSync(directory);
+  const marker=path.join(directory,'update-cancel'),started=path.join(directory,'delay-started'),nonce='a'.repeat(64);
+  // The reader publishes CANCEL on invocation, deterministically placing arrival
+  // between the old guard's existence check and its original-reader call.
+  const reader='$script:OwnedSeamCalls=0;$script:OwnedSeamResult=$true;function Read-UpdateMarker([string]$Kind,[string]$Nonce){$script:OwnedSeamCalls++;if($Nonce -cne '+psquote(nonce)+'){throw "Wrong synthetic nonce"};if($Kind -ceq "CANCEL" -and $script:OwnedSeamResult){[IO.File]::WriteAllText('+psquote(marker)+',("CANCEL "+$Nonce+[char]10))};return $script:OwnedSeamResult};';
+  // Negative control only: retain the former guard here to prove the race.
+  const oldGuard='$script:OwnedFixtureReadMarker=(Get-Command Read-UpdateMarker).ScriptBlock;$script:OwnedFixtureCancelDelay=$null;function Read-UpdateMarker([string]$Kind,[string]$Nonce){if($Kind -ceq "CANCEL" -and [IO.File]::Exists('+psquote(marker)+')){if($null -eq $script:OwnedFixtureCancelDelay){$script:OwnedFixtureCancelDelay=[DateTime]::UtcNow.AddMilliseconds(6000)};if([DateTime]::UtcNow -lt $script:OwnedFixtureCancelDelay){return $false}};return & $script:OwnedFixtureReadMarker $Kind $Nonce};';
+  const code=[
+    "$ErrorActionPreference='Stop';Set-StrictMode -Version Latest;$observed=[ordered]@{}",
+    reader+oldGuard,
+    '$value=Read-UpdateMarker "CANCEL" '+psquote(nonce)+';$observed["oldGuardBypass"]=($value -eq $true -and $script:OwnedSeamCalls -eq 1 -and $null -eq $script:OwnedFixtureCancelDelay -and [IO.File]::Exists('+psquote(marker)+'))',
+    '[IO.File]::Delete('+psquote(marker)+')',
+    reader+cancelDelayWrapper(6000,started),
+    '$script:OwnedSeamResult=$false;$value=Read-UpdateMarker "CANCEL" '+psquote(nonce)+';$observed["falseRead"]=($value -eq $false -and $script:OwnedSeamCalls -eq 1 -and $null -eq $script:OwnedFixtureCancelDelay -and -not [IO.File]::Exists('+psquote(started)+'))',
+    '$script:OwnedSeamResult=$true;$value=Read-UpdateMarker "GO" '+psquote(nonce)+';$observed["goUnchanged"]=($value -eq $true -and $script:OwnedSeamCalls -eq 2 -and $null -eq $script:OwnedFixtureCancelDelay -and -not [IO.File]::Exists('+psquote(started)+'))',
+    '$value=Read-UpdateMarker "CANCEL" '+psquote(nonce)+';$deadline=$script:OwnedFixtureCancelDelay;$observed["arrivalDelayed"]=($value -eq $false -and $script:OwnedSeamCalls -eq 3 -and $null -ne $deadline -and [IO.File]::Exists('+psquote(started)+'))',
+    '$value=Read-UpdateMarker "CANCEL" '+psquote(nonce)+';$observed["delayRetained"]=($value -eq $false -and $script:OwnedSeamCalls -eq 4 -and $script:OwnedFixtureCancelDelay -eq $deadline)',
+    '$script:OwnedFixtureCancelDelay=[DateTime]::UtcNow.AddMilliseconds(-1);$value=Read-UpdateMarker "CANCEL" '+psquote(nonce)+';$observed["expiryAccepted"]=($value -eq $true -and $script:OwnedSeamCalls -eq 5)',
+    '[Console]::Out.WriteLine((ConvertTo-Json -InputObject $observed -Compress))'
+  ].join(';');
+  const executable=path.win32.join(process.env.SystemRoot||'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
+  const owner=track(executable,['-NoLogo','-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(code,'utf16le').toString('base64')],{env:require('../src/powershell-environment.cjs').windowsPowerShellEnvironment()});
+  await until(()=>owner.exited,'Owned cancellation-delay seam self-test exits naturally');
+  const labels={oldGuardBypass:'Former existence/read guard accepts the deterministic marker-arrival race',falseRead:'Rejected original marker reads remain false without activating a delay',goUnchanged:'Validated GO passes through without activating the CANCEL delay',arrivalDelayed:'Validated CANCEL arrival activates the shared wrapper delay before acceptance',delayRetained:'Repeated CANCEL performs one original read and preserves the first deadline',expiryAccepted:'Validated CANCEL passes only after the self-test forces its deadline past'};
+  let observed;try{observed=JSON.parse(owner.stdout.trim())}catch{}
+  const valid=observed&&typeof observed==='object'&&Object.keys(observed).length===Object.keys(labels).length&&Object.keys(labels).every(key=>typeof observed[key]==='boolean');
+  report.cancelDelaySeam={helperExitCode:owner.code,observations:valid?observed:null};persist();console.log('Cancellation delay seam '+JSON.stringify(report.cancelDelaySeam));
+  check('Native cancellation-delay seam returns its six bounded observations',owner.code===0&&Boolean(valid));
+  for(const [key,label] of Object.entries(labels))check(label,observed[key]);
+}
 function dependencies(context, mutation) {
   return { startupMs: 20000, commandMs: context.nodeCommandMs || 5000, execute(executable, args, options) {
     assert.equal(path.basename(executable).toLowerCase(), 'powershell.exe');
@@ -203,7 +241,9 @@ function dependencies(context, mutation) {
     assert.equal(original.split(marker).length,2,'Production bootstrap has one fixed broker entry.');
     const workerMarker='$result=Invoke-UpdateRunner',fixturesBase64=Buffer.from(fixtureFunctions,'utf8').toString('base64');
     const workerSuffix=' -CommandTimeoutMs '+(context.commandTimeoutMs||5000)+' -ParentTimeoutMs '+(context.parentTimeoutMs||5000)+' -InstallerTimeoutMs 10000;[IO.File]::WriteAllText('+psquote(context.statusPath)+',[string]$result);[IO.File]::WriteAllText('+psquote(context.statusPath+'.workerpid')+',[string]$PID);if($Error.Count){[IO.File]::WriteAllText('+psquote(context.statusPath+'.diagnostics')+',([string]$Error[0]+[Environment]::NewLine+$Error[0].InvocationInfo.PositionMessage+[Environment]::NewLine+$Error[0].ScriptStackTrace))};';
-    const delayFixture=context.cancelDelayMs ? '$script:OwnedFixtureReadMarker=(Get-Command Read-UpdateMarker).ScriptBlock;$script:OwnedFixtureCancelDelay=$null;function Read-UpdateMarker([string]$Kind,[string]$Nonce){if($Kind -ceq "CANCEL" -and [IO.File]::Exists('+psquote(path.join(context.stageDirectory,'update-cancel'))+')){if($null -eq $script:OwnedFixtureCancelDelay){$script:OwnedFixtureCancelDelay=[DateTime]::UtcNow.AddMilliseconds('+context.cancelDelayMs+')};if([DateTime]::UtcNow -lt $script:OwnedFixtureCancelDelay){return $false}};return & $script:OwnedFixtureReadMarker $Kind $Nonce};' : '';
+    // Observe the injected delay outside the production-owned stage/markers.
+    context.cancelDelayStartedPath=context.statusPath+'.cancel-delay-started';
+    const delayFixture=context.cancelDelayMs ? cancelDelayWrapper(context.cancelDelayMs,context.cancelDelayStartedPath) : '';
     const factory=[
       '$script:OwnedFixtureWorkerFactory=(Get-Command New-UpdateWorkerBootstrap).ScriptBlock',
       'function New-UpdateWorkerBootstrap([string]$Runner,[string]$RunnerSha256,[string]$Path,[string]$ManifestSha256,[int]$BrokerPid,[string]$Nonce) {'+
@@ -282,6 +322,7 @@ async function main() {
     report.launchIndependence={parentExited:true,helperExited:true,broker:probeBroker,detached:false,windowsHide:true,parentStartTicks:proof.parentStartTicks};
   }
   if(probeOnly){report.scope='Owned Node/PowerShell launch/lifetime probe only; a hidden Start-Process grandchild binds the real Node parent handle and confirms its exit. No app, installer, registry or user-data operation.';report.status='passed';persist();console.log('Owned helper launch independence probe passed.');return;}
+  if(!eofOnly)await checkCancellationDelaySeam();
   const binaries = {};
   for (const [name, version] of [['old', '1.0.0'], ['next', '1.0.1'], ['wrong', '1.0.2']]) {
     const folder = path.join(ownedRoot, 'binaries', name); fs.mkdirSync(folder, { recursive: true });
@@ -356,8 +397,19 @@ async function main() {
   }
   {
     const context=await fixtureContext('cancel-timeout-retry','currentuser',binaries);context.cancelDelayMs=6000;context.commandTimeoutMs=30000;context.parentTimeoutMs=30000;context.nodeCommandMs=1000;
-    const task=await prepared(context);await task.release();let rejected=false;try{await task.cancel()}catch{rejected=true}
-    check(context.name+': unconfirmed bounded cancellation rejects and preserves Cancel/installer while parent lives',rejected&&!context.parent.exited&&fs.existsSync(path.join(context.stageDirectory,'update-cancel'))&&fs.existsSync(context.plan.installerPath)&&!fs.existsSync(context.installLog)&&!fs.existsSync(context.restartLog));
+    const task=await prepared(context);await task.release();let rejected=false,cancelError=null;
+    const cancelStartedAt=new Date().toISOString(),cancelStarted=performance.now();
+    try{await task.cancel()}catch(error){rejected=true;cancelError={message:error.message==='Update cancellation could not be confirmed. NerdSSHell can keep running.'?error.message:'Cancellation failed (details omitted).',code:['EACCES','EBUSY','ENOENT','EPERM','ETIMEDOUT','EPIPE','ERR_STREAM_DESTROYED','ERR_STREAM_WRITE_AFTER_END'].includes(error.code)?error.code:null}}
+    const cancelElapsedMs=Math.round(performance.now()-cancelStarted);
+    const conditions={cancelRejected:rejected,parentAlive:!context.parent.exited,cancelMarkerPresent:fs.existsSync(path.join(context.stageDirectory,'update-cancel')),installerPresent:fs.existsSync(context.plan.installerPath),noInstall:!fs.existsSync(context.installLog),noRestart:!fs.existsSync(context.restartLog)};
+    // Freeze the original six-conjunct verdict before diagnostics or cleanup.
+    const expectedTimeout=conditions.cancelRejected&&conditions.parentAlive&&conditions.cancelMarkerPresent&&conditions.installerPresent&&conditions.noInstall&&conditions.noRestart;
+    let nativeStatus=null,delayStartedAt=null;
+    try{const value=fs.readFileSync(context.statusPath,'utf8');nativeStatus=['cancelled','refused','updated','restored'].includes(value)?value:'unknown'}catch(error){if(error.code!=='ENOENT')nativeStatus='unreadable'}
+    try{const value=Date.parse(fs.readFileSync(context.cancelDelayStartedPath,'utf8'));if(Number.isFinite(value))delayStartedAt=new Date(value).toISOString()}catch{}
+    report.cancelTimeoutObservation={case:context.name,...conditions,cancelStartedAt,cancelElapsedMs,cancelError,observedAt:new Date().toISOString(),parentProcessExited:context.parent.processExited,helperExited:context.helper.exited,helperExitCode:context.helper.code,nativeStatus,stoppedMarkerPresent:fs.existsSync(path.join(context.stageDirectory,'update-stopped')),delayMarkerPresent:fs.existsSync(context.cancelDelayStartedPath),delayStartedAt};
+    persist();console.log('Cancellation timeout observation '+JSON.stringify(report.cancelTimeoutObservation));
+    check(context.name+': unconfirmed bounded cancellation rejects and preserves Cancel/installer while parent lives',expectedTimeout);
     let releaseRefused=false;try{await task.release()}catch{releaseRefused=true}check(context.name+': cancellation timeout cannot rearm release',releaseRefused);
     await until(()=>fs.existsSync(context.statusPath),'Delayed native worker records stop before retry');await task.cancel();
     check(context.name+': later retry confirms positive stopped state and cleans source-owned stage',await completed(context)==='cancelled'&&!fs.existsSync(context.installLog)&&!fs.existsSync(context.restartLog));await exitParent(context.parent);

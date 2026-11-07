@@ -35,7 +35,7 @@ const output = options.has('--output') ? path.resolve(options.get('--output')) :
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-per-pane-'));
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const metrics = { logins: 0, shells: 0, closedShells: 0, exec: 0, inspections: 0, unexpectedExec: 0, sftp: 0, closedSftp: 0, directories: [], resize: [], terminalBaud: [] };
-const peers = new Set(), report = { status: 'running', started: new Date().toISOString(), executable: exe, expectedVersion: metadata.version, visibleFixture, appPID: null, checks: [], screenshots: [], metrics, nativeDialogs: 'Unverified: upload/download native dialogs and transfer bytes are covered separately.' };
+const peers = new Set(), report = { status: 'running', started: new Date().toISOString(), executable: exe, expectedVersion: metadata.version, visibleFixture, appPID: null, checks: [], screenshots: [], layoutGeometry: [], fileViewportRegression: [], metrics, nativeDialogs: 'Unverified: upload/download native dialogs and transfer bytes are covered separately.' };
 let server, launcher, appPID, ws;
 async function freePort() { const s = net.createServer(); await new Promise(resolve => s.listen(0, '127.0.0.1', resolve)); const p = s.address().port; await new Promise(resolve => s.close(resolve)); return p; }
 async function fixture() {
@@ -126,6 +126,100 @@ function terminalText(view) {
   }
   return text;
 }
+// Runs in the renderer. Record geometry only: local status/path/file text stays private.
+function fileLayoutGeometry() {
+  const rect = r => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height });
+  const bounds = node => rect(node.getBoundingClientRect());
+  const clientBounds = node => { const r = bounds(node), left = r.left + node.clientLeft, top = r.top + node.clientTop; return { left, top, right: left + node.clientWidth, bottom: top + node.clientHeight }; };
+  const intersect = (a, b, x = true, y = true) => {
+    const left = x ? Math.max(a.left, b.left) : a.left, top = y ? Math.max(a.top, b.top) : a.top;
+    const right = Math.max(left, x ? Math.min(a.right, b.right) : a.right), bottom = Math.max(top, y ? Math.min(a.bottom, b.bottom) : a.bottom);
+    return { left, top, right, bottom, width: right - left, height: bottom - top };
+  };
+  const visibleBounds = node => {
+    let r = bounds(node);
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent), x = /^(auto|scroll|hidden|clip)$/.test(style.overflowX), y = /^(auto|scroll|hidden|clip)$/.test(style.overflowY);
+      if (x || y) r = intersect(r, clientBounds(parent), x, y);
+    }
+    return intersect(r, { left: 0, top: 0, right: innerWidth, bottom: innerHeight });
+  };
+  const measure = node => {
+    const style = getComputedStyle(node);
+    return { rect: bounds(node), visibleRect: visibleBounds(node), client: { width: node.clientWidth, height: node.clientHeight }, scroll: { width: node.scrollWidth, height: node.scrollHeight, left: node.scrollLeft, top: node.scrollTop }, style: { display: style.display, flex: style.flex, flexDirection: style.flexDirection, minHeight: style.minHeight, overflowX: style.overflowX, overflowY: style.overflowY, marginTop: style.marginTop, marginBottom: style.marginBottom, paddingTop: style.paddingTop, paddingBottom: style.paddingBottom } };
+  };
+  return [...views.values()].filter(v => !v.wrapper.hidden).map(v => {
+    const drawer = v.wrapper.querySelector('.file-drawer'), viewport = intersect(clientBounds(drawer), visibleBounds(drawer));
+    return { key: v.pane.key, dock: v.files.dock, drawer: measure(drawer), drawerViewport: viewport, dual: measure(drawer.querySelector('.file-dual')), columns: ['local', 'remote'].map(side => {
+      const column = drawer.querySelector('.file-' + side), view = column.querySelector('.file-view'), list = column.querySelector('.file-list'), actions = column.querySelector('.file-actions'), status = column.querySelector('.file-status'), font = getComputedStyle(status);
+      const range = document.createRange(); range.selectNodeContents(status); const lineRects = [...range.getClientRects()].map(rect);
+      return { side, column: measure(column), controls: measure(column.querySelector('.file-controls')), view: measure(view), filter: measure(view.querySelector('.file-toolbar')), list: measure(list), actions: measure(actions), status: { ...measure(status), length: status.textContent.length, font: { family: font.fontFamily, size: font.fontSize, weight: font.fontWeight, lineHeight: font.lineHeight, letterSpacing: font.letterSpacing }, lineRects, lineCount: new Set(lineRects.map(r => r.top)).size }, actionHits: [...actions.querySelectorAll('button')].map((button, index) => {
+        const r = bounds(button), x = (r.left + r.right) / 2, y = (r.top + r.bottom) / 2;
+        const insideDrawerViewport = r.width > 0 && r.height > 0 && x >= viewport.left && x < viewport.right && y >= viewport.top && y < viewport.bottom;
+        const hit = insideDrawerViewport ? document.elementFromPoint(x, y) : null;
+        return { index, rect: r, center: { x, y }, insideDrawerViewport, hit: insideDrawerViewport ? { button: button.contains(hit), actions: actions.contains(hit), list: list.contains(hit), view: view.contains(hit) } : null };
+      }) };
+    }) };
+  });
+}
+// Synchronous renderer fixture: no IPC, event handlers, or private text in its result.
+function fileViewportRegression() {
+  const rect = node => { const r = node.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; };
+  const viewport = node => { const r = rect(node), left = r.left + node.clientLeft, top = r.top + node.clientTop; return { left, top, right: left + node.clientWidth, bottom: top + node.clientHeight }; };
+  const records = [...views.values()].filter(v => !v.wrapper.hidden).flatMap(v => ['local', 'remote'].map(side => {
+    const drawer = v.wrapper.querySelector('.file-drawer'), column = drawer.querySelector('.file-' + side), list = column.querySelector('.file-list'), status = column.querySelector('.file-status');
+    return { key: v.pane.key, side, drawer, column, list, status, view: column.querySelector('.file-view'), controls: column.querySelector('.file-controls'), actions: column.querySelector('.file-actions'), listNodes: [...list.childNodes], statusNodes: [...status.childNodes] };
+  }));
+  const scrolls = new Map();
+  for (const r of records) for (const start of [r.list, r.status]) for (let node = start; node; node = node.parentElement) if (!scrolls.has(node)) scrolls.set(node, { left: node.scrollLeft, top: node.scrollTop });
+  const sample = r => {
+    const list = rect(r.list), view = viewport(r.view), actions = rect(r.actions), maxStatus = Number.parseFloat(getComputedStyle(r.status).maxHeight);
+    return { list, view, actionsTop: actions.top, listFitsView: list.width > 0 && list.height > 0 && list.left >= view.left - 1 && list.right <= view.right + 1 && list.top >= view.top - 1 && list.bottom <= view.bottom + 1, viewDoesNotOverflow: r.view.scrollHeight <= r.view.clientHeight + 1, actionsBelow: Math.max(list.bottom, view.bottom, rect(r.controls).bottom) <= actions.top + 1, statusCapped: Number.isFinite(maxStatus) && Math.abs(rect(r.status).height - maxStatus) <= 1 && r.status.scrollHeight > r.status.clientHeight, viewWidth: r.view.clientWidth, viewHeight: r.view.clientHeight, listWidth: r.list.clientWidth, listHeight: r.list.clientHeight, listScrollHeight: r.list.scrollHeight, drawerWidth: r.drawer.clientWidth, drawerHeight: r.drawer.clientHeight, drawerScrollWidth: r.drawer.scrollWidth, drawerScrollHeight: r.drawer.scrollHeight };
+  };
+  const appendRows = (list, start) => {
+    const fragment = document.createDocumentFragment();
+    for (let i = start; i < start + 100; i++) {
+      const row = document.createElement('button'); row.type = 'button'; row.className = 'file-entry';
+      for (const [name, text] of [['file-kind', 'FILE'], ['file-name', 'Synthetic row ' + String(i).padStart(3, '0')], ['file-size', '1 KiB'], ['file-modified', 'Synthetic date']]) { const span = document.createElement('span'); span.className = name; span.textContent = text; row.append(span); }
+      fragment.append(row);
+    }
+    list.append(fragment);
+  };
+  const revealPoint = (drawer, point) => {
+    const p = point(), box = viewport(drawer);
+    drawer.scrollBy({ left: p.x - (box.left + box.right) / 2, top: p.y - (box.top + box.bottom) / 2, behavior: 'instant' });
+    const next = point(), visible = viewport(drawer);
+    return { ...next, inside: next.x >= visible.left && next.x < visible.right && next.y >= visible.top && next.y < visible.bottom && next.x >= 0 && next.x < innerWidth && next.y >= 0 && next.y < innerHeight };
+  };
+  const columns = []; let restored = false;
+  try {
+    for (const r of records) { r.status.textContent = 'Synthetic wrapped layout status. '.repeat(80); r.list.replaceChildren(); appendRows(r.list, 0); }
+    const initial = records.map(sample);
+    for (const r of records) appendRows(r.list, 100);
+    const expanded = records.map(sample);
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i], before = initial[i], after = expanded[i];
+      const bounded = ['viewWidth', 'viewHeight', 'listWidth', 'listHeight', 'drawerWidth', 'drawerHeight', 'drawerScrollWidth', 'drawerScrollHeight'].every(key => Math.abs(before[key] - after[key]) <= 1);
+      r.list.scrollTo({ left: 0, top: r.list.scrollHeight, behavior: 'instant' });
+      const last = r.list.lastElementChild, point = revealPoint(r.drawer, () => { const row = rect(last), box = viewport(r.list); return { x: (Math.max(row.left, box.left) + Math.min(row.right, box.right)) / 2, y: (row.top + row.bottom) / 2 }; });
+      const row = rect(last), box = viewport(r.list);
+      const lastRow = { insideList: row.height > 0 && row.top >= box.top - 1 && row.bottom <= box.bottom + 1 && Math.min(row.right, box.right) > Math.max(row.left, box.left), insideDrawer: point.inside, hit: point.inside && last.contains(document.elementFromPoint(point.x, point.y)), rowTop: row.top, rowBottom: row.bottom, viewportTop: box.top, viewportBottom: box.bottom, scrollTop: r.list.scrollTop };
+      const actionHits = [...r.actions.querySelectorAll('button')].map((button, index) => {
+        const target = revealPoint(r.drawer, () => { const b = rect(button); return { x: (b.left + b.right) / 2, y: (b.top + b.bottom) / 2 }; });
+        return { index, insideDrawer: target.inside, hit: target.inside && button.contains(document.elementFromPoint(target.x, target.y)) };
+      });
+      columns.push({ key: r.key, side: r.side, initial: before, expanded: after, bounded, scrollable: before.listScrollHeight > before.listHeight && after.listScrollHeight > before.listScrollHeight, lastRow, actionHits });
+    }
+  } finally {
+    for (const r of records) { r.list.replaceChildren(...r.listNodes); r.status.replaceChildren(...r.statusNodes); }
+    // Restore after the original content has its original layout again.
+    void document.documentElement.offsetHeight;
+    for (const [node, position] of scrolls) node.scrollTo({ ...position, behavior: 'instant' });
+    const sameNodes = (node, saved) => node.childNodes.length === saved.length && saved.every((child, i) => node.childNodes[i] === child);
+    restored = records.every(r => sameNodes(r.list, r.listNodes) && sameNodes(r.status, r.statusNodes)) && [...scrolls].every(([node, position]) => Math.abs(node.scrollLeft - position.left) <= 1 && Math.abs(node.scrollTop - position.top) <= 1);
+  }
+  return { columns, restored };
+}
 async function main() {
   if (process.platform !== 'win32') throw new Error('This acceptance harness requires Windows.');
   fs.mkdirSync(output, { recursive: true }); assert.ok(fs.existsSync(exe), 'Run npm run pack first.');
@@ -209,6 +303,12 @@ async function main() {
     try { await delay(200); const data = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }); const file = path.join(output, name + '.png'); fs.writeFileSync(file, Buffer.from(data.data, 'base64')); report.screenshots.push(file); }
     finally { await evaluate(`document.querySelectorAll('.file-local').forEach(node=>node.style.visibility=''); true`); }
   };
+  const captureLayoutGeometry = () => evaluate(`({controlGeometry:[...views.values()].filter(v=>!v.wrapper.hidden).map(v=>{const drawer=v.wrapper.querySelector('.file-drawer'),actions=drawer.querySelector('.file-actions').getBoundingClientRect(),list=drawer.querySelector('.file-list').getBoundingClientRect(),controls=drawer.querySelector('.file-controls').getBoundingClientRect();return {key:v.pane.key,dock:v.files.dock,listBottom:list.bottom,controlsBottom:controls.bottom,actionsTop:actions.top};}),panes:(${fileLayoutGeometry.toString()})(),capturedAt:performance.now()})`);
+  const recordLayoutGeometry = (dimensions, layout, phase, geometry) => {
+    const snapshot = { dimensions, layout, phase, ...geometry }; report.layoutGeometry.push(snapshot);
+    fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2));
+    console.log('File layout geometry ' + JSON.stringify({ dimensions, layout, phase, capturedAt: geometry.capturedAt, panes: geometry.panes.map(p => ({ key: p.key, dock: p.dock, columns: p.columns.map(c => ({ side: c.side, controlsBottom: c.controls.rect.bottom, listBottom: c.list.rect.bottom, visibleListBottom: c.list.visibleRect.bottom, listHeight: c.list.rect.height, viewBottom: c.view.rect.bottom, viewHeight: c.view.client.height, viewScrollHeight: c.view.scroll.height, actionsTop: c.actions.rect.top, statusLength: c.status.length, statusHeight: c.status.rect.height, statusLines: c.status.lineCount, actionHits: c.actionHits.map(h => h.insideDrawerViewport ? h.hit : null) })) })) }));
+  };
   for (const dimensions of [[1920, 1080], [900, 600]]) {
     await send('Emulation.setDeviceMetricsOverride', { width: dimensions[0], height: dimensions[1], deviceScaleFactor: 1, mobile: false });
     for (const [size, orientation, name] of [[1, null, 'single'], [2, 'side-by-side', 'side-by-side'], [2, 'stacked', 'stacked'], [4, null, 'four']]) {
@@ -216,10 +316,25 @@ async function main() {
       await evaluate(`document.querySelector('[data-layout-choice="'+${JSON.stringify(choice)}+'"]').click(); true`); await delay(150);
       check(`${dimensions.join('x')}: ${name} layout retains browser ownership`, await evaluate(`__smokeKeys.every((k,i)=>views.get(k).files.key===k&&views.get(k).files.directory==='/project-'+i) && [...views.values()].filter(v=>!v.wrapper.hidden).every(v=>{const r=v.host.getBoundingClientRect();return r.width>40&&r.height>25;})`));
       check(`${dimensions.join('x')}: ${name} browsers fit inside their terminal panes`, await evaluate(`[...views.values()].filter(v=>!v.wrapper.hidden).every(v=>{const b=v.wrapper.querySelector('.pane-body').getBoundingClientRect(),d=v.wrapper.querySelector('.file-drawer').getBoundingClientRect();return d.width>0&&d.height>0&&d.x>=b.x-1&&d.y>=b.y-1&&d.right<=b.right+1&&d.bottom<=b.bottom+1&&(v.files.dock==='right'?d.width<=b.width*.65+1:d.height<=b.height*.65+1);})`));
-      const controlGeometry = await evaluate(`[...views.values()].filter(v=>!v.wrapper.hidden).map(v=>{const drawer=v.wrapper.querySelector('.file-drawer'),actions=drawer.querySelector('.file-actions').getBoundingClientRect(),list=drawer.querySelector('.file-list').getBoundingClientRect(),controls=drawer.querySelector('.file-controls').getBoundingClientRect();return {key:v.pane.key,dock:v.files.dock,listBottom:list.bottom,controlsBottom:controls.bottom,actionsTop:actions.top};})`);
-      if (!controlGeometry.every(g => g.listBottom <= g.actionsTop + 1 && g.controlsBottom <= g.actionsTop + 1)) { report.overlapGeometry = controlGeometry; await screenshot(dimensions.join('x') + '-' + name + '-overlap'); }
+      const geometry = await captureLayoutGeometry(), controlGeometry = geometry.controlGeometry;
+      recordLayoutGeometry(dimensions, name, 'immediate', geometry);
+      if (!controlGeometry.every(g => g.listBottom <= g.actionsTop + 1 && g.controlsBottom <= g.actionsTop + 1)) {
+        report.overlapGeometry = controlGeometry;
+        await delay(200); recordLayoutGeometry(dimensions, name, 'after-200ms', await captureLayoutGeometry());
+        await screenshot(dimensions.join('x') + '-' + name + '-overlap');
+      }
       check(`${dimensions.join('x')}: ${name} file controls do not overlap transfer actions`, controlGeometry.every(g => g.listBottom <= g.actionsTop + 1 && g.controlsBottom <= g.actionsTop + 1));
       await screenshot(dimensions.join('x') + '-' + name);
+      // Let live listings and transient fixture notices finish before hit testing.
+      await wait(`[...views.values()].filter(v=>!v.wrapper.hidden).every(v=>!v.files.loading&&!v.wrapper.querySelector('[data-local="refresh"]').disabled)&&$('notice').hidden`, 'File layout fixture did not become idle.');
+      const regression = { dimensions, layout: name, ...await evaluate(`(${fileViewportRegression.toString()})()`) };
+      report.fileViewportRegression.push(regression); fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2));
+      console.log('File viewport regression ' + JSON.stringify(regression));
+      check(`${dimensions.join('x')}: ${name} Local and Remote list viewports fit with maximum wrapped status`, regression.columns.length > 0 && regression.columns.every(c => [c.initial, c.expanded].every(g => g.listFitsView && g.viewDoesNotOverflow && g.actionsBelow && g.statusCapped)));
+      check(`${dimensions.join('x')}: ${name} growing directories retain bounded list and drawer geometry`, regression.columns.every(c => c.bounded && c.scrollable));
+      check(`${dimensions.join('x')}: ${name} last synthetic rows remain visible and reachable`, regression.columns.every(c => c.lastRow.insideList && c.lastRow.insideDrawer && c.lastRow.hit));
+      check(`${dimensions.join('x')}: ${name} transfer action centers remain reachable after drawer scrolling`, regression.columns.every(c => c.actionHits.length > 0 && c.actionHits.every(h => h.insideDrawer && h.hit)));
+      check(`${dimensions.join('x')}: ${name} layout fixture restores original nodes and scroll positions`, regression.restored);
     }
     await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,shiftKey:true,bubbles:true,cancelable:true})); views.get(active).wrapper.querySelector('.pane-title').dispatchEvent(new MouseEvent('dblclick',{bubbles:true})); true`);
     check(`${dimensions.join('x')}: removed focus shortcut and title double-click cannot hide split panes`, await evaluate(`layout===4 && [...views.values()].filter(v=>!v.wrapper.hidden).length===4 && views.get(active).files.visible`));

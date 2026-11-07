@@ -35,7 +35,7 @@ const output = options.has('--output') ? path.resolve(options.get('--output')) :
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-per-pane-'));
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const metrics = { logins: 0, shells: 0, closedShells: 0, exec: 0, inspections: 0, unexpectedExec: 0, sftp: 0, closedSftp: 0, directories: [], resize: [], terminalBaud: [] };
-const peers = new Set(), report = { status: 'running', started: new Date().toISOString(), executable: exe, expectedVersion: metadata.version, visibleFixture, appPID: null, checks: [], screenshots: [], metrics, nativeDialogs: 'Unverified: upload/download native dialogs and transfer bytes are covered separately.' };
+const peers = new Set(), report = { status: 'running', started: new Date().toISOString(), executable: exe, expectedVersion: metadata.version, visibleFixture, appPID: null, checks: [], screenshots: [], layoutGeometry: [], metrics, nativeDialogs: 'Unverified: upload/download native dialogs and transfer bytes are covered separately.' };
 let server, launcher, appPID, ws;
 async function freePort() { const s = net.createServer(); await new Promise(resolve => s.listen(0, '127.0.0.1', resolve)); const p = s.address().port; await new Promise(resolve => s.close(resolve)); return p; }
 async function fixture() {
@@ -126,6 +126,42 @@ function terminalText(view) {
   }
   return text;
 }
+// Runs in the renderer. Record geometry only: local status/path/file text stays private.
+function fileLayoutGeometry() {
+  const rect = r => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height });
+  const bounds = node => rect(node.getBoundingClientRect());
+  const clientBounds = node => { const r = bounds(node), left = r.left + node.clientLeft, top = r.top + node.clientTop; return { left, top, right: left + node.clientWidth, bottom: top + node.clientHeight }; };
+  const intersect = (a, b, x = true, y = true) => {
+    const left = x ? Math.max(a.left, b.left) : a.left, top = y ? Math.max(a.top, b.top) : a.top;
+    const right = Math.max(left, x ? Math.min(a.right, b.right) : a.right), bottom = Math.max(top, y ? Math.min(a.bottom, b.bottom) : a.bottom);
+    return { left, top, right, bottom, width: right - left, height: bottom - top };
+  };
+  const visibleBounds = node => {
+    let r = bounds(node);
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent), x = /^(auto|scroll|hidden|clip)$/.test(style.overflowX), y = /^(auto|scroll|hidden|clip)$/.test(style.overflowY);
+      if (x || y) r = intersect(r, clientBounds(parent), x, y);
+    }
+    return intersect(r, { left: 0, top: 0, right: innerWidth, bottom: innerHeight });
+  };
+  const measure = node => {
+    const style = getComputedStyle(node);
+    return { rect: bounds(node), visibleRect: visibleBounds(node), client: { width: node.clientWidth, height: node.clientHeight }, scroll: { width: node.scrollWidth, height: node.scrollHeight, left: node.scrollLeft, top: node.scrollTop }, style: { display: style.display, flex: style.flex, flexDirection: style.flexDirection, minHeight: style.minHeight, overflowX: style.overflowX, overflowY: style.overflowY, marginTop: style.marginTop, marginBottom: style.marginBottom, paddingTop: style.paddingTop, paddingBottom: style.paddingBottom } };
+  };
+  return [...views.values()].filter(v => !v.wrapper.hidden).map(v => {
+    const drawer = v.wrapper.querySelector('.file-drawer'), viewport = intersect(clientBounds(drawer), visibleBounds(drawer));
+    return { key: v.pane.key, dock: v.files.dock, drawer: measure(drawer), drawerViewport: viewport, dual: measure(drawer.querySelector('.file-dual')), columns: ['local', 'remote'].map(side => {
+      const column = drawer.querySelector('.file-' + side), view = column.querySelector('.file-view'), list = column.querySelector('.file-list'), actions = column.querySelector('.file-actions'), status = column.querySelector('.file-status'), font = getComputedStyle(status);
+      const range = document.createRange(); range.selectNodeContents(status); const lineRects = [...range.getClientRects()].map(rect);
+      return { side, column: measure(column), controls: measure(column.querySelector('.file-controls')), view: measure(view), filter: measure(view.querySelector('.file-toolbar')), list: measure(list), actions: measure(actions), status: { ...measure(status), length: status.textContent.length, font: { family: font.fontFamily, size: font.fontSize, weight: font.fontWeight, lineHeight: font.lineHeight, letterSpacing: font.letterSpacing }, lineRects, lineCount: new Set(lineRects.map(r => r.top)).size }, actionHits: [...actions.querySelectorAll('button')].map((button, index) => {
+        const r = bounds(button), x = (r.left + r.right) / 2, y = (r.top + r.bottom) / 2;
+        const insideDrawerViewport = r.width > 0 && r.height > 0 && x >= viewport.left && x < viewport.right && y >= viewport.top && y < viewport.bottom;
+        const hit = insideDrawerViewport ? document.elementFromPoint(x, y) : null;
+        return { index, rect: r, center: { x, y }, insideDrawerViewport, hit: insideDrawerViewport ? { button: button.contains(hit), actions: actions.contains(hit), list: list.contains(hit), view: view.contains(hit) } : null };
+      }) };
+    }) };
+  });
+}
 async function main() {
   if (process.platform !== 'win32') throw new Error('This acceptance harness requires Windows.');
   fs.mkdirSync(output, { recursive: true }); assert.ok(fs.existsSync(exe), 'Run npm run pack first.');
@@ -209,6 +245,12 @@ async function main() {
     try { await delay(200); const data = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }); const file = path.join(output, name + '.png'); fs.writeFileSync(file, Buffer.from(data.data, 'base64')); report.screenshots.push(file); }
     finally { await evaluate(`document.querySelectorAll('.file-local').forEach(node=>node.style.visibility=''); true`); }
   };
+  const captureLayoutGeometry = () => evaluate(`({controlGeometry:[...views.values()].filter(v=>!v.wrapper.hidden).map(v=>{const drawer=v.wrapper.querySelector('.file-drawer'),actions=drawer.querySelector('.file-actions').getBoundingClientRect(),list=drawer.querySelector('.file-list').getBoundingClientRect(),controls=drawer.querySelector('.file-controls').getBoundingClientRect();return {key:v.pane.key,dock:v.files.dock,listBottom:list.bottom,controlsBottom:controls.bottom,actionsTop:actions.top};}),panes:(${fileLayoutGeometry.toString()})(),capturedAt:performance.now()})`);
+  const recordLayoutGeometry = (dimensions, layout, phase, geometry) => {
+    const snapshot = { dimensions, layout, phase, ...geometry }; report.layoutGeometry.push(snapshot);
+    fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2));
+    console.log('File layout geometry ' + JSON.stringify({ dimensions, layout, phase, capturedAt: geometry.capturedAt, panes: geometry.panes.map(p => ({ key: p.key, dock: p.dock, columns: p.columns.map(c => ({ side: c.side, controlsBottom: c.controls.rect.bottom, listBottom: c.list.rect.bottom, visibleListBottom: c.list.visibleRect.bottom, listHeight: c.list.rect.height, viewBottom: c.view.rect.bottom, viewHeight: c.view.client.height, viewScrollHeight: c.view.scroll.height, actionsTop: c.actions.rect.top, statusLength: c.status.length, statusHeight: c.status.rect.height, statusLines: c.status.lineCount, actionHits: c.actionHits.map(h => h.insideDrawerViewport ? h.hit : null) })) })) }));
+  };
   for (const dimensions of [[1920, 1080], [900, 600]]) {
     await send('Emulation.setDeviceMetricsOverride', { width: dimensions[0], height: dimensions[1], deviceScaleFactor: 1, mobile: false });
     for (const [size, orientation, name] of [[1, null, 'single'], [2, 'side-by-side', 'side-by-side'], [2, 'stacked', 'stacked'], [4, null, 'four']]) {
@@ -216,8 +258,13 @@ async function main() {
       await evaluate(`document.querySelector('[data-layout-choice="'+${JSON.stringify(choice)}+'"]').click(); true`); await delay(150);
       check(`${dimensions.join('x')}: ${name} layout retains browser ownership`, await evaluate(`__smokeKeys.every((k,i)=>views.get(k).files.key===k&&views.get(k).files.directory==='/project-'+i) && [...views.values()].filter(v=>!v.wrapper.hidden).every(v=>{const r=v.host.getBoundingClientRect();return r.width>40&&r.height>25;})`));
       check(`${dimensions.join('x')}: ${name} browsers fit inside their terminal panes`, await evaluate(`[...views.values()].filter(v=>!v.wrapper.hidden).every(v=>{const b=v.wrapper.querySelector('.pane-body').getBoundingClientRect(),d=v.wrapper.querySelector('.file-drawer').getBoundingClientRect();return d.width>0&&d.height>0&&d.x>=b.x-1&&d.y>=b.y-1&&d.right<=b.right+1&&d.bottom<=b.bottom+1&&(v.files.dock==='right'?d.width<=b.width*.65+1:d.height<=b.height*.65+1);})`));
-      const controlGeometry = await evaluate(`[...views.values()].filter(v=>!v.wrapper.hidden).map(v=>{const drawer=v.wrapper.querySelector('.file-drawer'),actions=drawer.querySelector('.file-actions').getBoundingClientRect(),list=drawer.querySelector('.file-list').getBoundingClientRect(),controls=drawer.querySelector('.file-controls').getBoundingClientRect();return {key:v.pane.key,dock:v.files.dock,listBottom:list.bottom,controlsBottom:controls.bottom,actionsTop:actions.top};})`);
-      if (!controlGeometry.every(g => g.listBottom <= g.actionsTop + 1 && g.controlsBottom <= g.actionsTop + 1)) { report.overlapGeometry = controlGeometry; await screenshot(dimensions.join('x') + '-' + name + '-overlap'); }
+      const geometry = await captureLayoutGeometry(), controlGeometry = geometry.controlGeometry;
+      recordLayoutGeometry(dimensions, name, 'immediate', geometry);
+      if (!controlGeometry.every(g => g.listBottom <= g.actionsTop + 1 && g.controlsBottom <= g.actionsTop + 1)) {
+        report.overlapGeometry = controlGeometry;
+        await delay(200); recordLayoutGeometry(dimensions, name, 'after-200ms', await captureLayoutGeometry());
+        await screenshot(dimensions.join('x') + '-' + name + '-overlap');
+      }
       check(`${dimensions.join('x')}: ${name} file controls do not overlap transfer actions`, controlGeometry.every(g => g.listBottom <= g.actionsTop + 1 && g.controlsBottom <= g.actionsTop + 1));
       await screenshot(dimensions.join('x') + '-' + name);
     }

@@ -201,7 +201,13 @@ test('ASAR crawl cannot package files through an outside-directory link', async 
   await assert.rejects(asar.createPackage(source, path.join(directory, 'blocked.asar')), /outside|out of|escapes/i);
 });
 
-test('universal ASAR merger still enforces its unique-file glob allowlist', async t => {
+// This macOS merger strips only POSIX leading slashes from ASAR entries;
+// its ASAR 3 dependency produces backslash-prefixed entries on Windows.
+// Builder invokes it only from macPackager. Keep the synthetic POSIX coverage
+// here while the actual Windows builder, ASAR and advisory tests run separately.
+test('universal ASAR merger still enforces its unique-file glob allowlist', {
+  skip: process.platform === 'win32' ? '@electron/universal merges macOS bundles and requires POSIX ASAR paths.' : false
+}, async t => {
   const directory = temporary(t);
   const x64Source = path.join(directory, 'x64');
   const armSource = path.join(directory, 'arm64');

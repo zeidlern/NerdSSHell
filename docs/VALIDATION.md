@@ -1,4 +1,4 @@
-# Version 1.2.9 dependency security maintenance validation
+# Version 1.2.9 dependency security and AGPLv3 validation
 
 Local evidence collected November 7, 2026, on Linux x64 with Node 24.22.1 and npm 11.9.0, based on main `a8a94c78f2d0caf9fd877e75bd405c3edee1b37b`. The candidate uses Electron 44.10.2, node-pty 1.2.0-beta.18 and electron-builder 26.18.1. These results identify the local candidate; protected checks, native Windows acceptance and official publication remain separate gates.
 
@@ -16,9 +16,10 @@ Local evidence collected November 7, 2026, on Linux x64 with Node 24.22.1 and np
 | Dependency inventories | Regenerated and validated: 282 full SPDX packages, 11 runtime packages and ten runtime notices; packaged runtime dependency versions and notice contents are unchanged |
 | Windows x64 directory cross-build | Passed with the existing unsigned configuration and Electron 44.10.2; exact-package verification passed PE branding/version, Electron fuses, Windows ASAR integrity, source containment and native-provider hashes |
 | Packaged license verification | Passed for the project license, inventory, ten exact packaged JavaScript license files and Electron/Chromium notices |
-| Real loopback appliance SSH integration | Two tests passed on the final candidate, including 300 authentication/lifecycle/failure cycles; zero automatic input, exec or subsystem requests and zero retained sockets, channels, provider maps, secrets, tasks, prompts or ready listeners after cleanup |
+| AGPLv3 release metadata | Source, lockfile, both inventory roots and packaged application declare AGPL-3.0-only; packaged LICENSE matches the complete canonical GNU text byte-for-byte, while third-party notices are unchanged |
+| Real loopback appliance SSH integration | Two tests passed on the application/dependency candidate before the license-only change, including 300 authentication/lifecycle/failure cycles; zero automatic input, exec or subsystem requests and zero retained sockets, channels, provider maps, secrets, tasks, prompts or ready listeners after cleanup |
 | Real OpenSSH/tmux integration | Full six-file run: two passed and 11 failed of 13. Both OpenSSH endpoints authenticate with strict host verification, but PTY ownership and tmux Unix socket operations are blocked by this execution environment; these cases remain unvalidated |
-| Secret/history review | Gitleaks 8.30.1 found no leaks in reachable history (32 commit changes scanned) or the working tree; publication history review covered 34 commits and 702 text blobs, with examples, test fixtures and upstream attribution matches manually triaged |
+| Secret/history review | Gitleaks 8.30.1 found no leaks in reachable history (32 commit changes scanned) or the final tracked source; publication history review covered 34 commits and 702 text blobs, with examples, test fixtures and upstream attribution matches manually triaged |
 | Workflow syntax and patch hygiene | actionlint 1.7.12 and git diff --check passed; the CodeQL 4.39.3 pin matches the official release commit |
 | Independent review | Manual source review found no confirmed new runtime vulnerability in the examined trust boundaries; independent dependency/test/patch review found no blocker and reran all nine new regressions successfully |
 
@@ -30,14 +31,19 @@ The Windows directory package was cross-built on Linux, then statically verified
 
 | Local candidate file | SHA-256 |
 | --- | --- |
-| NerdSSHell.exe | 039a7e88360fbcbb6650630e39b1363ecb0767ba8b64c04180b9680ec1d2514a |
-| resources/app.asar | d76ebf3d7c16653ec2e5c86e18beeee9b6a0ca27255d0a95f0761d5ee7c4dc9d |
+| NerdSSHell.exe | 72518c2da260900e3665ec708ae53799177ddc8359812bcdd39014843491ec8b |
+| resources/app.asar | d9e7e4b2e779218767707c9fdfe758a8878d5eed9499af5a0e9adfb64d477891 |
+| LICENSE | 0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0 |
 
 The November 7 GitHub Security dashboard showed zero open Dependabot, code-scanning and secret-scanning alerts. Its dependency check was dated October 28, so that view did not substitute for the fresh local audits that found the two new advisories. Dependency alerts, security updates, secret scanning/push protection and private vulnerability reporting were enabled. No new CodeQL scan was run locally or claimed from this dashboard observation.
 
 The manual source review examined IPC sender/frame/origin and consent binding, SSH host verification/authentication, saved-password lifetime, persistent lifecycle/input, SFTP/local-file grants and cancellation, release origins/redirects/download bounds, and the Windows update/elevation helpers. Required managed Codex Security workflow resources were unavailable; no completed managed scan is claimed. Native Windows paths received static review only. Existing SFTP v3 concurrency and same-user/OS-compromise limitations remain documented. Secret scanning and text-history review do not certify every historical binary or image.
 
-Protected main requires fresh Linux/Windows build, dependency, secret-history and both CodeQL checks from GitHub Actions, with no bypass. Local evidence cannot satisfy those integration-bound checks. No Actions run was requested during this local validation. The reviewed candidate must pass the repository's exact-source acceptance and publication gates before creating the protected version tag; publication must reuse the accepted main Windows artifact.
+The owner selected AGPL-3.0-only for 1.2.9 after the initial local candidate. The complete 34,523-byte [GNU AGPLv3 license text](https://www.gnu.org/licenses/agpl-3.0.txt) was copied verbatim. Local source/regression checks and the Windows directory build, exact-package and license checks were repeated with the updated metadata and license; the hashes above identify this AGPL candidate. Earlier published releases retain their original terms.
+
+After the owner authorized GitHub Actions, the initial [PR39 Linux run](https://github.com/zeidlern/NerdSSHell/actions/runs/42407330621) passed all 13 real integration tests, resolving the environment-blocked OpenSSH/tmux cases for that source. The separate [Windows updater acceptance](https://github.com/zeidlern/NerdSSHell/actions/runs/42407330631) also passed its pinned public-installer fixture; it does not establish a literal 1.2.8-to-1.2.9 upgrade. The primary Windows test job exposed a new fixture's attempt to execute the macOS-only universal ASAR merger with Windows path separators. That fixture is explicitly skipped on Windows; its real merger/allowlist coverage remains active on Linux, and the supported Windows ASAR/builder and advisory checks remain active.
+
+Protected main requires fresh Linux/Windows build, dependency, secret-history and both CodeQL checks from GitHub Actions, with no bypass. Local evidence cannot satisfy those integration-bound checks. The final reviewed candidate, including AGPL metadata and the fixture correction, must pass fresh exact-source acceptance and publication gates before creating the protected version tag; publication must reuse the accepted main Windows artifact. The pull request and release retain the final hosted receipts.
 
 ---
 

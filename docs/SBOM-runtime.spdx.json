@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "nerdsshell@1.2.9",
-  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.9-2f3e0b48-51d4-4d5d-8172-6ea78a7d3da3",
+  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.9-bf58d41d-26c5-4dfb-b104-2686664165ef",
   "creationInfo": {
-    "created": "2026-11-07T19:22:15.776Z",
+    "created": "2026-11-07T19:45:30.062Z",
     "creators": [
       "Tool: npm/cli-11.9.0"
     ]
@@ -24,7 +24,7 @@
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "homepage": "https://github.com/zeidlern/NerdSSHell/wiki",
-      "licenseDeclared": "GPL-3.0-only",
+      "licenseDeclared": "AGPL-3.0-only",
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",

@@ -37,7 +37,7 @@ jobs:
       - name: Check workstation, runner and fork refusal before installation
         run: node --test test/published-update-acceptance.test.cjs
       - run: npm run check
-      - run: node scripts/Generate-SupplyChain.cjs
+      - run: npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs
       - run: npm run dist
       - run: npm run verify:package
       - name: Legacy refusal and patched candidate transport with actual public NSIS in this disposable VM

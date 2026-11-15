@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "nerdsshell@1.2.10",
-  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.10-13d25073-2b3a-4aaa-bd0b-464f865460de",
+  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.10-1f8898d6-1b2d-4f25-9c13-0367cae9b3f4",
   "creationInfo": {
-    "created": "2026-11-15T01:30:43.199Z",
+    "created": "2026-11-15T01:41:26.121Z",
     "creators": [
       "Tool: npm/cli-12.2.2"
     ]

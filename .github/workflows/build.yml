@@ -76,7 +76,7 @@ jobs:
           $parseErrors = $null
           [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'scripts/Install-Windows.ps1'), [ref]$parseTokens, [ref]$parseErrors) | Out-Null
           if ($parseErrors.Count) { $parseErrors | Format-List | Out-String | Write-Error }
-      - run: node scripts/Generate-SupplyChain.cjs
+      - run: npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs
       - run: npm run dist
       - id: verify_package
         run: npm run verify:package

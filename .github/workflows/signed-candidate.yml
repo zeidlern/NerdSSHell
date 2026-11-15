@@ -38,7 +38,7 @@ jobs:
       - run: node scripts/Verify-Publication.cjs --installed
       - run: npm run check
       - run: npm test
-      - run: node scripts/Generate-SupplyChain.cjs
+      - run: npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs
       - name: Build and verify signed installer
         shell: pwsh
         env:

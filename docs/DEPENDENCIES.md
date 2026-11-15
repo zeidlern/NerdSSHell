@@ -13,6 +13,8 @@ npm audit --package-lock-only --ignore-scripts --audit-level=low
 
 `Verify-Publication.cjs` checks that optional lockfile placements are actually absent. The [full SPDX inventory](SBOM.spdx.json) includes the locked build graph. The [runtime SPDX inventory](SBOM-runtime.spdx.json) and [third-party notices](THIRD-PARTY-NOTICES.md) describe the packaged JavaScript subset; Electron/Chromium distribute their own notices beside the executable.
 
+Regenerate inventories with `npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs`, as pinned in every Windows build workflow. The generator rejects missing/duplicate SPDX package IDs before writing an inventory. Node's bundled npm 10.9.9 emits duplicate package IDs for this graph; the pinned npm emits 282 unique full entries and 11 runtime entries.
+
 ## November 14, 2026 maintenance for 1.2.10
 
 The source-build security floor is now **Node 22.23.5 or 24.22.3**, from the [November 11 security releases](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases). CI uses 22.23.5. Standalone build Node and Electron's embedded Node are separate dependencies.

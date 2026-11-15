@@ -23,9 +23,9 @@ for (let index = 2; index < process.argv.length; index++) {
   options.set(name, value);
 }
 const asar = physicalFs.realpathSync.native(options.get('--asar') || path.join(root, 'dist', 'win-unpacked', 'resources', 'app.asar'));
-// Use the locked package's supported loader; it checksum-verifies and installs
-// the development SDK on demand when a fresh CI install has no executable yet.
-const runtime = fs.realpathSync.native(options.get('--runtime') || (process.versions.electron ? process.execPath : require('electron')));
+// Select the prepared, verified Windows SDK directly; npm's generated launcher
+// path file is not required on a fresh install.
+const runtime = fs.realpathSync.native(options.get('--runtime') || (process.versions.electron ? process.execPath : require('./lib/electron-sdk.cjs').sdkExecutable()));
 const temporaryRoot = fs.realpathSync.native(os.tmpdir());
 const samePath = (first, second) => process.platform === 'win32' ? path.resolve(first).toLowerCase() === path.resolve(second).toLowerCase() : path.resolve(first) === path.resolve(second);
 const output = path.resolve(options.get('--output') || path.join(root, '.local', 'packaged-confirmation'));

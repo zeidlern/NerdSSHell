@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
-const { runtimeSpec, assertVersions, verifySdk } = require('../scripts/lib/electron-sdk.cjs');
+const { runtimeSpec, assertVersions, verifySdk, sdkExecutable } = require('../scripts/lib/electron-sdk.cjs');
 const { assertRuntime } = require('../src/runtime-identity.cjs');
 const metadata = require('../package.json');
 
@@ -21,7 +21,7 @@ test('the npm launcher cannot silently select an older packaged or test runtime'
   }
   assert.throws(() => assertRuntime({}, metadata.electronRuntime), /differs/);
   assert.throws(() => assertRuntime(versions, undefined), /differs/);
-  assert.throws(() => runtimeSpec({ ...metadata, build: { ...metadata.build, electronVersion: metadata.devDependencies.electron } }), /must agree/);
+  assert.throws(() => runtimeSpec({ ...metadata, build: { ...metadata.build, electronVersion: '0.0.0' } }), /must agree/);
   assert.throws(() => runtimeSpec({ ...metadata, build: { ...metadata.build, electronDownload: {} } }), /pinned SHA-256/);
 });
 
@@ -38,11 +38,12 @@ test('SDK cache corruption, hardlinks and old version metadata fail before execu
   const execute = () => { calls++; return { status: 0, stdout: JSON.stringify({ electron: spec.version, node: spec.node, chrome: spec.chrome }) }; };
   assert.equal(verifySdk(directory, spec, execute), directory);
   assert.equal(calls, 1);
+  assert.equal(sdkExecutable(directory, spec, execute), path.join(directory, 'electron.exe'), 'SDK selection must not depend on npm launcher path.txt or its Unix fallback');
   calls = 0;
   fs.appendFileSync(file, 'tampered');
   assert.throws(() => verifySdk(directory, spec, execute), /verified official archive/);
   fs.writeFileSync(file, bytes);
-  fs.writeFileSync(path.join(directory, 'version'), metadata.devDependencies.electron);
+  fs.writeFileSync(path.join(directory, 'version'), '0.0.0');
   assert.throws(() => verifySdk(directory, spec, execute), /version file differs/);
   fs.writeFileSync(path.join(directory, 'version'), spec.version);
   fs.linkSync(file, path.join(directory, 'linked.exe'));

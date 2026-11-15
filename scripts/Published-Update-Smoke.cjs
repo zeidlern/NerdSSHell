@@ -179,7 +179,7 @@ function candidateController(archive, plan, output) {
   const data = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), 'nerdsshell-candidate-controller-'));
   const nonce = randomBytes(32).toString('hex'), protocol = controllerProtocol(data, nonce);
   const file = path.join(data, 'controller-plan.json'); fs.writeFileSync(file, JSON.stringify({ archive, ...plan, output, protocolNonce: nonce }), { flag: 'wx', mode: 0o600 });
-  const child = spawn(require('electron'), [__filename, '--candidate-controller', file, '--user-data-dir=' + data], { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(require('./lib/electron-sdk.cjs').sdkExecutable(), [__filename, '--candidate-controller', file, '--user-data-dir=' + data], { shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   let exited = false, exitCode, stderr = '', launchError, cancelTask;
   child.stdout.resume(); child.stderr.on('data', bytes => { stderr += bytes.toString().slice(0, Math.max(0, 16384 - stderr.length)); });
   child.once('error', error => { launchError = error; }); child.once('exit', code => { exited = true; exitCode = code; }); child.once('close', code => { exited = true; exitCode = code; });

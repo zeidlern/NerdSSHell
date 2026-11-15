@@ -8,7 +8,7 @@ const output=path.resolve(at('--output')||path.join(root,'.local','startup-updat
 if(!process.versions.electron){
  (async()=>{fs.mkdirSync(output,{recursive:true});for(const scenario of ['decline','accept','bad-hash']){
   const data=fs.realpathSync.native(fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()),'nerdsshell-startup-ui-')));
-  const child=spawn(require('electron'),[__filename,'--scenario',scenario,'--output',output,'--data',data,'--user-data-dir='+data],{cwd:root,windowsHide:true,stdio:['ignore','pipe','pipe']});child.stdout.on('data',b=>process.stdout.write(b));child.stderr.resume();
+  const child=spawn(require('./lib/electron-sdk.cjs').sdkExecutable(),[__filename,'--scenario',scenario,'--output',output,'--data',data,'--user-data-dir='+data],{cwd:root,windowsHide:true,stdio:['ignore','pipe','pipe']});child.stdout.on('data',b=>process.stdout.write(b));child.stderr.resume();
   const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',resolve)});
   assert.equal(fs.realpathSync.native(data),data);assert.equal(path.dirname(data).toLowerCase(),fs.realpathSync.native(os.tmpdir()).toLowerCase());assert.ok(path.basename(data).startsWith('nerdsshell-startup-ui-'));fs.rmSync(data,{recursive:true,force:true});
   if(code!==0)throw new Error('Owned startup offer acceptance failed');

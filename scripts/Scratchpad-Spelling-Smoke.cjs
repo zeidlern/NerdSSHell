@@ -6,7 +6,7 @@ if (process.versions.electron) require('./lib/electron-sdk.cjs').assertVersions(
 if (!process.versions.electron) {
   const { spawn } = require('node:child_process');
   const output = path.resolve(process.argv[2] || path.join(__dirname, '..', '.local', 'scratchpad-spelling-smoke'));
-  const child = spawn(require('electron'), [__filename, output], { windowsHide: true, stdio: 'inherit' });
+  const child = spawn(require('./lib/electron-sdk.cjs').sdkExecutable(), [__filename, output], { windowsHide: true, stdio: 'inherit' });
   child.on('error', error => { console.error(error); process.exitCode = 1; });
   child.on('exit', code => {
     if (code !== 0) { process.exitCode = 1; return; }

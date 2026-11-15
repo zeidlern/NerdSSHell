@@ -15,6 +15,7 @@ Local Windows 11 x64 / Node 22.23.5 measurements:
 | Unsigned Windows installer and package | Fresh 45.3.3 build passed fuses, ASAR integrity, native-provider hashes, source/runtime containment, branding/version and notices |
 | Packaged Quick Connect and passwords | 54 and 71 checks passed against the new production executable with disposable profiles and generated SSH peers |
 | Exact-ASAR confirmations and startup updater | 48 and 13 checks passed under the verified 45.3.3 SDK; memory-only clipboard, controlled update transport and inert handoff |
+| Fresh-launcher negative control | With npm's generated path.txt temporarily absent, all confirmation/startup/spelling fixtures passed using the directly verified Windows executable; the original generated file was restored |
 | Inventories | 283 unique full / 12 runtime SPDX entries, including separate official Electron binary provenance; ten runtime JavaScript notices unchanged |
 
 The application checks actual runtime identity before opening user data; SDK acceptance checks its actual runtime independently. Neither an old npm launcher nor a packaging-only version override can silently validate the wrong SDK. No existing user application, profile, credential, remote session or system security setting was changed. Full hosted native handoff, consoles and real-installer acceptance must pass for the exact candidate before merging; the pull request records those later receipts. Real UAC/alternate-account, physical clipboard and other manual acceptance limitations remain explicit.

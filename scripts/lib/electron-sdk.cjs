@@ -40,6 +40,10 @@ function verifySdk(directory, spec = runtimeSpec(), execute = spawnSync) {
   return directory;
 }
 
+function sdkExecutable(directory = process.env.ELECTRON_OVERRIDE_DIST_PATH || path.join(root, '.local', `electron-sdk-${runtimeSpec().version}-win32-x64`), spec = runtimeSpec(), execute = spawnSync) {
+  return path.join(verifySdk(directory, spec, execute), 'electron.exe');
+}
+
 async function prepareSdk() {
   assert.equal(process.platform, 'win32', 'The supported Electron SDK platform is Windows x64');
   assert.equal(process.arch, 'x64', 'The supported Electron SDK architecture is x64');
@@ -61,4 +65,4 @@ async function prepareSdk() {
   return verifySdk(directory, spec);
 }
 
-module.exports = { runtimeSpec, assertVersions, verifySdk, prepareSdk };
+module.exports = { runtimeSpec, assertVersions, verifySdk, sdkExecutable, prepareSdk };

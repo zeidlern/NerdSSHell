@@ -20,7 +20,7 @@ The suite covers verified authentication, two independent endpoints/session iden
 ## Windows build and packaged acceptance
 
 ```powershell
-node .\scripts\Generate-SupplyChain.cjs
+npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs
 npm.cmd run dist
 npm.cmd run verify:package
 node .\scripts\Verify-Notices.cjs

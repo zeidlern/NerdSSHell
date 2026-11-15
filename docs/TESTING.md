@@ -1,6 +1,6 @@
 # Development and acceptance checks
 
-Use Node 22 x64 version 22.23.4 or later within the 22.x line and the committed lockfile. Node 24 x64 version 24.22.1 or later within the 24.x line is also supported. Windows 11 x64 is the supported desktop target. Run from the repository root:
+Use Node 22 x64 version 22.23.5 or later within the 22.x line and the committed lockfile. Node 24 x64 version 24.22.3 or later within the 24.x line is also supported. Windows 11 x64 is the supported desktop target. Run from the repository root:
 
 ```powershell
 npm.cmd ci --omit=optional
@@ -20,10 +20,12 @@ The suite covers verified authentication, two independent endpoints/session iden
 ## Windows build and packaged acceptance
 
 ```powershell
-node .\scripts\Generate-SupplyChain.cjs
+npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs
 npm.cmd run dist
 npm.cmd run verify:package
 node .\scripts\Verify-Notices.cjs
+node .\scripts\Prepare-Electron-SDK.cjs
+$env:ELECTRON_OVERRIDE_DIST_PATH = Join-Path $PWD ('.local/electron-sdk-' + (Get-Content package.json -Raw | ConvertFrom-Json).electronRuntime.version + '-win32-x64')
 node .\scripts\Elevated-Console-Smoke.cjs --asar dist/win-unpacked/resources/app.asar
 node .\scripts\Packaged-Password-Smoke.cjs
 node .\scripts\Packaged-Confirmation-Smoke.cjs

@@ -18,6 +18,18 @@ const universalRequire = createRequire(require.resolve('@electron/universal'));
 const { FileMatcher, getNodeModuleFileMatcher, copyFiles } = builderRequire('./fileMatcher');
 const glob = asarRequire('glob');
 
+test('source builds reject Node releases predating the November security fixes', () => {
+  const { satisfies } = require('semver');
+  assert.equal(metadata.devEngines.runtime.version, metadata.engines.node);
+  assert.equal(metadata.devEngines.runtime.onFail, 'error');
+  for (const version of ['22.23.5', '22.24.0', '24.22.3', '24.23.0']) {
+    assert.equal(satisfies(version, metadata.engines.node), true, version);
+  }
+  for (const version of ['20.20.0', '22.23.4', '24.22.1', '24.22.2', '22.23.5-rc.1', '24.22.3-rc.1', '23.0.0', '25.0.0', '26.13.1']) {
+    assert.equal(satisfies(version, metadata.engines.node), false, version);
+  }
+});
+
 function temporary(t) {
   const parent = fs.realpathSync(os.tmpdir());
   const directory = fs.mkdtempSync(path.join(parent, 'nerdsshell-build-deps-'));

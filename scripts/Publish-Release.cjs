@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
+const { runtimePackage, validateRuntime } = require('./lib/electron-inventory.cjs');
 const REPO = 'zeidlern/NerdSSHell';
 const BASE = `/repos/${REPO}`;
 const STABLE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -41,6 +42,7 @@ function validateSource(pkg, lock, changelog, tag) {
   assert.equal(pkg.name, 'nerdsshell'); assert.equal(pkg.version, version, 'Tag and source package version differ');
   assert.equal(lock.name, pkg.name); assert.equal(lock.version, version);
   assert.equal(lock.packages?.['']?.name, pkg.name); assert.equal(lock.packages[''].version, version);
+  runtimePackage(pkg);
   const section = changelog.match(new RegExp(`^## ${version.replaceAll('.', '\\.')}((?=[ \\t\\r\\n]|$)[^\\n]*)\\n([\\s\\S]*?)(?=^## |$(?![\\s\\S]))`, 'm'));
   assert.ok(section && section[2].trim(), `CHANGELOG.md needs a nonempty ${version} section`);
   return { version, changes: section[2].trim() };
@@ -101,12 +103,14 @@ function validateAssets(assets, expected, partial = false) {
     assert.ok(Number.isSafeInteger(asset.id) && asset.id > 0);
   }
 }
-function validateInventory(bytes, version, lock, runtime) {
+function validateInventory(bytes, version, lock, runtime, metadata = null) {
   const doc = JSON.parse(bytes);
   assert.equal(doc.spdxVersion, 'SPDX-2.3'); assert.equal(doc.name, `nerdsshell@${version}`);
   assert.ok(Array.isArray(doc.packages));
   const actual = new Set(doc.packages.map(item => `${item.name}@${item.versionInfo}`));
   const wanted = new Set([`nerdsshell@${version}`]);
+  const binary = metadata ? validateRuntime(doc, metadata) : null;
+  if (binary) wanted.add(`${binary.name}@${binary.versionInfo}`);
   for (const [location, item] of Object.entries(lock.packages)) {
     if (!location || item.link || (runtime && (item.dev || item.optional))) continue;
     assert.ok(location.includes('node_modules/') && typeof item.version === 'string', 'Invalid locked package identity');
@@ -133,8 +137,8 @@ function validateFiles(dir, source) {
   assert.deepEqual(parsed.sort((a, b) => a.name.localeCompare(b.name)),
     wanted.map(({ name, sha256 }) => ({ name, sha256 })).sort((a, b) => a.name.localeCompare(b.name)),
     'Checksum manifest does not match actual consumer bytes');
-  validateInventory(fs.readFileSync(path.join(dir, 'SBOM.spdx.json'), 'utf8'), source.version, source.lock, false);
-  validateInventory(fs.readFileSync(path.join(dir, 'SBOM-runtime.spdx.json'), 'utf8'), source.version, source.lock, true);
+  validateInventory(fs.readFileSync(path.join(dir, 'SBOM.spdx.json'), 'utf8'), source.version, source.lock, false, source.pkg);
+  validateInventory(fs.readFileSync(path.join(dir, 'SBOM-runtime.spdx.json'), 'utf8'), source.version, source.lock, true, source.pkg);
   assert.equal(digest(source.license), hash(path.join(dir, 'LICENSE.txt')), 'License differs from tagged source');
   assert.equal(digest(source.notices), hash(path.join(dir, 'THIRD-PARTY-NOTICES.md')), 'Notices differ from tagged source');
   return expected;
@@ -252,7 +256,7 @@ function createPublisher({ client, env = process.env, git = args => execFileSync
       'Version tag must resolve to the validated protected-main history');
     const pkg = JSON.parse(readSource(sha, 'package.json')), lock = JSON.parse(readSource(sha, 'package-lock.json'));
     const { version, changes } = validateSource(pkg, lock, readSource(sha, 'CHANGELOG.md'), tag);
-    return { tag, sha, tagObject: ref.object.sha, version, changes, lock,
+    return { tag, sha, tagObject: ref.object.sha, version, changes, lock, pkg,
       license: readSource(sha, 'LICENSE'), notices: readSource(sha, 'docs/THIRD-PARTY-NOTICES.md') };
   }
   async function gates(source, prior) {

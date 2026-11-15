@@ -1,6 +1,6 @@
 # Dependency maintenance
 
-Use the committed lockfile and a patched Node.js build: **22.23.4 or newer in 22.x**, or **24.22.1 or newer in 24.x**. CI pins Node **22.23.4**. The package's `engines` and npm `devEngines.runtime` declare these supported ranges; `devEngines` fails npm install, ci and run commands on an unsupported runtime. The Windows build helper also checks the version before installing dependencies. These are build-tool requirements, not the Node version bundled inside Electron.
+Use the committed lockfile and a patched Node.js build: **22.23.5 or newer in 22.x**, or **24.22.3 or newer in 24.x**. CI pins Node **22.23.5**. The package's `engines` and npm `devEngines.runtime` declare these supported ranges; `devEngines` fails npm install, ci and run commands on an unsupported runtime. The Windows build helper also checks the version before installing dependencies. These are build-tool requirements, not the Node version bundled inside Electron.
 
 Supported Windows builds and CI install with `npm ci --omit=optional`. Runtime libraries and development/build tools are both covered by the supported-build audit. Optional packages remain in the lockfile and receive a separate complete-lockfile audit; omission alone does not resolve an advisory.
 
@@ -12,6 +12,26 @@ npm audit --package-lock-only --ignore-scripts --audit-level=low
 ```
 
 `Verify-Publication.cjs` checks that optional lockfile placements are actually absent. The [full SPDX inventory](SBOM.spdx.json) includes the locked build graph. The [runtime SPDX inventory](SBOM-runtime.spdx.json) and [third-party notices](THIRD-PARTY-NOTICES.md) describe the packaged JavaScript subset; Electron/Chromium distribute their own notices beside the executable.
+
+Regenerate inventories with `npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs`, as pinned in every Windows build workflow. The generator rejects missing/duplicate SPDX package IDs before writing an inventory. Node's bundled npm 10.9.9 emits duplicate package IDs for this graph. The pinned npm plus explicit binary provenance emits 283 unique full entries and 12 runtime entries, including the official Electron binary separately from its npm launcher.
+
+## November 14, 2026 maintenance for 1.2.10
+
+The source-build security floor is now **Node 22.23.5 or 24.22.3**, from the [November 11 security releases](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases). CI uses 22.23.5. Standalone build Node and Electron's embedded Node are separate dependencies.
+
+All direct packages were checked against the npm registry and upstream release channels. The shipped runtime advances from 44.10.2 to [45.3.3](https://releases.electronjs.org/release/v45.3.3), with Chromium 156.0.8078.100, Node 24.22.3 and upstream security backports, including the November Node security fixes. The [Electron 45 migration notes](https://www.electronjs.org/docs/latest/breaking-changes#breaking-api-changes-450) remove sandboxed-preload Node shims; this application's preload uses only the supported Electron module. Synchronous safeStorage remains available in 45 but is deprecated ahead of removal in 46; a future upgrade must migrate it while preserving stored credentials.
+
+[ASAR 4.3.2](https://github.com/electron/asar/releases/tag/v4.3.2) now declares patched glob and minimatch ranges. Remove the glob override and resolve glob 14.0.6 normally. Retain the version-qualified minimatch override for builder/universal consumers, refreshed to 11.0.8, and the scoped global-agent override, refreshed to 4.1.7. The actual ASAR/build consumers and optional downloader proxy are tested, including hostile patterns, cancellation, containment, checksum refusal and NO_PROXY. Compatible transitive updates include extract-zip 1.0.8, Undici 7.30.2, tar 7.5.23, semver 7.8.6 and brace-expansion patches. Both supported and complete lockfile audits report zero known npm advisories at this review.
+
+Other direct pins remain current: xterm 6.0.0, fit 0.11.0, search 0.16.0, ssh2 1.17.0, fuses 2.1.3 and resedit 3.1.0. Builder 26.18.1 is the newer stable `v26` channel despite an older `latest` tag; node-pty beta.18 remains the reviewed beta channel, newer than stable 1.1.0. Its native-provider hashes remain unchanged. Pillow 13.0.0, Gitleaks 8.30.1 and the existing full-SHA Action pins are current. No new prerelease or standalone ConPTY replacement is introduced.
+
+### Verified binary runtime and separate npm launcher
+
+At this review, the [official 45.3.3 release job](https://releases.electronjs.org/build/jOVrnZUowOfhJDK-ofrB) completed its platform builds and GitHub publication while npm publication remained in progress. The reproducible build uses electron-builder's supported `build.electronVersion: 45.3.3` and normal official downloader with a pinned `build.electronDownload.checksums` entry. The npm `electron: 45.3.2` dependency remains honestly identified as the launcher/download wrapper; it does not select the shipped runtime.
+
+The official `electron-v45.3.3-win32-x64.zip` SHA-256 is `49dd2d3875944f08de03d34595cd30093c588b9edcabb41a0ac481028a3a5a8a`, matched against both SHASUMS256.txt and the GitHub asset digest. Its original `electron.exe` SHA-256 is `cf7ff337d82f32a437d315721ef361f53a8473905a655a0c650967a66ccd0724`. `package.json` records the reviewed embedded versions and these pins. The publisher validates the binary component in both inventories against the exact tagged source; npm's audit describes the npm graph, not this separately inventoried binary.
+
+`npm start` prepares and verifies a separate project-local SDK using the same archive/checksum, then launches that SDK. Windows CI calls `scripts/Prepare-Electron-SDK.cjs --github-env` so every SDK fixture selects it through `ELECTRON_OVERRIDE_DIST_PATH`. Fixtures resolve the verified `electron.exe` directly, independently of npm's generated `path.txt` and its platform fallback. Cache reuse checks the original executable hash, SDK version file and actual process versions. Application startup and SDK acceptance reject a mismatched Electron/Node/Chromium runtime. No npm metadata or package bytes are forged, and no integrity/fuse verification is relaxed. Actual validation is recorded in [VALIDATION.md](VALIDATION.md).
 
 ## November 7, 2026 maintenance for 1.2.9
 
@@ -32,9 +52,9 @@ The other direct npm dependencies remain at their reviewed current versions: @xt
 
 The [CodeQL Action 4.39.3 release](https://github.com/github/codeql-action/releases/tag/v4.39.3) fixes diff-based alert filtering for paths containing spaces, special characters or non-ASCII characters; both workflow uses are pinned to its official commit `33d7b85da1a04171e211befe2c739303b9a4c066`. Checkout 7.0.1, setup-node 7.1.0 and upload-artifact 7.0.2 remain their current releases. Changing an Action pin does not establish that the workflow ran; actual local checks and any outstanding protected checks are recorded in [validation results](VALIDATION.md).
 
-### Announced upstream follow-up
+### Historical announced upstream follow-up
 
-Node has [announced security releases for November 11, 2026](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases), with high-severity issues affecting the supported 22.x, 24.x and 26.x lines. Those fixes are not released as of this review. Reassess both the source-build Node minimum/CI pin and Electron's embedded Node after upstream publishes the fixes. Installing a newer standalone Node does not update the Node runtime inside an Electron application. This release does not claim to include the pending fixes or establish their eventual application-specific reachability.
+At the November 7 review, Node had [announced security releases for November 11, 2026](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases), with high-severity issues affecting the supported 22.x, 24.x and 26.x lines. Those fixes were not released at that checkpoint. The November 14 section above records the subsequent build-tool update and remaining Electron package-publication gap. Installing a newer standalone Node does not update the Node runtime inside an Electron application.
 
 ## October 28, 2026 maintenance for 1.2.8
 
@@ -52,7 +72,7 @@ GitHub Actions use reviewed full-SHA pins for setup-node 7.1.0, upload-artifact 
 
 `electron-builder 26.18.1 -> app-builder-lib 26.18.1 -> @electron/get 3.1.0` introduces the optional HTTP(S) build-download proxy. Its original `global-agent 3.0.0 -> roarr 2.15.4 -> sprintf-js 1.1.3` chain contains [GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c). The affected formatter has no patched release. It is not included in the packaged application or supported installation.
 
-The scoped `package.json` override selects **global-agent 4.1.3** only beneath `app-builder-lib`'s `@electron/get`. [Upstream 4.1.0](https://github.com/gajus/global-agent/releases/tag/v4.1.0) removes `roarr`; its formatter and unused helper dependencies consequently leave the lockfile. Electron's separate downloader, runtime SSH/terminal libraries and packaging versions remain pinned independently. No advisory is suppressed or dismissed.
+The scoped `package.json` override selects **global-agent 4.1.7** only beneath `app-builder-lib`'s `@electron/get`. [Upstream 4.1.0](https://github.com/gajus/global-agent/releases/tag/v4.1.0) removes `roarr`; its formatter and unused helper dependencies consequently leave the lockfile. Electron's separate downloader, runtime SSH/terminal libraries and packaging versions remain pinned independently. No advisory is suppressed or dismissed.
 
 The required CommonJS `bootstrap()` export, `GLOBAL_AGENT_*` environment settings and mutable `NO_PROXY` controller remain compatible with [@electron/get 3.1.0's proxy integration](https://github.com/electron/get/blob/v3.1.0/src/proxy.ts). Version 4's TypeScript migration does not affect this JavaScript caller. Its default TLS certificate verification remains enabled; do not disable verification to accommodate a proxy.
 

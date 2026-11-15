@@ -48,6 +48,8 @@ Coverage: `test/transfer.test.cjs`, `test/storage-security.test.cjs`, `test/per-
 
 Packaging disables RunAsNode, NODE_OPTIONS, Node CLI inspection and extra file-protocol privileges. Embedded ASAR integrity and only-load-from-ASAR are enabled; package verification checks actual fuse bytes, Windows integrity metadata, native hashes, JavaScript containment, branding and notices. Required native executables/libraries are explicit unpacked exceptions.
 
+The packaged Electron runtime is pinned independently of its npm launcher. Official archive checksums and embedded Electron/Node/Chromium versions are recorded in package.json; startup refuses mismatches before selecting user data. SDK preparation verifies the original executable hash and actual process versions, and CI explicitly selects that SDK. Both dependency inventories include the binary runtime, whose exact provenance is checked by the publisher against tagged source.
+
 Keep fork workflows away from signing secrets and release workstations. Default workflow tokens are read-only and third-party Actions are pinned to full commit SHAs. Signing requires a reviewed source SHA and protected environment, followed by verification of the actual application and installer. Authenticode status must be reported accurately.
 
 Coverage: `test/packaging.test.cjs`, `test/branding.test.cjs`, `scripts/Verify-Packaged.cjs`, `scripts/Verify-Notices.cjs` and `scripts/Verify-Signed.ps1`. Dependency advisories and CodeQL reports require individual reachability/impact review; a green test suite does not clear an unexplained finding.

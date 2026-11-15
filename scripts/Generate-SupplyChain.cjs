@@ -5,10 +5,12 @@
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { addRuntime } = require('./lib/electron-inventory.cjs');
 
 const root = path.resolve(__dirname, '..');
 const docs = path.join(root, 'docs');
 const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+const metadata = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 function sbom(name, omitted) {
@@ -27,6 +29,10 @@ function sbom(name, omitted) {
   if (doc.spdxVersion !== 'SPDX-2.3' || !Array.isArray(doc.packages)) {
     throw new Error(`Invalid SPDX output for ${name}`);
   }
+  if (doc.packages.some(entry => !entry.SPDXID) || new Set(doc.packages.map(entry => entry.SPDXID)).size !== doc.packages.length) {
+    throw new Error(`npm emitted missing or duplicate SPDX package IDs for ${name}; regenerate with npm 12.2.2.`);
+  }
+  addRuntime(doc, metadata);
   fs.writeFileSync(path.join(docs, name), `${JSON.stringify(doc, null, 2)}\n`);
   return doc.packages.length;
 }

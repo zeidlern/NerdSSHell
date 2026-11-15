@@ -1,3 +1,65 @@
+# Version 1.2.10 Electron 45.3.3 validation
+
+The owner authorized integration and official publication of 1.2.10 after the direct-binary investigation. The final candidate uses official Electron 45.3.3 / Node 24.22.3 / Chromium 156.0.8078.100, with the archive and original executable SHA-256 pins recorded in package.json. The npm electron 45.3.2 package remains a separately identified launcher; packaging and SDK selection use the explicit 45.3.3 runtime. These results supersede the earlier 45.3.2 candidate below.
+
+Local Windows 11 x64 / Node 22.23.5 measurements:
+
+| Check | Result |
+| --- | --- |
+| Source and publication checks | Passed |
+| Full regression suite | 1,144 passed, zero failures, two skips of 1,146: macOS-only ASAR merger and unavailable file-symlink privilege |
+| New runtime regressions | Three passed: runtime/embedded-Node mismatch, corrupted/hardlinked SDK refusal before execution, and stale version metadata |
+| Publication regressions | 35 passed, including missing, altered, duplicate and unbound binary provenance; no npm install required by the protected publisher |
+| Supported and complete npm audits | Both report zero vulnerabilities |
+| SDK identity | Official archive checksum matches the release manifest and GitHub asset digest; original executable checksum and actual Electron/Node/Chromium versions match the reviewed source |
+| Unsigned Windows installer and package | Fresh 45.3.3 build passed fuses, ASAR integrity, native-provider hashes, source/runtime containment, branding/version and notices |
+| Packaged Quick Connect and passwords | 54 and 71 checks passed against the new production executable with disposable profiles and generated SSH peers |
+| Exact-ASAR confirmations and startup updater | 48 and 13 checks passed under the verified 45.3.3 SDK; memory-only clipboard, controlled update transport and inert handoff |
+| Fresh-launcher negative control | With npm's generated path.txt temporarily absent, all confirmation/startup/spelling fixtures passed using the directly verified Windows executable; the original generated file was restored |
+| Inventories | 283 unique full / 12 runtime SPDX entries, including separate official Electron binary provenance; ten runtime JavaScript notices unchanged |
+
+The application checks actual runtime identity before opening user data; SDK acceptance checks its actual runtime independently. Neither an old npm launcher nor a packaging-only version override can silently validate the wrong SDK. No existing user application, profile, credential, remote session or system security setting was changed. Full hosted native handoff, consoles and real-installer acceptance must pass for the exact candidate before merging; the pull request records those later receipts. Real UAC/alternate-account, physical clipboard and other manual acceptance limitations remain explicit.
+
+Local unsigned candidate hashes (not official release assets): installer `0a9ec14841086a0cb691e3a0043cc16c4bc6b126f959bb21583b3e4240562c12`; app.asar `da0ffe878b22ffaeeead48a24ea247b7024b3bf9b77d5c11897f5237e3d76abf`.
+
+---
+
+# Earlier 1.2.10 candidate — Electron 45.3.2
+
+Local evidence collected November 14, 2026, on Windows 11 x64 with Node 22.23.5 and npm 10.9.9. The candidate starts from official main `3cc4049` on `codex/november-dependency-security`, selects Electron 45.3.2 and ASAR 4.3.2, and preserves the reviewed node-pty beta.18/native-provider pins. The standalone Node ZIP was verified against the official SHA-256 manifest and used only as project-local tooling.
+
+| Check | Measured local result |
+| --- | --- |
+| Fresh supported dependency install | Passed with lifecycle scripts enabled and optional packages omitted; all 19 optional lockfile placements verified absent |
+| Supported and complete npm lockfile audits | Both report zero vulnerabilities at all severities; the baseline full lockfile also reported zero |
+| Complete dependency install and optional proxy | Disposable script-disabled complete installation passed; actual bootstrap, loopback forwarding, cache reuse, NO_PROXY, checksum and non-origin URL refusal passed; roarr/sprintf-js absent |
+| Source/publication and Windows helper | Source checks and publication regressions passed; Windows helper parses successfully |
+| Full Windows regression suite | 1,137 passed, zero failures, two skips of 1,139: macOS-only ASAR merger and unavailable file-symlink privilege |
+| Build-consumer and Node security-floor regressions | Nine passed, zero failed, one macOS-only ASAR-merger skip of ten; actual ASAR/builder behavior, hostile patterns, cancellation and old/prerelease Node rejection covered |
+| Real appliance SSH integration | Two tests passed, including 300 authentication/lifecycle/failure cycles; zero automatic input, exec/subsystem requests or retained sockets, channels, secrets, tasks and prompts |
+| Fresh unsigned Windows installer | Built successfully; exact-package branding/version, fuses, ASAR integrity, native hashes and JavaScript containment passed |
+| Packaged notices | Project license, ten exact packaged JavaScript license files and Electron/Chromium notices verified |
+| Packaged Quick Connect | 54 checks passed against the production Windows executable and generated SSH peers |
+| Packaged remembered passwords | 71 checks passed, including Windows-protected storage, restart, identity binding, rejection eviction and no renderer/plaintext disclosure |
+| Exact-ASAR shared confirmations | 48 checks passed under the pinned Windows SDK with a memory-only clipboard; stale/disconnected destinations receive no input |
+| Exact-ASAR updater startup | 13 checks passed for pointer decline/approval and bad-checksum refusal; controlled transport and inert handoff |
+| Packaged per-pane acceptance | 230 checks passed, including SSH/SFTP, compact file-panel scrolling, workbench, PowerShell/PowerShell 7/CMD, Unicode, resize, Ctrl+C, natural exit, baud requests and scoped disconnect confirmation |
+| Native console bridge | Passed owned helper/native hash, Unicode/editing, resize, Ctrl+C, exit and failure cleanup cases against the exact ASAR; no UAC requested |
+| Scratchpad spelling/wrapping | 16 checks passed under Electron 45.3.2 / Chromium 156.0.8078.100; no external HTTP(S) request or dictionary download |
+| Dependency inventories | Regenerated with project-local npm 12.2.2: 282 unique full SPDX entries, 11 runtime entries and ten runtime notices; runtime package versions and notice text unchanged. The Node ZIP's bundled npm 10.9.9 emitted duplicate SPDX IDs, so that output was replaced |
+| Inventory negative control | npm 10.9.9 output is rejected for duplicate SPDX IDs before overwriting the prior inventory; the exact pinned npm 12.2.2 workflow command succeeds. All Windows generation steps use this pin |
+
+The complete native updater-handoff fixture did **not** pass: it completed ten setup/probe checks, then correctly refused preparation because the existing installed NerdSSHell instance is outside the fixture's owned process tree. It reported `Another application instance is running`, performed zero registry operations/process kills, and cleaned every owned process and temporary directory. No installed application was closed or modified. This conservative refusal is not a successful update-handoff acceptance receipt. Repeat the complete fixture in the disposable Windows CI environment, along with the required real-installer acceptance. No local NSIS installation, real upgrade, genuine UAC, physical clipboard or full OpenSSH/tmux acceptance is claimed.
+
+**Outstanding security update:** Electron 45.3.3 is announced with Node 24.22.3 and has official Windows binaries, but its npm package/version metadata returns 404 at this checkpoint. The validated 45.3.2 runtime still embeds Node 24.22.2. The November Node runtime fixes remain pending, despite the patched build Node and clean npm audit; see [dependency maintenance](DEPENDENCIES.md#verified-binary-runtime-and-separate-npm-launcher). The candidate is not release-ready until this gap and exact-head protected/hosted acceptance are resolved. No release, tag, installed user copy or repository protection was changed.
+
+Local unsigned candidate hashes, distinct from any official release:
+
+- Installer `NerdSSHell-1.2.10-x64-Setup.exe`: `6be8719b998fc83fb638e7e38ae616fca7b80fe5d4c88e0cc2f87268f01a260e`.
+- `app.asar`: `d79a727e8f3f4a2cfc1147f03fb0e08956764874384b82112831e9910865d421`.
+
+---
+
 # Version 1.2.9 dependency security and AGPLv3 validation
 
 Local evidence collected November 7, 2026, on Linux x64 with Node 24.22.1 and npm 11.9.0. The dependency/licensing work started from main `a8a94c78f2d0caf9fd877e75bd405c3edee1b37b`; the compact-panel follow-up starts from its merged main commit `63d69c0b2d0b28043bc101263ca4d0d26bcc093f`. The candidate uses Electron 44.10.2, node-pty 1.2.0-beta.18 and electron-builder 26.18.1. These results identify local candidates; protected checks, native Windows acceptance and official publication remain separate gates.

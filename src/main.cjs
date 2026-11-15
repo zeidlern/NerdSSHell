@@ -1,5 +1,6 @@
 'use strict';
 const { app, BrowserWindow, ipcMain, dialog: nativeDialog, clipboard, Menu, shell, protocol, net, Notification, session, safeStorage } = require('electron');
+if (process.versions?.electron) require('./runtime-identity.cjs').assertRuntime(process.versions, require('../package.json').electronRuntime);
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');

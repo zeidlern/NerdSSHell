@@ -21,6 +21,9 @@ async function verify(directory) {
   assert.equal(sourceMetadata.build.nsis.guid, INSTALLER_GUID, 'Original installer upgrade identity must remain pinned');
   assert.equal(asar.extractFile(archive, 'src/application-identity.cjs').toString('utf8'), fs.readFileSync(path.join(__dirname, '..', 'src/application-identity.cjs'), 'utf8'), 'Packaged data compatibility selector differs from reviewed source');
   assert.equal(packagedMetadata.version, sourceMetadata.version, 'Packaged application version differs from source');
+  assert.deepEqual(packagedMetadata.electronRuntime, sourceMetadata.electronRuntime, 'Packaged runtime provenance differs from source');
+  assert.equal(sourceMetadata.build.electronVersion, sourceMetadata.electronRuntime.version, 'Builder and runtime pins differ');
+  assert.ok(asar.extractFile(archive, 'src/runtime-identity.cjs').equals(fs.readFileSync(path.join(__dirname, '..', 'src/runtime-identity.cjs'))), 'Packaged runtime identity guard differs from source');
   for (const name of ['src/main.cjs', 'src/release-updater.cjs', 'src/release-transport.cjs', 'src/update-handoff.cjs', 'src/update-runner.ps1']) {
     assert.ok(asar.extractFile(archive, name).equals(fs.readFileSync(path.join(__dirname, '..', name))), `Packaged update source differs: ${name}`);
   }

@@ -15,7 +15,7 @@ const rootRequire = createRequire(path.join(root, 'package.json'));
 const builderRequire = createRequire(rootRequire.resolve('app-builder-lib/package.json'));
 const getRequire = createRequire(builderRequire.resolve('@electron/get'));
 const proxyPackage = getRequire('global-agent/package.json');
-assert.equal(proxyPackage.version, '4.1.3', 'Optional build proxy override must be installed');
+assert.equal(proxyPackage.version, '4.1.7', 'Optional build proxy override must be installed');
 assert.equal(builderRequire('@electron/get/package.json').version, '3.1.0');
 assert.throws(() => getRequire.resolve('roarr'), { code: 'MODULE_NOT_FOUND' });
 assert.throws(() => getRequire.resolve('sprintf-js'), { code: 'MODULE_NOT_FOUND' });

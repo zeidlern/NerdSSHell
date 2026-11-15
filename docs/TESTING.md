@@ -24,6 +24,8 @@ npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs
 npm.cmd run dist
 npm.cmd run verify:package
 node .\scripts\Verify-Notices.cjs
+node .\scripts\Prepare-Electron-SDK.cjs
+$env:ELECTRON_OVERRIDE_DIST_PATH = Join-Path $PWD ('.local/electron-sdk-' + (Get-Content package.json -Raw | ConvertFrom-Json).electronRuntime.version + '-win32-x64')
 node .\scripts\Elevated-Console-Smoke.cjs --asar dist/win-unpacked/resources/app.asar
 node .\scripts\Packaged-Password-Smoke.cjs
 node .\scripts\Packaged-Confirmation-Smoke.cjs

@@ -194,6 +194,7 @@ function candidateController(archive, plan, output) {
   };
 }
 async function runCandidateController() {
+  require('./lib/electron-sdk.cjs').assertVersions(process.versions);
   hostedEnvironment();
   assert.equal(process.argv[2], '--candidate-controller'); const file = process.argv[3];
   const directory = fs.realpathSync.native(path.dirname(file));

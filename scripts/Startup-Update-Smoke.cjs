@@ -3,6 +3,7 @@
 // No user profile, registry, real installer, external request or clipboard use.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict'),{spawn}=require('node:child_process'),{createHash}=require('node:crypto');
 const root=path.resolve(__dirname,'..'),args=process.argv.slice(2),at=name=>{const n=args.indexOf(name);return n<0?undefined:args[n+1]};
+if(process.versions.electron)require('./lib/electron-sdk.cjs').assertVersions(process.versions);
 const output=path.resolve(at('--output')||path.join(root,'.local','startup-update-ui'));
 if(!process.versions.electron){
  (async()=>{fs.mkdirSync(output,{recursive:true});for(const scenario of ['decline','accept','bad-hash']){

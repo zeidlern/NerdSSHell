@@ -2,7 +2,8 @@
 
 ## 1.2.10 — November dependency maintenance
 
-- Update Electron to 45.3.2, the newest npm-published stable runtime available during validation, including Chromium 156.0.8078.100 and upstream security backports. Electron 45.3.3 is announced with Node 24.22.3, but its npm package is not yet available; the November embedded-Node security update remains outstanding. See [dependency maintenance](docs/DEPENDENCIES.md).
+- Ship official Electron 45.3.3 with Node 24.22.3 and Chromium 156.0.8078.100, including the November Node security fixes and upstream security backports. Pin the official Windows archive SHA-256 independently of the npm launcher package, whose latest available version remains 45.3.2 at this review.
+- Prepare a separately verified 45.3.3 SDK for development and Windows acceptance. Check the actual Electron, Node and Chromium versions before application startup and SDK tests; reject an older runtime, corrupted SDK or missing/altered binary inventory provenance. Preserve existing installer, data and session identity.
 - Require patched source-build Node 22.23.5+ or 24.22.3+ within the supported major lines, pin CI to 22.23.5, and add regressions rejecting earlier security levels and prereleases.
 - Update ASAR to 4.3.2, the optional build proxy to global-agent 4.1.7, minimatch to 11.0.8, and compatible locked transitive dependencies. Remove the glob override because ASAR now declares a patched version range; retain the remaining scoped security overrides and adversarial build-consumer tests.
 - Refresh dependency inventories and notices. Pin inventory generation to npm 12.2.2 and reject duplicate SPDX package IDs before writing an inventory. Actual Windows validation and remaining release gates are recorded in [validation results](docs/VALIDATION.md).

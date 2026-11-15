@@ -2,6 +2,7 @@
 // Isolated Windows/Electron spelling acceptance. Hidden window, synthetic notes,
 // disposable user data, no shells, and all external requests are intercepted.
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), assert = require('node:assert/strict');
+if (process.versions.electron) require('./lib/electron-sdk.cjs').assertVersions(process.versions);
 if (!process.versions.electron) {
   const { spawn } = require('node:child_process');
   const output = path.resolve(process.argv[2] || path.join(__dirname, '..', '.local', 'scratchpad-spelling-smoke'));

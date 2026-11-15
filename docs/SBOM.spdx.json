@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "nerdsshell@1.2.10",
-  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.10-1f8898d6-1b2d-4f25-9c13-0367cae9b3f4",
+  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.10-1e5818ec-1b6c-4a4c-b97a-1c88405360ec",
   "creationInfo": {
-    "created": "2026-11-15T01:41:26.121Z",
+    "created": "2026-11-15T02:05:58.045Z",
     "creators": [
       "Tool: npm/cli-12.2.2"
     ]
@@ -6495,6 +6495,31 @@
           "checksumValue": "ad592cbec9cd09d27fa2119ceb180fc3237c7a1782c6c88b33c9b1b84fedfe6395a897b03ee3b59a22e94c74224604ca08b7b12f831e00555a82db3b1e6359d9"
         }
       ]
+    },
+    {
+      "name": "Electron Windows x64 runtime",
+      "SPDXID": "SPDXRef-Electron-Runtime-45.3.3-win32-x64",
+      "versionInfo": "45.3.3",
+      "packageFileName": "electron-v45.3.3-win32-x64.zip",
+      "downloadLocation": "https://github.com/electron/electron/releases/download/v45.3.3/electron-v45.3.3-win32-x64.zip",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "APPLICATION",
+      "licenseDeclared": "NOASSERTION",
+      "licenseComments": "Electron is MIT-licensed; Chromium and bundled dependencies have separate notices in LICENSE.electron.txt and LICENSES.chromium.html.",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "49dd2d3875944f08de03d34595cd30093c588b9edcabb41a0ac481028a3a5a8a"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:generic/electron@45.3.3?arch=x64&os=windows"
+        }
+      ],
+      "sourceInfo": "Official Electron distribution: Node.js 24.22.3, Chromium 156.0.8078.100; electron.exe SHA-256 cf7ff337d82f32a437d315721ef361f53a8473905a655a0c650967a66ccd0724. npm electron@45.3.2 is the separate launcher/download wrapper."
     }
   ],
   "relationships": [
@@ -8922,6 +8947,11 @@
       "spdxElementId": "SPDXRef-Package-yargs-parser-21.1.1",
       "relatedSpdxElement": "SPDXRef-Package-yargs-17.7.3",
       "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Electron-Runtime-45.3.3-win32-x64",
+      "relationshipType": "DEPENDS_ON"
     }
   ]
 }

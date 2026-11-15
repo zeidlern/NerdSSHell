@@ -7,6 +7,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { REPO, WORKFLOWS, versionFromTag, compareVersions, validateSource, validateRun, selectRuns,
   validateJobs, validateArtifact, validateAssets, validateInventory, createClient, findRelease, createPublisher } = require('../scripts/Publish-Release.cjs');
+const { runtimePackage, addRuntime } = require('../scripts/lib/electron-inventory.cjs');
 const base = `/repos/${REPO}`, sha = '1'.repeat(40), mainSha = '2'.repeat(40), version = '2.3.4', tag = 'v' + version;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const lock = { name: 'nerdsshell', version, packages: {
@@ -14,10 +15,17 @@ const lock = { name: 'nerdsshell', version, packages: {
   'node_modules/dev': { version: '2.0.0', dev: true }, 'node_modules/optional': { version: '3.0.0', optional: true }
 } };
 const pkg = { name: 'nerdsshell', version };
-const inventory = runtime => ({ spdxVersion: 'SPDX-2.3', name: `nerdsshell@${version}`, packages: [
-  { name: 'nerdsshell', versionInfo: version }, { name: 'runtime', versionInfo: '1.0.0' },
-  ...(runtime ? [] : [{ name: 'dev', versionInfo: '2.0.0' }, { name: 'optional', versionInfo: '3.0.0' }])
-] });
+const runtimeSource = () => ({ ...pkg, devDependencies: { electron: '45.3.2' },
+  electronRuntime: { version: '45.3.3', node: '24.22.3', chrome: '156.0.8078.100', executableSha256: 'b'.repeat(64) },
+  build: { electronVersion: '45.3.3', electronDownload: { checksums: { 'electron-v45.3.3-win32-x64.zip': 'a'.repeat(64) } } } });
+function inventory(runtime, metadata = null) {
+  const doc = { spdxVersion: 'SPDX-2.3', name: `nerdsshell@${version}`, packages: [
+    { name: 'nerdsshell', versionInfo: version }, { name: 'runtime', versionInfo: '1.0.0' },
+    ...(runtime ? [] : [{ name: 'dev', versionInfo: '2.0.0' }, { name: 'optional', versionInfo: '3.0.0' }])
+  ].map((entry, index) => ({ ...entry, SPDXID: `SPDXRef-Package-${index}` })), relationships: [] };
+  if (metadata) addRuntime(doc, metadata);
+  return doc;
+}
 function run(workflow = 'build.yml', id = 1) {
   return { id, head_sha: sha, head_branch: 'main', head_repository: { full_name: REPO }, event: 'push',
     path: `.github/workflows/${workflow}`, status: 'completed', conclusion: 'success', run_attempt: 1,
@@ -31,20 +39,21 @@ function artifact(selected = run()) {
   return { id: 10, name: 'NerdSSHell-Windows-x64', expired: false, size_in_bytes: 42,
     created_at: '2026-10-14T00:01:00Z', workflow_run: { id: selected.id, head_sha: selected.head_sha, head_branch: 'main' } };
 }
-function fixture(t, { published = false, draft = false, newer = false } = {}) {
+function fixture(t, { published = false, draft = false, newer = false, binaryRuntime = false } = {}) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-publication-'));
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const eventPath = path.join(temp, 'event.json'); fs.writeFileSync(eventPath, JSON.stringify({ inputs: { tag } }));
   const env = { RUNNER_TEMP: temp, GITHUB_REPOSITORY: REPO, GITHUB_EVENT_NAME: 'workflow_dispatch',
     GITHUB_REF: 'refs/heads/main', GITHUB_EVENT_PATH: eventPath };
-  const files = { 'package.json': JSON.stringify(pkg), 'package-lock.json': JSON.stringify(lock),
+  const sourcePkg = binaryRuntime ? runtimeSource() : pkg;
+  const files = { 'package.json': JSON.stringify(sourcePkg), 'package-lock.json': JSON.stringify(lock),
     'CHANGELOG.md': `# Changelog\n\n## ${version} — New fix\n\n- A meaningful fix.\n\n## 2.3.3\n\n- Prior fix.\n`,
     LICENSE: 'The exact source license\n', 'docs/THIRD-PARTY-NOTICES.md': 'The exact source notices\n' };
   const payloads = {
     [`NerdSSHell-${version}-x64-Setup.exe`]: Buffer.from('Accepted Windows installer'),
     [`NerdSSHell-user-manual-${version}.zip`]: Buffer.from('Deterministic tracked manual archive'),
-    'LICENSE.txt': Buffer.from(files.LICENSE), 'SBOM.spdx.json': Buffer.from(JSON.stringify(inventory(false))),
-    'SBOM-runtime.spdx.json': Buffer.from(JSON.stringify(inventory(true))),
+    'LICENSE.txt': Buffer.from(files.LICENSE), 'SBOM.spdx.json': Buffer.from(JSON.stringify(inventory(false, sourcePkg))),
+    'SBOM-runtime.spdx.json': Buffer.from(JSON.stringify(inventory(true, sourcePkg))),
     'THIRD-PARTY-NOTICES.md': Buffer.from(files['docs/THIRD-PARTY-NOTICES.md'])
   };
   payloads['SHA256SUMS.txt'] = Buffer.from(Object.keys(payloads).sort().map(name => `${hash(payloads[name])}  ${name}\n`).join(''));
@@ -161,6 +170,74 @@ test('inventories bind full and runtime package/version sets to exact tagged loc
   assert.throws(() => validateInventory(JSON.stringify(inventory(false)), version, lock, true));
   const changed = inventory(false); changed.packages[1].versionInfo = '9.0.0';
   assert.throws(() => validateInventory(JSON.stringify(changed), version, lock, false));
+});
+test('both inventories identify the official binary runtime separately from its npm launcher', () => {
+  const metadata = runtimeSource(), binary = runtimePackage(metadata);
+  assert.equal(binary.versionInfo, '45.3.3');
+  assert.equal(binary.downloadLocation, 'https://github.com/electron/electron/releases/download/v45.3.3/electron-v45.3.3-win32-x64.zip');
+  assert.deepEqual(binary.checksums, [{ algorithm: 'SHA256', checksumValue: 'a'.repeat(64) }]);
+  assert.ok(binary.sourceInfo.includes('Node.js 24.22.3') && binary.sourceInfo.includes('npm electron@45.3.2'));
+  for (const runtime of [false, true]) {
+    const doc = inventory(runtime, metadata);
+    validateInventory(JSON.stringify(doc), version, lock, runtime, metadata);
+    assert.throws(() => validateInventory(JSON.stringify(doc), version, lock, runtime));
+    assert.throws(() => validateInventory(JSON.stringify(inventory(runtime)), version, lock, runtime, metadata));
+    assert.throws(() => addRuntime(doc, metadata), /already inventoried/);
+  }
+});
+test('publisher rejects altered, duplicate or unbound binary provenance', () => {
+  const metadata = runtimeSource();
+  const changes = [
+    doc => doc.packages.at(-1).versionInfo = '45.3.2',
+    doc => doc.packages.at(-1).downloadLocation = 'https://untrusted.example/electron.zip',
+    doc => doc.packages.at(-1).checksums[0].checksumValue = 'c'.repeat(64),
+    doc => doc.packages.at(-1).checksums[0].algorithm = 'SHA1',
+    doc => doc.packages.at(-1).sourceInfo = 'A different embedded Node version or executable',
+    doc => doc.packages.at(-1).SPDXID += '-substituted',
+    doc => doc.packages.push(structuredClone(doc.packages.at(-1))),
+    doc => doc.relationships = [],
+    doc => doc.relationships.push(structuredClone(doc.relationships.at(-1))),
+    doc => doc.relationships.at(-1).spdxElementId = 'SPDXRef-Foreign-Application'
+  ];
+  for (const runtime of [false, true]) for (const change of changes) {
+    const doc = inventory(runtime, metadata); change(doc);
+    assert.throws(() => validateInventory(JSON.stringify(doc), version, lock, runtime, metadata));
+  }
+});
+test('explicit runtime metadata cannot omit hashes or disagree with the builder version', () => {
+  const changes = [
+    metadata => delete metadata.electronRuntime,
+    metadata => metadata.build.electronVersion = '45.3.2',
+    metadata => metadata.electronRuntime.version = '45.3.3-beta.1',
+    metadata => metadata.electronRuntime.node = '24.22.3-rc.1',
+    metadata => metadata.electronRuntime.chrome = '156.0.8078',
+    metadata => metadata.electronRuntime.executableSha256 = 'not a checksum',
+    metadata => metadata.devDependencies.electron = '^45.3.2',
+    metadata => delete metadata.build.electronDownload.checksums['electron-v45.3.3-win32-x64.zip'],
+    metadata => metadata.build.electronDownload.checksums['electron-v45.3.3-win32-x64.zip'] = 'A'.repeat(64)
+  ];
+  for (const change of changes) {
+    const metadata = runtimeSource(); change(metadata);
+    assert.throws(() => validateSource(metadata, lock, `## ${version}\n\n- Fix.\n`, tag));
+  }
+  assert.equal(runtimePackage(pkg), null, 'Historical tags retain their original inventory contract');
+});
+test('runtime publication accepts canonical inventories and refuses substituted bytes before draft creation', async t => {
+  {
+    const { publisher, state } = fixture(t, { binaryRuntime: true });
+    await publisher.prepare(); await publisher.publish();
+    assert.equal(state.release?.draft, false, 'Canonical runtime inventory survives preparation, publication and public byte verification');
+  }
+  {
+    const { publisher, state } = fixture(t, { binaryRuntime: true });
+    state.downloadedChange = directory => {
+      const doc = inventory(true, runtimeSource()); doc.packages.at(-1).checksums[0].checksumValue = 'f'.repeat(64);
+      fs.writeFileSync(path.join(directory, 'docs', 'SBOM-runtime.spdx.json'), JSON.stringify(doc));
+    };
+    await assert.rejects(publisher.prepare());
+    assert.equal(state.release, null, 'Runtime substitution cannot create a release draft');
+    assert.ok(state.calls.every(call => !call.method), 'Runtime substitution performs no release write');
+  }
 });
 test('release assets reject replacements, duplicates and unexpected draft files', () => {
   const expected = [{ name: 'installer.exe', size: 42, sha256: 'a'.repeat(64) }];

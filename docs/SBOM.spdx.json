@@ -2,22 +2,22 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "nerdsshell@1.2.9",
-  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.9-222d3972-47c6-4f4a-907e-d209de92782c",
+  "name": "nerdsshell@1.2.10",
+  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.10-13d25073-2b3a-4aaa-bd0b-464f865460de",
   "creationInfo": {
-    "created": "2026-11-07T19:45:29.721Z",
+    "created": "2026-11-15T01:30:43.199Z",
     "creators": [
-      "Tool: npm/cli-11.9.0"
+      "Tool: npm/cli-12.2.2"
     ]
   },
   "documentDescribes": [
-    "SPDXRef-Package-nerdsshell-1.2.9"
+    "SPDXRef-Package-nerdsshell-1.2.10"
   ],
   "packages": [
     {
       "name": "nerdsshell",
-      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.9",
-      "versionInfo": "1.2.9",
+      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.10",
+      "versionInfo": "1.2.10",
       "packageFileName": "",
       "description": "NerdSSHell — Built for Windows nerds with Linux problems",
       "primaryPackagePurpose": "APPLICATION",
@@ -29,39 +29,16 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/nerdsshell@1.2.9"
+          "referenceLocator": "pkg:npm/nerdsshell@1.2.10"
         }
       ]
     },
     {
       "name": "@electron-internal/extract-zip",
-      "SPDXID": "SPDXRef-Package-electron-internal.extract-zip-1.0.5",
-      "versionInfo": "1.0.5",
+      "SPDXID": "SPDXRef-Package-electron-internal.extract-zip-1.0.8",
+      "versionInfo": "1.0.8",
       "packageFileName": "node_modules/@electron-internal/extract-zip",
-      "downloadLocation": "https://registry.npmjs.org/@electron-internal/extract-zip/-/extract-zip-1.0.5.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "BSD-2-Clause",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40electron-internal/extract-zip@1.0.5"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "f9ba8508ff7ca4b2344edd17428d539a55edc2359c8484a77433b10a411c22e5205d6a419cbc9123ed8353e99eb2f9cc317e8bd570ea60d0349573431ddff288"
-        }
-      ]
-    },
-    {
-      "name": "@electron/asar",
-      "SPDXID": "SPDXRef-Package-electron.asar-4.3.1",
-      "versionInfo": "4.3.1",
-      "packageFileName": "node_modules/@electron/asar",
-      "downloadLocation": "https://registry.npmjs.org/@electron/asar/-/asar-4.3.1.tgz",
+      "downloadLocation": "https://registry.npmjs.org/@electron-internal/extract-zip/-/extract-zip-1.0.8.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -69,36 +46,36 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40electron/asar@4.3.1"
+          "referenceLocator": "pkg:npm/%40electron-internal/extract-zip@1.0.8"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "ea923ae33fed31206451364b405621b3662207b7d2f6c280ea0cbbff69c7d49bbb186c13df650fb23e0cc6cc2ce4d326b51e82d3361d5d5c4453fac6a8944224"
+          "checksumValue": "f226a378b15bccdc0cd26dc0b106526606111168250089b21afbc5496537e0580c5bcb079737708fd40abeff5d80dee330fe7dd4415417fb0b382dc997d6088d"
         }
       ]
     },
     {
-      "name": "glob",
-      "SPDXID": "SPDXRef-Package-glob-14.0.4",
-      "versionInfo": "14.0.4",
-      "packageFileName": "node_modules/@electron/asar/node_modules/glob",
-      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-14.0.4.tgz",
+      "name": "@electron/asar",
+      "SPDXID": "SPDXRef-Package-electron.asar-4.3.2",
+      "versionInfo": "4.3.2",
+      "packageFileName": "node_modules/@electron/asar",
+      "downloadLocation": "https://registry.npmjs.org/@electron/asar/-/asar-4.3.2.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
-      "licenseDeclared": "BlueOak-1.0.0",
+      "licenseDeclared": "MIT",
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/glob@14.0.4"
+          "referenceLocator": "pkg:npm/%40electron/asar@4.3.2"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "98c8b034aa096781c0211549c68b4ee8bb0d451780df4810c0ff44dbfa7de2d7cbbfe8f28023692838e18522fa38b63a2c4dfbd44666e4401fed1a58b94aa5b3"
+          "checksumValue": "da7c323b73a098b8246107ba4f307c166cab04a1a0997cd23b9d68ce81b60691ce2cf4cf750a41b7fcc3d0c74f92142be14a95830deed3dcb8b98c6064a866b6"
         }
       ]
     },
@@ -310,29 +287,6 @@
       ]
     },
     {
-      "name": "brace-expansion",
-      "SPDXID": "SPDXRef-Package-brace-expansion-1.1.21",
-      "versionInfo": "1.1.21",
-      "packageFileName": "node_modules/@electron/universal/node_modules/@electron/asar/node_modules/brace-expansion",
-      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-1.1.21.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/brace-expansion@1.1.21"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "f73780f8a2d934dce0945d933ca450103cb1e986f2edd68092ecbc3223f3a573ec6035a2fc344cf239b0503c689108d8a81a6fe4380f8b00f88786594b2d548f"
-        }
-      ]
-    },
-    {
       "name": "minimatch",
       "SPDXID": "SPDXRef-Package-minimatch-3.1.5",
       "versionInfo": "3.1.5",
@@ -379,6 +333,29 @@
       ]
     },
     {
+      "name": "brace-expansion",
+      "SPDXID": "SPDXRef-Package-brace-expansion-1.1.22",
+      "versionInfo": "1.1.22",
+      "packageFileName": "node_modules/@electron/universal/node_modules/brace-expansion",
+      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-1.1.22.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/brace-expansion@1.1.22"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "08a2c34ee4ac374fabd5384cd16933cc123b7673c8eb11067dafc99d56082bd24d040d4dd4dc8fc17547a2bfff34a0ffcb7b03c69efae2c65d2e114aee91fc5d"
+        }
+      ]
+    },
+    {
       "name": "commander",
       "SPDXID": "SPDXRef-Package-commander-5.1.0",
       "versionInfo": "5.1.0",
@@ -421,6 +398,29 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "29801be1cf4125023a42a18ab6157af0e1ded1b69dced7572562a8d16b4103d22e0853d32af13965d5018253fcdf768c8e16923cd3b80398ff124cd9b4694a8c"
+        }
+      ]
+    },
+    {
+      "name": "glob",
+      "SPDXID": "SPDXRef-Package-glob-7.2.3",
+      "versionInfo": "7.2.3",
+      "packageFileName": "node_modules/@electron/universal/node_modules/glob",
+      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-7.2.3.tgz",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/glob@7.2.3"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "9c5474ccba54d9809a471c28089bcbe94bc21f6245c85548bf04cbb087f6d40b8794cb240358614dd93e2e5609b4e958b7dbfa76fb330f604646a04bfa240af5"
         }
       ]
     },
@@ -840,10 +840,10 @@
     },
     {
       "name": "@types/node",
-      "SPDXID": "SPDXRef-Package-types.node-24.19.0",
-      "versionInfo": "24.19.0",
+      "SPDXID": "SPDXRef-Package-types.node-24.19.2",
+      "versionInfo": "24.19.2",
       "packageFileName": "node_modules/@types/node",
-      "downloadLocation": "https://registry.npmjs.org/@types/node/-/node-24.19.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/@types/node/-/node-24.19.2.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -851,13 +851,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/%40types/node@24.19.0"
+          "referenceLocator": "pkg:npm/%40types/node@24.19.2"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "cd8fb9b4ac577611a1d4f608d1a73eee3baf12ee0e23abd6b555688f98b69b8da3c4063553ecc71ade900b2385c3291d3fadac337309f6cb68618530e5a0967b"
+          "checksumValue": "f77778f700962640b237ceccc4ba4d37a2973c2c05c3b6d5520efd986515d4e4b8d09196c150abf27eb50d7092ab3ec257afd57cf91bef179ceee3f633e40759"
         }
       ]
     },
@@ -1208,10 +1208,10 @@
     },
     {
       "name": "semver",
-      "SPDXID": "SPDXRef-Package-semver-6.3.1",
-      "versionInfo": "6.3.1",
+      "SPDXID": "SPDXRef-Package-semver-6.3.2",
+      "versionInfo": "6.3.2",
       "packageFileName": "node_modules/app-builder-lib/node_modules/@electron/get/node_modules/semver",
-      "downloadLocation": "https://registry.npmjs.org/semver/-/semver-6.3.1.tgz",
+      "downloadLocation": "https://registry.npmjs.org/semver/-/semver-6.3.2.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "ISC",
@@ -1219,13 +1219,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/semver@6.3.1"
+          "referenceLocator": "pkg:npm/semver@6.3.2"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "051ed5bc30951cefaadb10445ac9314ba0c9135a919dbec3c7352ba206fbd425a849f89c07162c88019df8a9749a6abf329ac6f7202b464cab4314cee978cccc"
+          "checksumValue": "198ac2003c29bbac95e4e02f721910dbb679c3033158010c83934d5a3c8787fe436e8145a9b75bbd8348bd9a2e429c57c9e30fa133a1d2f74f60a95fd19b3075"
         }
       ]
     },
@@ -1645,10 +1645,10 @@
     },
     {
       "name": "brace-expansion",
-      "SPDXID": "SPDXRef-Package-brace-expansion-5.0.12",
-      "versionInfo": "5.0.12",
+      "SPDXID": "SPDXRef-Package-brace-expansion-5.0.13",
+      "versionInfo": "5.0.13",
       "packageFileName": "node_modules/brace-expansion",
-      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.12.tgz",
+      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.13.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -1656,13 +1656,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/brace-expansion@5.0.12"
+          "referenceLocator": "pkg:npm/brace-expansion@5.0.13"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "628bd0debce168b308ac38cd0cc90d4b4d6d79af77aa11211b9c72f1febe47497e770dca8bee6c0a822823de368ae2d94c75a881692d830543854d3d88d12299"
+          "checksumValue": "561ddd9856dce3065ea31eccf48ff42fd19f15df374aee3ec82724fce17d1a2fcffdd0079f4453ed7e0af51ee030d3210dc9370ef851e905ec9d07638e0c0dbd"
         }
       ]
     },
@@ -1921,10 +1921,10 @@
     },
     {
       "name": "ci-info",
-      "SPDXID": "SPDXRef-Package-ci-info-4.4.0",
-      "versionInfo": "4.4.0",
+      "SPDXID": "SPDXRef-Package-ci-info-4.5.0",
+      "versionInfo": "4.5.0",
       "packageFileName": "node_modules/ci-info",
-      "downloadLocation": "https://registry.npmjs.org/ci-info/-/ci-info-4.4.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/ci-info/-/ci-info-4.5.0.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -1932,13 +1932,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/ci-info@4.4.0"
+          "referenceLocator": "pkg:npm/ci-info@4.5.0"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "efb3d2c1eadc09953615ce2c5fde1e17c93c3f1b5ee890302f8fc80992c58c92ea7a0b3b902b80b2aaa3ffbd0d405e93bc3a6016392e6d0076156d9965d76f42"
+          "checksumValue": "775b8cf24e54644c8fcdad67fcc1b7928f272aea4a374289a45b22a603dc81a082bd5f88a887c9f8dcd38deb652ccf94717671dfe70bacdafbebe7803bb1b533"
         }
       ]
     },
@@ -2588,10 +2588,10 @@
     },
     {
       "name": "electron",
-      "SPDXID": "SPDXRef-Package-electron-44.10.2",
-      "versionInfo": "44.10.2",
+      "SPDXID": "SPDXRef-Package-electron-45.3.2",
+      "versionInfo": "45.3.2",
       "packageFileName": "node_modules/electron",
-      "downloadLocation": "https://registry.npmjs.org/electron/-/electron-44.10.2.tgz",
+      "downloadLocation": "https://registry.npmjs.org/electron/-/electron-45.3.2.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -2599,13 +2599,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/electron@44.10.2"
+          "referenceLocator": "pkg:npm/electron@45.3.2"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "073f8657ef578fefb7456f793587f3a795a08af7fad418164cf071613394113cad541d6e2d400e752337f439ff5773c661e19313a2d87824d1e520a2bb7051d8"
+          "checksumValue": "6cf3b430cbc909d29d3df5e0777112f33ba9bbea1cafa5e64ae446c3265acd38a2813cfc8c4eebc2e91291c9348a8992e9465e16e0b0ceed2e6a7303fc3df8bb"
         }
       ]
     },
@@ -3071,10 +3071,10 @@
     },
     {
       "name": "brace-expansion",
-      "SPDXID": "SPDXRef-Package-brace-expansion-2.1.7",
-      "versionInfo": "2.1.7",
+      "SPDXID": "SPDXRef-Package-brace-expansion-2.1.8",
+      "versionInfo": "2.1.8",
       "packageFileName": "node_modules/filelist/node_modules/brace-expansion",
-      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-2.1.7.tgz",
+      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-2.1.8.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -3082,13 +3082,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/brace-expansion@2.1.7"
+          "referenceLocator": "pkg:npm/brace-expansion@2.1.8"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "b996dec3536a7663c34cc27c6a1d72f9bfbd40426b7e45c593745c4d0c375f48d6ff1454bc52ac83509f41d49819d4db5d9584c6d53727771cc6d9dfc35162d2"
+          "checksumValue": "067943cc3610a29953b194af3e2f3a08dce66dc6f4ed7f2e7d1f1f935ce2bda8842655c9922ab5310c830959a559cb166e3e9a597a879ebc307af6eb9bf49a8a"
         }
       ]
     },
@@ -3301,33 +3301,33 @@
     },
     {
       "name": "glob",
-      "SPDXID": "SPDXRef-Package-glob-7.2.3",
-      "versionInfo": "7.2.3",
+      "SPDXID": "SPDXRef-Package-glob-14.0.6",
+      "versionInfo": "14.0.6",
       "packageFileName": "node_modules/glob",
-      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-7.2.3.tgz",
+      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-14.0.6.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
-      "licenseDeclared": "ISC",
+      "licenseDeclared": "BlueOak-1.0.0",
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/glob@7.2.3"
+          "referenceLocator": "pkg:npm/glob@14.0.6"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "9c5474ccba54d9809a471c28089bcbe94bc21f6245c85548bf04cbb087f6d40b8794cb240358614dd93e2e5609b4e958b7dbfa76fb330f604646a04bfa240af5"
+          "checksumValue": "3b05e354fdacbd8e44c8b63be557a4f7a0bca8ae3782aaede31b19faa4882dd9da12224f5e477ada671f512371fd3404ad045dbb9b8ce6417aeec7ce36b6a02b"
         }
       ]
     },
     {
       "name": "global-agent",
-      "SPDXID": "SPDXRef-Package-global-agent-4.1.3",
-      "versionInfo": "4.1.3",
+      "SPDXID": "SPDXRef-Package-global-agent-4.1.7",
+      "versionInfo": "4.1.7",
       "packageFileName": "node_modules/global-agent",
-      "downloadLocation": "https://registry.npmjs.org/global-agent/-/global-agent-4.1.3.tgz",
+      "downloadLocation": "https://registry.npmjs.org/global-agent/-/global-agent-4.1.7.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "BSD-3-Clause",
@@ -3335,13 +3335,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/global-agent@4.1.3"
+          "referenceLocator": "pkg:npm/global-agent@4.1.7"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "2942445628ae153dc8f7bb7e19832290b3c94b62dfa3f4b617e0d0b815b3bb368c3e7bede72c9978fcc0af1dfa7c1ce9193c598c8a436d72dec922e087e93bea"
+          "checksumValue": "a71699a9db0cc0f0388bb4ee44aa4350e366db11918ef61d46889d090cfb565794295b947e1ff8a794374034c6ae9004e4acf94f1c5c67ebaa1204e4a0a44db6"
         }
       ]
     },
@@ -3416,24 +3416,24 @@
     },
     {
       "name": "graceful-fs",
-      "SPDXID": "SPDXRef-Package-graceful-fs-4.2.11",
-      "versionInfo": "4.2.11",
+      "SPDXID": "SPDXRef-Package-graceful-fs-4.2.12",
+      "versionInfo": "4.2.12",
       "packageFileName": "node_modules/graceful-fs",
-      "downloadLocation": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.11.tgz",
+      "downloadLocation": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.12.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
-      "licenseDeclared": "ISC",
+      "licenseDeclared": "BlueOak-1.0.0",
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/graceful-fs@4.2.11"
+          "referenceLocator": "pkg:npm/graceful-fs@4.2.12"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "45b279fe398570d342703579a3d7939c12c9fc7b33595d0fef76dcf857f89d2feb263f98692e881b288e2f45680585fe9755ab97793ade1fcaac7fa7849d17bd"
+          "checksumValue": "8aec86176138a1a7d07cfb11ac6db0b58d882eea4c86fb5dae1cebc41fb455c8ec3e948fb6da5f61d8e71851ac4e2e4c6891632358ce2873d0e944db4e3f5303"
         }
       ]
     },
@@ -4221,10 +4221,10 @@
     },
     {
       "name": "minimatch",
-      "SPDXID": "SPDXRef-Package-minimatch-11.0.5",
-      "versionInfo": "11.0.5",
+      "SPDXID": "SPDXRef-Package-minimatch-11.0.8",
+      "versionInfo": "11.0.8",
       "packageFileName": "node_modules/minimatch",
-      "downloadLocation": "https://registry.npmjs.org/minimatch/-/minimatch-11.0.5.tgz",
+      "downloadLocation": "https://registry.npmjs.org/minimatch/-/minimatch-11.0.8.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "BlueOak-1.0.0",
@@ -4232,13 +4232,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/minimatch@11.0.5"
+          "referenceLocator": "pkg:npm/minimatch@11.0.8"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "b273e5569a4571859f2cb1501a10f153205c1cdb4c9569a7de3b63ee911a3be0cff29a8bd08bc0cd784c6269f5cfd01236d826c0b05d17149fe2d31407439328"
+          "checksumValue": "9c542e6124d5ac6bf2b15069b39221fb405d9d814dfc28f70bcd7aafafa9ef22be147ad52c61383b837d005c3292b94d96f3361d8b7e45a775522ae8ea1f3c22"
         }
       ]
     },
@@ -4359,10 +4359,10 @@
     },
     {
       "name": "nan",
-      "SPDXID": "SPDXRef-Package-nan-2.29.0",
-      "versionInfo": "2.29.0",
+      "SPDXID": "SPDXRef-Package-nan-2.30.0",
+      "versionInfo": "2.30.0",
       "packageFileName": "node_modules/nan",
-      "downloadLocation": "https://registry.npmjs.org/nan/-/nan-2.29.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/nan/-/nan-2.30.0.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -4370,13 +4370,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/nan@2.29.0"
+          "referenceLocator": "pkg:npm/nan@2.30.0"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "1a51a4dc722f8ad6efb3e2d3de0e9750fd64a62aca36f98317017f6e6a3a5cd5926ff79812cfcee1b7e0204217099fa520e4d2e713700ef486330e8525d021b4"
+          "checksumValue": "3f99a8903912bc2181cfa9990c3ff697ec3d428202457742c99f4e34699378faf8d288a1260dcaa67d18537b7029de8f267c1294b05635078e4fac96115d9ce0"
         }
       ]
     },
@@ -5417,10 +5417,10 @@
     },
     {
       "name": "sanitize-filename",
-      "SPDXID": "SPDXRef-Package-sanitize-filename-1.6.4",
-      "versionInfo": "1.6.4",
+      "SPDXID": "SPDXRef-Package-sanitize-filename-1.6.5",
+      "versionInfo": "1.6.5",
       "packageFileName": "node_modules/sanitize-filename",
-      "downloadLocation": "https://registry.npmjs.org/sanitize-filename/-/sanitize-filename-1.6.4.tgz",
+      "downloadLocation": "https://registry.npmjs.org/sanitize-filename/-/sanitize-filename-1.6.5.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "WTFPL OR ISC",
@@ -5428,13 +5428,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/sanitize-filename@1.6.4"
+          "referenceLocator": "pkg:npm/sanitize-filename@1.6.5"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "f59c88d3c3ecbdd425dabfdb0481ae6e955d477451f6c63a44389614fade036d42fc41654219a0a36d1466536364c31936e6eeb0b840428ce403439de49db512"
+          "checksumValue": "f9d540a6de3afe80055913f42814a760d2d1c35a5e63ba3f6f5dad9a99653cd1698dfc243ee66eb75f8388a683f73631e6bd921f073e5cc2d205a0e2c94270de"
         }
       ]
     },
@@ -5463,10 +5463,10 @@
     },
     {
       "name": "semver",
-      "SPDXID": "SPDXRef-Package-semver-7.8.5",
-      "versionInfo": "7.8.5",
+      "SPDXID": "SPDXRef-Package-semver-7.8.6",
+      "versionInfo": "7.8.6",
       "packageFileName": "node_modules/semver",
-      "downloadLocation": "https://registry.npmjs.org/semver/-/semver-7.8.5.tgz",
+      "downloadLocation": "https://registry.npmjs.org/semver/-/semver-7.8.6.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "ISC",
@@ -5474,13 +5474,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/semver@7.8.5"
+          "referenceLocator": "pkg:npm/semver@7.8.6"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "63bfca0ec6fc2e3a28669c1aa86cae94ee8342592c8029dc7211c693eb19218e1206f52870c044147e54af57c8e1d57e26f974c3a723bee71a222e34a6e462a0"
+          "checksumValue": "f65a52494e0c972de6aedaeec0bb3578b2bafa0cdbcea78117044d8c88c4fbd2ee0e959d61cb6b4254377a3d489608bb8249e9b134673e82cff03a421ea1c827"
         }
       ]
     },
@@ -5808,10 +5808,10 @@
     },
     {
       "name": "tar",
-      "SPDXID": "SPDXRef-Package-tar-7.5.22",
-      "versionInfo": "7.5.22",
+      "SPDXID": "SPDXRef-Package-tar-7.5.23",
+      "versionInfo": "7.5.23",
       "packageFileName": "node_modules/tar",
-      "downloadLocation": "https://registry.npmjs.org/tar/-/tar-7.5.22.tgz",
+      "downloadLocation": "https://registry.npmjs.org/tar/-/tar-7.5.23.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "BlueOak-1.0.0",
@@ -5819,13 +5819,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/tar@7.5.22"
+          "referenceLocator": "pkg:npm/tar@7.5.23"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "3053bf433bed00e9896e484e6824ef6c670537d2fd6fe26e9c8b03c1a2a58d239d70b31e6b7349d64f54b33feb8dd7d25d3ab875fcdf792ed6e29e1838000778"
+          "checksumValue": "964ba4cdda069e06472595f15b84bf138169f608530e5c995eb40644da09fcb5ef0ca717513ab6b20e7241eef8a68ed5a1e6ba9ff20dd3dfb013f42f24c8a27c"
         }
       ]
     },
@@ -5923,10 +5923,10 @@
     },
     {
       "name": "semver",
-      "SPDXID": "SPDXRef-Package-semver-5.7.2",
-      "versionInfo": "5.7.2",
+      "SPDXID": "SPDXRef-Package-semver-5.7.3",
+      "versionInfo": "5.7.3",
       "packageFileName": "node_modules/tiny-async-pool/node_modules/semver",
-      "downloadLocation": "https://registry.npmjs.org/semver/-/semver-5.7.2.tgz",
+      "downloadLocation": "https://registry.npmjs.org/semver/-/semver-5.7.3.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "ISC",
@@ -5934,13 +5934,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/semver@5.7.2"
+          "referenceLocator": "pkg:npm/semver@5.7.3"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "701ce79d0f4a8c9a94ebb079d91302eb908c6ab2b6eb4d161676e471a8b05aadf1cbfe61685265b21827a63a2f31527e1df7f8f5df06127d1bf3b0b9a43435d2"
+          "checksumValue": "90cd7c04f3aa4e2d3e4c1ebcef4dff18946900c2f931ef880d0b11d49dba601dc414a28d1321c8559b960d7efe58a401ded1f00f0824db805f85da5651bcadbd"
         }
       ]
     },
@@ -6038,10 +6038,10 @@
     },
     {
       "name": "tslib",
-      "SPDXID": "SPDXRef-Package-tslib-2.8.1",
-      "versionInfo": "2.8.1",
+      "SPDXID": "SPDXRef-Package-tslib-2.9.1",
+      "versionInfo": "2.9.1",
       "packageFileName": "node_modules/tslib",
-      "downloadLocation": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+      "downloadLocation": "https://registry.npmjs.org/tslib/-/tslib-2.9.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "0BSD",
@@ -6049,13 +6049,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/tslib@2.8.1"
+          "referenceLocator": "pkg:npm/tslib@2.9.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "a0916ef781d06fe29576e49440bef09e99aa9df98bb0e03f9c087a6fa107d30084a0ad3f98f79753a737c0a0d5f373243ae1cf447b525ca294f7d2016b34bfdb"
+          "checksumValue": "6b8531f552ae20c1ec392ec435b12aea12b66466084f6ed1b65d04e1e0fd2aac3184a89078c644ffdc5bdc8758c166923b220140b1318508170d3628882c6758"
         }
       ]
     },
@@ -6107,10 +6107,10 @@
     },
     {
       "name": "undici",
-      "SPDXID": "SPDXRef-Package-undici-7.30.1",
-      "versionInfo": "7.30.1",
+      "SPDXID": "SPDXRef-Package-undici-7.30.2",
+      "versionInfo": "7.30.2",
       "packageFileName": "node_modules/undici",
-      "downloadLocation": "https://registry.npmjs.org/undici/-/undici-7.30.1.tgz",
+      "downloadLocation": "https://registry.npmjs.org/undici/-/undici-7.30.2.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -6118,13 +6118,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/undici@7.30.1"
+          "referenceLocator": "pkg:npm/undici@7.30.2"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "d372ab31b8c814359047944d3eb4b0ddb775af5d89a7215097dff2c6351b26daa48e6965a82e65163661eae8deb8908aafc10e42f456f3bd8ecbf6b3fa72d8c6"
+          "checksumValue": "98bc8f4271f053168cfeb89d7a82bff8a2fc0da0092d197868109f997e38e1a0922e721aa26a8f2ed3517b68dd09872c939c19cd7ac32100bc65e60d44063220"
         }
       ]
     },
@@ -6500,82 +6500,67 @@
   "relationships": [
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DESCRIBES"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.xterm-6.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-fit-0.11.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-search-0.16.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ssh2-1.17.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-node-pty-1.2.0-beta.18",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron.asar-4.3.1",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "spdxElementId": "SPDXRef-Package-electron.asar-4.3.2",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.fuses-2.1.3",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron-44.10.2",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "spdxElementId": "SPDXRef-Package-electron-45.3.2",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron-builder-26.18.1",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-resedit-3.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-glob-14.0.4",
-      "relatedSpdxElement": "SPDXRef-Package-electron.asar-4.3.1",
+      "spdxElementId": "SPDXRef-Package-glob-14.0.6",
+      "relatedSpdxElement": "SPDXRef-Package-electron.asar-4.3.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-minimatch-11.0.5",
-      "relatedSpdxElement": "SPDXRef-Package-electron.asar-4.3.1",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-minimatch-11.0.5",
-      "relatedSpdxElement": "SPDXRef-Package-glob-14.0.4",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-minipass-7.1.3",
-      "relatedSpdxElement": "SPDXRef-Package-glob-14.0.4",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-path-scurry-3.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-glob-14.0.4",
+      "spdxElementId": "SPDXRef-Package-minimatch-11.0.8",
+      "relatedSpdxElement": "SPDXRef-Package-electron.asar-4.3.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -6589,7 +6574,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-electron.get-5.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6599,7 +6584,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-semver-7.8.5",
+      "spdxElementId": "SPDXRef-Package-semver-7.8.6",
       "relatedSpdxElement": "SPDXRef-Package-electron.get-5.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6609,7 +6594,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-undici-7.30.1",
+      "spdxElementId": "SPDXRef-Package-undici-7.30.2",
       "relatedSpdxElement": "SPDXRef-Package-electron.get-5.1.0",
       "relationshipType": "OPTIONAL_DEPENDENCY_OF"
     },
@@ -6634,7 +6619,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-9.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6734,7 +6719,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-minimatch-11.0.5",
+      "spdxElementId": "SPDXRef-Package-minimatch-11.0.8",
       "relatedSpdxElement": "SPDXRef-Package-electron.universal-2.0.3",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6759,22 +6744,22 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-concat-map-0.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.21",
+      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.22",
       "relatedSpdxElement": "SPDXRef-Package-minimatch-3.1.5",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-concat-map-0.0.1",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-11.4.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6786,6 +6771,41 @@
     {
       "spdxElementId": "SPDXRef-Package-universalify-2.0.1",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-11.4.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-fs.realpath-1.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-inflight-1.0.6",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-inherits-2.0.4",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-minimatch-3.1.5",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-once-1.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-path-is-absolute-1.0.1",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.22",
+      "relatedSpdxElement": "SPDXRef-Package-minimatch-3.1.5",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -6814,7 +6834,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-11.4.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6864,7 +6884,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-9.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6889,17 +6909,17 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
+      "spdxElementId": "SPDXRef-Package-tslib-2.9.1",
       "relatedSpdxElement": "SPDXRef-Package-peculiar.asn1-schema-2.11.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
+      "spdxElementId": "SPDXRef-Package-tslib-2.9.1",
       "relatedSpdxElement": "SPDXRef-Package-peculiar.json-schema-1.1.12",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
+      "spdxElementId": "SPDXRef-Package-tslib-2.9.1",
       "relatedSpdxElement": "SPDXRef-Package-peculiar.utils-2.0.3",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6919,7 +6939,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
+      "spdxElementId": "SPDXRef-Package-tslib-2.9.1",
       "relatedSpdxElement": "SPDXRef-Package-peculiar.webcrypto-1.7.2",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6944,7 +6964,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-types.node-24.19.0",
+      "spdxElementId": "SPDXRef-Package-types.node-24.19.2",
       "relatedSpdxElement": "SPDXRef-Package-types.cacheable-request-6.0.3",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -6959,22 +6979,22 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-types.node-24.19.0",
+      "spdxElementId": "SPDXRef-Package-types.node-24.19.2",
       "relatedSpdxElement": "SPDXRef-Package-types.fs-extra-9.0.13",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-types.node-24.19.0",
+      "spdxElementId": "SPDXRef-Package-types.node-24.19.2",
       "relatedSpdxElement": "SPDXRef-Package-types.keyv-3.1.4",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-undici-types-7.24.6",
-      "relatedSpdxElement": "SPDXRef-Package-types.node-24.19.0",
+      "relatedSpdxElement": "SPDXRef-Package-types.node-24.19.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-types.node-24.19.0",
+      "spdxElementId": "SPDXRef-Package-types.node-24.19.2",
       "relatedSpdxElement": "SPDXRef-Package-types.responselike-1.0.3",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7164,7 +7184,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-minimatch-11.0.5",
+      "spdxElementId": "SPDXRef-Package-minimatch-11.0.8",
       "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7194,7 +7214,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tar-7.5.22",
+      "spdxElementId": "SPDXRef-Package-tar-7.5.23",
       "relatedSpdxElement": "SPDXRef-Package-app-builder-lib-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7234,7 +7254,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.21",
+      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.22",
       "relatedSpdxElement": "SPDXRef-Package-minimatch-3.1.5",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7259,7 +7279,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-9.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7299,7 +7319,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-semver-6.3.1",
+      "spdxElementId": "SPDXRef-Package-semver-6.3.2",
       "relatedSpdxElement": "SPDXRef-Package-electron.get-3.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7309,12 +7329,12 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-global-agent-4.1.3",
+      "spdxElementId": "SPDXRef-Package-global-agent-4.1.7",
       "relatedSpdxElement": "SPDXRef-Package-electron.get-3.1.0",
       "relationshipType": "OPTIONAL_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-8.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7329,18 +7349,53 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-jsonfile-4.0.0",
       "relationshipType": "OPTIONAL_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-concat-map-0.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-fs.realpath-1.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-inflight-1.0.6",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-inherits-2.0.4",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-minimatch-3.1.5",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-once-1.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-path-is-absolute-1.0.1",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.22",
+      "relatedSpdxElement": "SPDXRef-Package-minimatch-3.1.5",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7364,7 +7419,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
+      "spdxElementId": "SPDXRef-Package-tslib-2.9.1",
       "relatedSpdxElement": "SPDXRef-Package-asn1js-3.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7375,7 +7430,7 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-balanced-match-4.0.4",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-5.0.12",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-5.0.13",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7424,7 +7479,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-sanitize-filename-1.6.4",
+      "spdxElementId": "SPDXRef-Package-sanitize-filename-1.6.5",
       "relatedSpdxElement": "SPDXRef-Package-builder-util-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7549,7 +7604,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-nan-2.29.0",
+      "spdxElementId": "SPDXRef-Package-nan-2.30.0",
       "relatedSpdxElement": "SPDXRef-Package-cpu-features-0.0.10",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7625,16 +7680,16 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-concat-map-0.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.21",
+      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.22",
       "relatedSpdxElement": "SPDXRef-Package-minimatch-3.1.5",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7689,18 +7744,18 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron-internal.extract-zip-1.0.5",
-      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.2",
+      "spdxElementId": "SPDXRef-Package-electron-internal.extract-zip-1.0.8",
+      "relatedSpdxElement": "SPDXRef-Package-electron-45.3.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.get-5.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.2",
+      "relatedSpdxElement": "SPDXRef-Package-electron-45.3.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-types.node-24.19.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-44.10.2",
+      "spdxElementId": "SPDXRef-Package-types.node-24.19.2",
+      "relatedSpdxElement": "SPDXRef-Package-electron-45.3.2",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -7724,7 +7779,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-ci-info-4.4.0",
+      "spdxElementId": "SPDXRef-Package-ci-info-4.5.0",
       "relatedSpdxElement": "SPDXRef-Package-electron-builder-26.18.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7860,16 +7915,16 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-concat-map-0.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-7.0.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7884,12 +7939,42 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-fs.realpath-1.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-inflight-1.0.6",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-inherits-2.0.4",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-minimatch-3.1.5",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-once-1.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-path-is-absolute-1.0.1",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-jsonfile-4.0.0",
       "relationshipType": "OPTIONAL_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.21",
+      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.22",
       "relatedSpdxElement": "SPDXRef-Package-minimatch-3.1.5",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7935,11 +8020,11 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-2.1.7",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-2.1.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-brace-expansion-2.1.7",
+      "spdxElementId": "SPDXRef-Package-brace-expansion-2.1.8",
       "relatedSpdxElement": "SPDXRef-Package-minimatch-5.1.9",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -7969,7 +8054,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-10.1.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8049,68 +8134,38 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-fs.realpath-1.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "spdxElementId": "SPDXRef-Package-minimatch-11.0.8",
+      "relatedSpdxElement": "SPDXRef-Package-glob-14.0.6",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-inflight-1.0.6",
-      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "spdxElementId": "SPDXRef-Package-minipass-7.1.3",
+      "relatedSpdxElement": "SPDXRef-Package-glob-14.0.6",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-inherits-2.0.4",
-      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-minimatch-3.1.5",
-      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-once-1.4.0",
-      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-path-is-absolute-1.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-concat-map-0.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.21",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.21",
-      "relatedSpdxElement": "SPDXRef-Package-minimatch-3.1.5",
+      "spdxElementId": "SPDXRef-Package-path-scurry-3.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-14.0.6",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-globalthis-1.0.4",
-      "relatedSpdxElement": "SPDXRef-Package-global-agent-4.1.3",
+      "relatedSpdxElement": "SPDXRef-Package-global-agent-4.1.7",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-matcher-4.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-global-agent-4.1.3",
+      "relatedSpdxElement": "SPDXRef-Package-global-agent-4.1.7",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-semver-7.8.5",
-      "relatedSpdxElement": "SPDXRef-Package-global-agent-4.1.3",
+      "spdxElementId": "SPDXRef-Package-semver-7.8.6",
+      "relatedSpdxElement": "SPDXRef-Package-global-agent-4.1.7",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-serialize-error-8.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-global-agent-4.1.3",
+      "relatedSpdxElement": "SPDXRef-Package-global-agent-4.1.7",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8264,7 +8319,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-jsonfile-6.2.1",
       "relationshipType": "OPTIONAL_DEPENDENCY_OF"
     },
@@ -8290,12 +8345,12 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-isaacs.nonrecursive-glob-match-1.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-minimatch-11.0.5",
+      "relatedSpdxElement": "SPDXRef-Package-minimatch-11.0.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-brace-expansion-5.0.12",
-      "relatedSpdxElement": "SPDXRef-Package-minimatch-11.0.5",
+      "spdxElementId": "SPDXRef-Package-brace-expansion-5.0.13",
+      "relatedSpdxElement": "SPDXRef-Package-minimatch-11.0.8",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8309,12 +8364,12 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-semver-7.8.5",
+      "spdxElementId": "SPDXRef-Package-semver-7.8.6",
       "relatedSpdxElement": "SPDXRef-Package-node-abi-4.40.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-semver-7.8.5",
+      "spdxElementId": "SPDXRef-Package-semver-7.8.6",
       "relatedSpdxElement": "SPDXRef-Package-node-api-version-0.2.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8329,7 +8384,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-node-gyp-12.4.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8344,12 +8399,12 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-semver-7.8.5",
+      "spdxElementId": "SPDXRef-Package-semver-7.8.6",
       "relatedSpdxElement": "SPDXRef-Package-node-gyp-12.4.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tar-7.5.22",
+      "spdxElementId": "SPDXRef-Package-tar-7.5.23",
       "relatedSpdxElement": "SPDXRef-Package-node-gyp-12.4.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8429,7 +8484,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
+      "spdxElementId": "SPDXRef-Package-tslib-2.9.1",
       "relatedSpdxElement": "SPDXRef-Package-pkijs-3.4.3",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8464,7 +8519,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-proper-lockfile-4.1.2",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8489,7 +8544,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
+      "spdxElementId": "SPDXRef-Package-tslib-2.9.1",
       "relatedSpdxElement": "SPDXRef-Package-pvtsutils-1.3.6",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8549,8 +8604,53 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
+      "spdxElementId": "SPDXRef-Package-balanced-match-1.0.2",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-concat-map-0.0.1",
+      "relatedSpdxElement": "SPDXRef-Package-brace-expansion-1.1.22",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-fs.realpath-1.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-inflight-1.0.6",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-inherits-2.0.4",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-minimatch-3.1.5",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-once-1.4.0",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-path-is-absolute-1.0.1",
+      "relatedSpdxElement": "SPDXRef-Package-glob-7.2.3",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-brace-expansion-1.1.22",
+      "relatedSpdxElement": "SPDXRef-Package-minimatch-3.1.5",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-truncate-utf8-bytes-1.0.2",
-      "relatedSpdxElement": "SPDXRef-Package-sanitize-filename-1.6.4",
+      "relatedSpdxElement": "SPDXRef-Package-sanitize-filename-1.6.5",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8564,7 +8664,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-semver-7.8.5",
+      "spdxElementId": "SPDXRef-Package-semver-7.8.6",
       "relatedSpdxElement": "SPDXRef-Package-simple-update-notifier-2.0.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8594,7 +8694,7 @@
       "relationshipType": "OPTIONAL_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-nan-2.29.0",
+      "spdxElementId": "SPDXRef-Package-nan-2.30.0",
       "relatedSpdxElement": "SPDXRef-Package-ssh2-1.17.0",
       "relationshipType": "OPTIONAL_DEPENDENCY_OF"
     },
@@ -8635,27 +8735,27 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-isaacs.fs-minipass-4.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.22",
+      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.23",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-chownr-3.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.22",
+      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.23",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-minipass-7.1.3",
-      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.22",
+      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.23",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-minizlib-3.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.22",
+      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.23",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-yallist-5.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.22",
+      "relatedSpdxElement": "SPDXRef-Package-tar-7.5.23",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8679,7 +8779,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-semver-5.7.2",
+      "spdxElementId": "SPDXRef-Package-semver-5.7.3",
       "relatedSpdxElement": "SPDXRef-Package-tiny-async-pool-1.3.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8719,7 +8819,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-unzipper-0.12.5",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8729,7 +8829,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.11",
+      "spdxElementId": "SPDXRef-Package-graceful-fs-4.2.12",
       "relatedSpdxElement": "SPDXRef-Package-fs-extra-11.3.1",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8764,7 +8864,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tslib-2.8.1",
+      "spdxElementId": "SPDXRef-Package-tslib-2.9.1",
       "relatedSpdxElement": "SPDXRef-Package-webcrypto-core-1.9.2",
       "relationshipType": "DEPENDENCY_OF"
     },

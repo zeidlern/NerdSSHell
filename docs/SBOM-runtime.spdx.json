@@ -2,22 +2,22 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "nerdsshell@1.2.9",
-  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.9-bf58d41d-26c5-4dfb-b104-2686664165ef",
+  "name": "nerdsshell@1.2.10",
+  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.10-e7733bb9-a6c9-4aac-8652-67c9671e8aa2",
   "creationInfo": {
-    "created": "2026-11-07T19:45:30.062Z",
+    "created": "2026-11-15T01:30:43.903Z",
     "creators": [
-      "Tool: npm/cli-11.9.0"
+      "Tool: npm/cli-12.2.2"
     ]
   },
   "documentDescribes": [
-    "SPDXRef-Package-nerdsshell-1.2.9"
+    "SPDXRef-Package-nerdsshell-1.2.10"
   ],
   "packages": [
     {
       "name": "nerdsshell",
-      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.9",
-      "versionInfo": "1.2.9",
+      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.10",
+      "versionInfo": "1.2.10",
       "packageFileName": "",
       "description": "NerdSSHell — Built for Windows nerds with Linux problems",
       "primaryPackagePurpose": "APPLICATION",
@@ -29,7 +29,7 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/nerdsshell@1.2.9"
+          "referenceLocator": "pkg:npm/nerdsshell@1.2.10"
         }
       ]
     },
@@ -267,32 +267,32 @@
   "relationships": [
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DESCRIBES"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.xterm-6.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-fit-0.11.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-search-0.16.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ssh2-1.17.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-node-pty-1.2.0-beta.18",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.9",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
       "relationshipType": "DEPENDENCY_OF"
     },
     {

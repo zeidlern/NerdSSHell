@@ -2,22 +2,22 @@
   "spdxVersion": "SPDX-2.3",
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
-  "name": "nerdsshell@1.2.10",
-  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.10-1e5818ec-1b6c-4a4c-b97a-1c88405360ec",
+  "name": "nerdsshell@1.2.11",
+  "documentNamespace": "http://spdx.org/spdxdocs/nerdsshell-1.2.11-2ab21e5e-9863-4c1b-bc41-b1c6d464ecd9",
   "creationInfo": {
-    "created": "2026-11-15T02:05:58.045Z",
+    "created": "2026-11-18T15:01:21.325Z",
     "creators": [
       "Tool: npm/cli-12.2.2"
     ]
   },
   "documentDescribes": [
-    "SPDXRef-Package-nerdsshell-1.2.10"
+    "SPDXRef-Package-nerdsshell-1.2.11"
   ],
   "packages": [
     {
       "name": "nerdsshell",
-      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.10",
-      "versionInfo": "1.2.10",
+      "SPDXID": "SPDXRef-Package-nerdsshell-1.2.11",
+      "versionInfo": "1.2.11",
       "packageFileName": "",
       "description": "NerdSSHell — Built for Windows nerds with Linux problems",
       "primaryPackagePurpose": "APPLICATION",
@@ -29,7 +29,7 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/nerdsshell@1.2.10"
+          "referenceLocator": "pkg:npm/nerdsshell@1.2.11"
         }
       ]
     },
@@ -2588,10 +2588,10 @@
     },
     {
       "name": "electron",
-      "SPDXID": "SPDXRef-Package-electron-45.3.2",
-      "versionInfo": "45.3.2",
+      "SPDXID": "SPDXRef-Package-electron-45.3.4",
+      "versionInfo": "45.3.4",
       "packageFileName": "node_modules/electron",
-      "downloadLocation": "https://registry.npmjs.org/electron/-/electron-45.3.2.tgz",
+      "downloadLocation": "https://registry.npmjs.org/electron/-/electron-45.3.4.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -2599,13 +2599,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/electron@45.3.2"
+          "referenceLocator": "pkg:npm/electron@45.3.4"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "6cf3b430cbc909d29d3df5e0777112f33ba9bbea1cafa5e64ae446c3265acd38a2813cfc8c4eebc2e91291c9348a8992e9465e16e0b0ceed2e6a7303fc3df8bb"
+          "checksumValue": "72a539bba6ab7c677d289bc23838e3df6724c640d06f07932f7bfc279d6d02c28698359829c02ab33be27b434328120697a65ed7d4132fbe32200507aea3438a"
         }
       ]
     },
@@ -3020,29 +3020,6 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "852ff45addd86b4e37a0a5ecd2c231acca4a4084d784c2c8ad500a2978b8828cc60bdbfb6115959d7219ce334f4ced3633d05dc4b096a8ad7245780dce257225"
-        }
-      ]
-    },
-    {
-      "name": "fdir",
-      "SPDXID": "SPDXRef-Package-fdir-6.5.0",
-      "versionInfo": "6.5.0",
-      "packageFileName": "node_modules/fdir",
-      "downloadLocation": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/fdir@6.5.0"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "b486d8b596ee70eb340511aa3c992c84951874bf920c7edd54cf208f2f84469dd60148cb105244fb4da46a7c87b708d63a7c2b298062c0098cd29e242c90275e"
         }
       ]
     },
@@ -4819,10 +4796,10 @@
     },
     {
       "name": "pe-library",
-      "SPDXID": "SPDXRef-Package-pe-library-2.0.1",
-      "versionInfo": "2.0.1",
+      "SPDXID": "SPDXRef-Package-pe-library-2.0.3",
+      "versionInfo": "2.0.3",
       "packageFileName": "node_modules/pe-library",
-      "downloadLocation": "https://registry.npmjs.org/pe-library/-/pe-library-2.0.1.tgz",
+      "downloadLocation": "https://registry.npmjs.org/pe-library/-/pe-library-2.0.3.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -4830,13 +4807,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/pe-library@2.0.1"
+          "referenceLocator": "pkg:npm/pe-library@2.0.3"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "fea8d816a35296ae7d0790c8dfa6a6fbee7fde0320874d909f3a588a0af0ad6eacf90a54d261dfd3dfe2038c234eedb5514c6877257b6427ad5793220e168dfc"
+          "checksumValue": "fa247eb91c81a417e19f180fda26b5861d6b4361aef93cc257be44d274aa97fa56190c3f07063641468e597f3fa88b2b422a9575868e2086117eb06e46ee0f5f"
         }
       ]
     },
@@ -4860,29 +4837,6 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "c5c787dac9e1b5be4cf658aa0ec984c39ea57b7efa993664117fe311bfd1c4d1727a036e97b78db250973fd1438ff2dcbb45fc284c8c71e3f69eda5a1eb0c454"
-        }
-      ]
-    },
-    {
-      "name": "picomatch",
-      "SPDXID": "SPDXRef-Package-picomatch-4.0.7",
-      "versionInfo": "4.0.7",
-      "packageFileName": "node_modules/picomatch",
-      "downloadLocation": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.7.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/picomatch@4.0.7"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "a9c26ef3c436216a89b030f9dbd24a31dc069bf76f2275b81ef427470887f49b62849bf318eb1c0ed1c4df1d6904a794393cac43c91598b9c9da426eef285c18"
         }
       ]
     },
@@ -5256,10 +5210,10 @@
     },
     {
       "name": "resedit",
-      "SPDXID": "SPDXRef-Package-resedit-3.1.0",
-      "versionInfo": "3.1.0",
+      "SPDXID": "SPDXRef-Package-resedit-3.1.1",
+      "versionInfo": "3.1.1",
       "packageFileName": "node_modules/resedit",
-      "downloadLocation": "https://registry.npmjs.org/resedit/-/resedit-3.1.0.tgz",
+      "downloadLocation": "https://registry.npmjs.org/resedit/-/resedit-3.1.1.tgz",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -5267,13 +5221,13 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/resedit@3.1.0"
+          "referenceLocator": "pkg:npm/resedit@3.1.1"
         }
       ],
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "8ba08df04e85cd3a73b06abfa149e6d864d685d7696446e7004fb378dc2a4e9a6e7132bbc5dd7bf2ad7158432b15bfa72e70a1fa0783a99e10c2114df1512055"
+          "checksumValue": "60fe8735c5e6d9521937d165da2abc127dd1a447c116d298da529dd472e99f08e892bea7937f699d33b911bcbc39e4158e1448e2a65e52de1bad67f8dcafc41a"
         }
       ]
     },
@@ -5945,29 +5899,6 @@
       ]
     },
     {
-      "name": "tinyglobby",
-      "SPDXID": "SPDXRef-Package-tinyglobby-0.2.17",
-      "versionInfo": "0.2.17",
-      "packageFileName": "node_modules/tinyglobby",
-      "downloadLocation": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz",
-      "filesAnalyzed": false,
-      "homepage": "NOASSERTION",
-      "licenseDeclared": "MIT",
-      "externalRefs": [
-        {
-          "referenceCategory": "PACKAGE-MANAGER",
-          "referenceType": "purl",
-          "referenceLocator": "pkg:npm/tinyglobby@0.2.17"
-        }
-      ],
-      "checksums": [
-        {
-          "algorithm": "SHA512",
-          "checksumValue": "c1747f758a5ca8a99f5a911d66388a24ec023459dd0f40cc9eb5bf7188d51adb449017d581c2c51e836b963e3b9a339589cf72c8dbbae5a96c805e0d4324dada"
-        }
-      ]
-    },
-    {
       "name": "tmp",
       "SPDXID": "SPDXRef-Package-tmp-0.2.7",
       "versionInfo": "0.2.7",
@@ -6497,11 +6428,29 @@
       ]
     },
     {
+      "name": "@nerdsshell/node-gyp-glob",
+      "SPDXID": "SPDXRef-Package-nerdsshell.node-gyp-glob-1.0.0",
+      "versionInfo": "1.0.0",
+      "packageFileName": "scripts/node-gyp-glob",
+      "description": "Windows project file discovery for the pinned node-gyp build tool",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "homepage": "NOASSERTION",
+      "licenseDeclared": "AGPL-3.0-only",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40nerdsshell/node-gyp-glob@1.0.0"
+        }
+      ]
+    },
+    {
       "name": "Electron Windows x64 runtime",
-      "SPDXID": "SPDXRef-Electron-Runtime-45.3.3-win32-x64",
-      "versionInfo": "45.3.3",
-      "packageFileName": "electron-v45.3.3-win32-x64.zip",
-      "downloadLocation": "https://github.com/electron/electron/releases/download/v45.3.3/electron-v45.3.3-win32-x64.zip",
+      "SPDXID": "SPDXRef-Electron-Runtime-45.3.4-win32-x64",
+      "versionInfo": "45.3.4",
+      "packageFileName": "electron-v45.3.4-win32-x64.zip",
+      "downloadLocation": "https://github.com/electron/electron/releases/download/v45.3.4/electron-v45.3.4-win32-x64.zip",
       "filesAnalyzed": false,
       "primaryPackagePurpose": "APPLICATION",
       "licenseDeclared": "NOASSERTION",
@@ -6509,73 +6458,78 @@
       "checksums": [
         {
           "algorithm": "SHA256",
-          "checksumValue": "49dd2d3875944f08de03d34595cd30093c588b9edcabb41a0ac481028a3a5a8a"
+          "checksumValue": "b177908b5c48dad990612d7861fc8f03f8c06be0ca3351383a83cc11dd8e9144"
         }
       ],
       "externalRefs": [
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:generic/electron@45.3.3?arch=x64&os=windows"
+          "referenceLocator": "pkg:generic/electron@45.3.4?arch=x64&os=windows"
         }
       ],
-      "sourceInfo": "Official Electron distribution: Node.js 24.22.3, Chromium 156.0.8078.100; electron.exe SHA-256 cf7ff337d82f32a437d315721ef361f53a8473905a655a0c650967a66ccd0724. npm electron@45.3.2 is the separate launcher/download wrapper."
+      "sourceInfo": "Official Electron distribution: Node.js 24.22.3, Chromium 156.0.8078.100; electron.exe SHA-256 11bbee3c799820f73f0e54184380ff84bf1c604ce8861a0ab25da69c1fad1ed4. npm electron@45.3.4 is the separate launcher/download wrapper."
     }
   ],
   "relationships": [
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DESCRIBES"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.xterm-6.0.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-fit-0.11.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-xterm.addon-search-0.16.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-ssh2-1.17.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-node-pty-1.2.0-beta.18",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.asar-4.3.2",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.fuses-2.1.3",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-electron-45.3.2",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "spdxElementId": "SPDXRef-Package-electron-45.3.4",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron-builder-26.18.1",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-resedit-3.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.10",
+      "spdxElementId": "SPDXRef-Package-resedit-3.1.1",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-nerdsshell.node-gyp-glob-1.0.0",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell-1.2.11",
       "relationshipType": "DEV_DEPENDENCY_OF"
     },
     {
@@ -7770,17 +7724,17 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-electron-internal.extract-zip-1.0.8",
-      "relatedSpdxElement": "SPDXRef-Package-electron-45.3.2",
+      "relatedSpdxElement": "SPDXRef-Package-electron-45.3.4",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-electron.get-5.1.0",
-      "relatedSpdxElement": "SPDXRef-Package-electron-45.3.2",
+      "relatedSpdxElement": "SPDXRef-Package-electron-45.3.4",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
       "spdxElementId": "SPDXRef-Package-types.node-24.19.2",
-      "relatedSpdxElement": "SPDXRef-Package-electron-45.3.2",
+      "relatedSpdxElement": "SPDXRef-Package-electron-45.3.4",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8031,11 +7985,6 @@
     {
       "spdxElementId": "SPDXRef-Package-hasown-2.0.4",
       "relatedSpdxElement": "SPDXRef-Package-es-set-tostringtag-2.1.0",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-picomatch-4.0.7",
-      "relatedSpdxElement": "SPDXRef-Package-fdir-6.5.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8434,7 +8383,7 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-tinyglobby-0.2.17",
+      "spdxElementId": "SPDXRef-Package-nerdsshell.node-gyp-glob-1.0.0",
       "relatedSpdxElement": "SPDXRef-Package-node-gyp-12.4.0",
       "relationshipType": "DEPENDENCY_OF"
     },
@@ -8614,8 +8563,8 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-pe-library-2.0.1",
-      "relatedSpdxElement": "SPDXRef-Package-resedit-3.1.0",
+      "spdxElementId": "SPDXRef-Package-pe-library-2.0.3",
+      "relatedSpdxElement": "SPDXRef-Package-resedit-3.1.1",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8809,13 +8758,8 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-fdir-6.5.0",
-      "relatedSpdxElement": "SPDXRef-Package-tinyglobby-0.2.17",
-      "relationshipType": "DEPENDENCY_OF"
-    },
-    {
-      "spdxElementId": "SPDXRef-Package-picomatch-4.0.7",
-      "relatedSpdxElement": "SPDXRef-Package-tinyglobby-0.2.17",
+      "spdxElementId": "SPDXRef-Package-glob-14.0.6",
+      "relatedSpdxElement": "SPDXRef-Package-nerdsshell.node-gyp-glob-1.0.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -8949,8 +8893,8 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
-      "spdxElementId": "SPDXRef-Package-nerdsshell-1.2.10",
-      "relatedSpdxElement": "SPDXRef-Electron-Runtime-45.3.3-win32-x64",
+      "spdxElementId": "SPDXRef-Package-nerdsshell-1.2.11",
+      "relatedSpdxElement": "SPDXRef-Electron-Runtime-45.3.4-win32-x64",
       "relationshipType": "DEPENDS_ON"
     }
   ]

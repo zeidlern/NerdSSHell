@@ -162,13 +162,22 @@ class Remote extends EventEmitter {
     }
     const status = knownHostStatus(known, p.host, p.port, key); const fp = fingerprint(key);
     if (status === 'revoked') throw new Error(`The server key for ${p.host} is marked revoked in known_hosts. Connection blocked.`);
-    const pin = this.pins[target];
-    if (pin && pin !== fp) throw new Error(`The identity of ${p.host} has changed. Connection blocked. Expected ${pin}; received ${fp}. Verify this independently before resetting trust.`);
-    if (status === 'changed' && !pin) throw new Error(`The identity of ${p.host} differs from your OpenSSH known_hosts file. Connection blocked. Received ${fp}.`);
-    if (pin || status === 'trusted') return true;
+    const matchesPin = () => {
+      const pin = this.pins[target];
+      if (pin && pin !== fp) throw new Error(`The identity of ${p.host} has changed. Connection blocked. Expected ${pin}; received ${fp}. Verify this independently before resetting trust.`);
+      return pin === fp;
+    };
+    if (matchesPin()) return true;
+    if (status === 'changed') throw new Error(`The identity of ${p.host} differs from your OpenSSH known_hosts file. Connection blocked. Received ${fp}.`);
+    if (status === 'trusted') return true;
     const accepted = await this.trust({ host: p.host, port: p.port, fingerprint: fp });
     if (!accepted || this.closing || this.client !== client) return false;
-    this.pins[target] = fp; await this.savePin?.(target, fp); return true;
+    // Another profile may have established this endpoint's identity during the prompt.
+    if (matchesPin()) return true;
+    if (this.savePin) await this.savePin(target, fp);
+    if (this.closing || this.client !== client) return false;
+    if (!matchesPin()) this.pins[target] = fp;
+    return true;
   }
   exec(command, { timeout = 20000, input, maxBytes = 8 * 1024 * 1024 } = {}) {
     if (this.profile.terminalType === 'generic') return Promise.reject(new Error('Network-device connections never execute server probes or task commands. Use the interactive terminal.'));

@@ -46,6 +46,26 @@ function writeFiles(directory, files) {
   }
 }
 
+test('node-gyp resolves only its two Windows build-file searches through the reviewed matcher', async t => {
+  const nodeGyp = createRequire(require.resolve('node-gyp'));
+  assert.equal(nodeGyp('tinyglobby/package.json').name, '@nerdsshell/node-gyp-glob');
+  const matcher = nodeGyp('tinyglobby');
+  const directory = temporary(t);
+  writeFiles(directory, {
+    'build/Project.sln': '', 'build/Project.mk': '', 'build/Extra.SLN': '',
+    'build/.hidden.sln': '', 'build/nested/Other.mk': '', 'build/directory.sln/child': ''
+  });
+  const original = process.cwd();
+  process.chdir(directory);
+  try {
+    const options = { expandDirectories: false };
+    assert.deepEqual(await matcher.glob('build/*.sln', options), ['build/Project.sln']);
+    assert.deepEqual(await matcher.glob('build/*.mk', options), ['build/Project.mk']);
+    assert.throws(() => matcher.glob('**/*', options), /Unsupported/);
+    assert.throws(() => matcher.glob('build/*.sln', {}), /Unsupported/);
+  } finally { process.chdir(original); }
+});
+
 function listedFiles(directory, prefix = '') {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const relative = prefix + entry.name;

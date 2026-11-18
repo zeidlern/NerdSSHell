@@ -6,6 +6,7 @@ const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { addRuntime } = require('./lib/electron-inventory.cjs');
+const { lockedPackages } = require('./lib/lock-packages.cjs');
 
 const root = path.resolve(__dirname, '..');
 const docs = path.join(root, 'docs');
@@ -40,9 +41,7 @@ function sbom(name, omitted) {
 const allCount = sbom('SBOM.spdx.json', []);
 const runtimeCount = sbom('SBOM-runtime.spdx.json', ['--omit=dev', '--omit=optional']);
 
-const runtime = Object.entries(lock.packages)
-  .filter(([name, entry]) => name.startsWith('node_modules/') && !entry.dev && !entry.optional)
-  .sort(([a], [b]) => a.localeCompare(b));
+const runtime = lockedPackages(lock, true);
 let notices = '# Third-party notices for packaged JavaScript dependencies\n\n';
 notices += 'Generated from the committed lockfile and installed package license files with `node scripts/Generate-SupplyChain.cjs`. The production install omits optional packages. Electron and Chromium notices are distributed beside the application executable as `LICENSE.electron.txt` and `LICENSES.chromium.html`; their binary contents are not described by the npm SBOM.\n\n';
 for (const [name, entry] of runtime) {

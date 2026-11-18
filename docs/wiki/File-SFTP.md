@@ -4,6 +4,8 @@
 
 File SFTP is the per-terminal file-transfer panel. It uses the verified SSH connection's SFTP subsystem. A local Windows shell has no remote File SFTP browser.
 
+File SFTP skips names containing invisible control characters that can change how a filename or extension is displayed. Ordinary Unicode filenames, including Arabic and Hebrew, are supported. If a selected local file changes identity before upload, refresh the folder and select the file again. Upload requires a filesystem that supplies a usable file ID. Finish editing the file before uploading if you need its contents to stay consistent throughout the transfer.
+
 ## Understand the two sides
 
 **Local** is a folder on your Windows PC. **Remote** is a folder on the selected SSH server under the selected account's permissions. Each remote terminal owns its own browser state, even when several terminals connect to the same server.

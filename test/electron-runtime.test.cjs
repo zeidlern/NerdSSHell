@@ -32,8 +32,8 @@ test('SDK cache corruption, hardlinks and old version metadata fail before execu
   const file = path.join(directory, 'electron.exe');
   const bytes = Buffer.from('inert SDK regression fixture');
   fs.writeFileSync(file, bytes);
-  fs.writeFileSync(path.join(directory, 'version'), '45.3.3');
   const spec = { ...runtimeSpec(), executableSha256: createHash('sha256').update(bytes).digest('hex') };
+  fs.writeFileSync(path.join(directory, 'version'), spec.version);
   let calls = 0;
   const execute = () => { calls++; return { status: 0, stdout: JSON.stringify({ electron: spec.version, node: spec.node, chrome: spec.chrome }) }; };
   assert.equal(verifySdk(directory, spec, execute), directory);
@@ -57,7 +57,7 @@ test('a cached SDK with the expected filename and version must report the pinned
   t.after(() => { assert.equal(path.dirname(directory), parent); fs.rmSync(directory, { recursive: true, force: true }); });
   const bytes = Buffer.from('inert runtime-probe fixture');
   fs.writeFileSync(path.join(directory, 'electron.exe'), bytes);
-  fs.writeFileSync(path.join(directory, 'version'), '45.3.3');
   const spec = { ...runtimeSpec(), executableSha256: createHash('sha256').update(bytes).digest('hex') };
+  fs.writeFileSync(path.join(directory, 'version'), spec.version);
   assert.throws(() => verifySdk(directory, spec, () => ({ status: 0, stdout: JSON.stringify({ electron: spec.version, node: '24.22.2', chrome: spec.chrome }) })), /node runtime differs/);
 });

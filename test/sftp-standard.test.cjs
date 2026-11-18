@@ -170,6 +170,20 @@ test('remote paths reject controls and local default names are Windows-safe', ()
   for (const p of ['abc', '/bad\nfile', '/bad\x00file', '']) assert.throws(() => remotePath(p));
   assert.equal(downloadName('/CON.txt'), 'download-CON.txt'); assert.equal(downloadName('/a:b.txt'), 'a_b.txt');
 });
+
+test('SFTP lists ordinary RTL names and excludes explicit direction controls from all reviewed paths', async () => {
+  const s = new SFTP();
+  s.pages = [[{ filename: 'تقرير.txt', attrs: attrs() }, { filename: 'a\u202eb', attrs: attrs() }], false];
+  const listing = await listDirectory({ sftp: async () => s }, '/');
+  assert.deepEqual(listing.entries.map(entry => entry.name), ['تقرير.txt']);
+  assert.equal(listing.skipped, 1);
+  for (const control of ['\u061c', '\u200f', '\u202e', '\u2066', '\u2069']) {
+    assert.throws(() => downloadName('/folder/a' + control + 'b'), /control/);
+    assert.throws(() => remotePath('/a' + control + 'b/file'), /control/);
+  }
+  s.realpath = (_p, cb) => cb(null, '/a\u2066b');
+  await assert.rejects(listDirectory({ sftp: async () => s }, '~'), /control/);
+});
 test('late SFTP listing cannot populate a different terminal sidecar', async t => {
   const a = deferred(), b = deferred();
   const api = { cancelFileList: async () => {}, listFiles: key => key === 'a/view' ? a.promise : b.promise };

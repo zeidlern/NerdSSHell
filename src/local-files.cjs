@@ -1,10 +1,12 @@
 'use strict';
 const fs = require('node:fs/promises'), path = require('node:path'), os = require('node:os');
 const { browserToken } = require('./file-listings.cjs');
+const { FILE_PATH_CONTROLS } = require('./file-paths.cjs');
 const { download, downloadName, remotePath } = require('./sftp-browser.cjs');
+const { sameUploadFile } = require('./transfer.cjs');
 function inside(root, target) { const relative = path.relative(root, target); return relative === '' || !relative.startsWith('..' + path.sep) && relative !== '..' && !path.isAbsolute(relative); }
 function localPath(value) {
-  if (typeof value !== 'string' || value.length > 4096 || !path.isAbsolute(value) || /[\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]/u.test(value)) throw new Error('Choose an absolute local folder without control characters.');
+  if (typeof value !== 'string' || value.length > 4096 || !path.isAbsolute(value) || FILE_PATH_CONTROLS.test(value)) throw new Error('Choose an absolute local folder without control characters.');
   return value;
 }
 /** Grants are scoped to one live file-browser/view. Only native folder selection expands a grant. */
@@ -46,16 +48,16 @@ class LocalFiles {
     r.entries = [];
     const timeout = new Promise((_resolve, reject) => { timer = setTimeout(() => { timedOut = true; reject(new Error('Local directory request timed out. Refresh when the filesystem is available.')); }, this.timeoutMs); });
     const operation = (async () => { try {
-      const root = grantedRoot ? await this.io.realpath(localPath(grantedRoot)) : r.root || await this.io.realpath(this.home);
+      const root = localPath(grantedRoot ? await this.io.realpath(localPath(grantedRoot)) : r.root || await this.io.realpath(this.home));
       if (await this.io.realpath(root) !== root) throw new Error('The chosen local root changed on disk. Use Browse again.');
-      const target = await this.io.realpath(directory === '~' || !directory ? root : localPath(directory));
+      const target = localPath(await this.io.realpath(directory === '~' || !directory ? root : localPath(directory)));
       if (!inside(root, target)) throw new Error('This path is outside the chosen local folder. Use Browse to choose another location.');
       validate(); const entries = []; let scanned = 0, bytes = 0, truncated = false;
       const dir = await this.io.opendir(target);
       try {
         for await (const item of dir) {
           validate(); if (++scanned > 1000) { truncated = true; break; }
-          if (/[\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]/u.test(item.name)) continue;
+          if (FILE_PATH_CONTROLS.test(item.name)) continue;
           const full = path.join(target, item.name); let stat;
           try { stat = await this.io.lstat(full); } catch { continue; }
           validate(); const entry = { name: item.name, path: full, kind: stat.isSymbolicLink() ? 'link' : stat.isDirectory() ? 'directory' : stat.isFile() ? 'file' : 'other', size: stat.size, modified: Math.floor(stat.mtimeMs / 1000) };
@@ -80,17 +82,18 @@ class LocalFiles {
     if (file !== undefined) {
       selected = r.entries.find(item => item.path === file && item.kind === 'file');
       if (!selected) throw new Error('Select a regular file from this local panel.');
-      const stat = await this.io.lstat(file), real = await this.io.realpath(file); validate();
-      if (!stat.isFile() || real !== file || !inside(root, real) || stat.size !== selected.size || Math.floor(stat.mtimeMs / 1000) !== selected.modified) throw new Error('Selected local file changed. Refresh first.');
-      identity = { size: stat.size, mtimeMs: stat.mtimeMs, ino: stat.ino, dev: stat.dev };
+      const stat = await this.io.lstat(file, { bigint: true }), real = await this.io.realpath(file); validate();
+      if (!stat.isFile() || real !== file || !inside(root, real) || Number(stat.size) !== selected.size || Math.floor(Number(stat.mtimeMs) / 1000) !== selected.modified) throw new Error('Selected local file changed. Refresh first.');
+      identity = stat;
       selected = { ...selected };
     }
-    return { owner: r.owner, directory, selected, validate, revalidate: async () => {
+    return { owner: r.owner, directory, selected, validate, revalidate: async sources => {
       validate(); const current = await this.io.realpath(directory), currentRoot = await this.io.realpath(root);
       if (current !== directory || currentRoot !== root || !inside(root, current)) throw new Error('Local folder changed on disk.');
       if (selected) {
-        const stat = await this.io.lstat(selected.path), real = await this.io.realpath(selected.path);
-        if (!stat.isFile() || real !== selected.path || !inside(root, real) || ['size','mtimeMs','ino','dev'].some(field => stat[field] !== identity[field])) throw new Error('Selected local file changed. Refresh first.');
+        const stat = await this.io.lstat(selected.path, { bigint: true }), real = await this.io.realpath(selected.path);
+        if (!sameUploadFile(stat, identity) || real !== selected.path || !inside(root, real)) throw new Error('Selected local file changed. Refresh first.');
+        if (sources && (sources.length !== 1 || sources[0].file !== selected.path || !sameUploadFile(sources[0].stat, identity))) throw new Error('Selected local file changed. Review the upload again.');
       }
       validate();
     } };
@@ -110,7 +113,7 @@ function installLocalFiles({ handle, fileOwner, dialog, getWindow, confirm, send
   handle('localFilesUpload', async (key, id, local, remoteDirectory) => {
     remotePath(remoteDirectory); const remote = files.captureRemote(key, id, remoteDirectory, true), c = await files.capture(key, id, local);
     const validate = () => { c.validate(); remote.validate(); };
-    const revalidate = async () => { validate(); await c.revalidate(); validate(); };
+    const revalidate = async sources => { validate(); await c.revalidate(sources); validate(); };
     return sendFiles(c.owner.profileId, c.owner.remote, remoteDirectory, [c.selected.path], key, validate, revalidate);
   });
   handle('localFilesDownload', async (key, id, source) => {

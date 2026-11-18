@@ -1,6 +1,6 @@
 {
   "name": "nerdsshell",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "private": true,
   "description": "NerdSSHell — Built for Windows nerds with Linux problems",
   "author": "Nicholas Zeidler",
@@ -35,9 +35,10 @@
   "devDependencies": {
     "@electron/asar": "4.3.2",
     "@electron/fuses": "2.1.3",
-    "electron": "45.3.2",
+    "electron": "45.3.4",
     "electron-builder": "26.18.1",
-    "resedit": "3.1.0"
+    "resedit": "3.1.1",
+    "tinyglobby": "file:scripts/node-gyp-glob"
   },
   "overrides": {
     "app-builder-lib": {
@@ -45,7 +46,10 @@
         "global-agent": "4.1.7"
       }
     },
-    "minimatch@>=7.0.0 <11.0.1": "11.0.8"
+    "minimatch@>=7.0.0 <11.0.1": "11.0.8",
+    "node-gyp@12.4.0": {
+      "tinyglobby": "$tinyglobby"
+    }
   },
   "build": {
     "appId": "app.nerdsshell.desktop",
@@ -111,10 +115,10 @@
     },
     "artifactName": "NerdSSHell-${version}-${arch}-Setup.${ext}",
     "copyright": "Copyright © 2026 Nicholas Zeidler",
-    "electronVersion": "45.3.3",
+    "electronVersion": "45.3.4",
     "electronDownload": {
       "checksums": {
-        "electron-v45.3.3-win32-x64.zip": "49dd2d3875944f08de03d34595cd30093c588b9edcabb41a0ac481028a3a5a8a"
+        "electron-v45.3.4-win32-x64.zip": "b177908b5c48dad990612d7861fc8f03f8c06be0ca3351383a83cc11dd8e9144"
       }
     }
   },
@@ -128,9 +132,9 @@
   },
   "license": "AGPL-3.0-only",
   "electronRuntime": {
-    "version": "45.3.3",
+    "version": "45.3.4",
     "node": "24.22.3",
     "chrome": "156.0.8078.100",
-    "executableSha256": "cf7ff337d82f32a437d315721ef361f53a8473905a655a0c650967a66ccd0724"
+    "executableSha256": "11bbee3c799820f73f0e54184380ff84bf1c604ce8861a0ab25da69c1fad1ed4"
   }
 }

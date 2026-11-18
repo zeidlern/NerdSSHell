@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { Writable } = require('node:stream');
-const { upload } = require('../src/transfer.cjs');
+const { upload, captureUploadSource } = require('../src/transfer.cjs');
 
 function missing() { const error = new Error('No such file'); error.code = 2; return error; }
 function fixture(t, sftp) {
@@ -79,6 +79,28 @@ test('new upload uses exclusive hardlink publishing, not an overwrite-capable re
   assert.deepEqual(result, ['/upload/test.txt']);
   assert.equal(sftp.linked, 1); assert.equal(sftp.renamed, 0);
   assert.equal(sftp.removed, 1);
+});
+
+test('the opened upload handle must match the reviewed file identity before remote writes', async t => {
+  const sftp = fakeSftp(), { local, remote } = fixture(t, sftp);
+  const source = await captureUploadSource(local);
+  source.stat.ino += 1n; // An inert mismatch in the review record, with identical size and time.
+  await assert.rejects(upload(remote, [source]), /selected local file changed/);
+  assert.equal(sftp.writes, 0); assert.equal(sftp.removed, 0); assert.equal(sftp.linked, 0);
+});
+
+test('an empty reviewed upload can be published through its verified handle', async t => {
+  const sftp = fakeSftp(), { local, remote } = fixture(t, sftp);
+  fs.truncateSync(local, 0);
+  assert.deepEqual(await upload(remote, [await captureUploadSource(local)]), ['/upload/test.txt']);
+  assert.equal(sftp.linked, 1);
+});
+
+test('upload rejects directional controls in local paths and the selected remote home', async t => {
+  const sftp = fakeSftp({ realpath(_path, cb) { cb(null, '/home/\u202etest'); } }), { local, remote } = fixture(t, sftp);
+  await assert.rejects(captureUploadSource(local + '\u2068'), /Invalid local upload path/);
+  await assert.rejects(upload(remote, [local], { directory: '~' }), /Invalid remote home/);
+  assert.equal(sftp.writes, 0);
 });
 
 test('concurrent creation of a target cannot be overwritten', async t => {

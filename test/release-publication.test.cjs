@@ -26,6 +26,29 @@ function inventory(runtime, metadata = null) {
   if (metadata) addRuntime(doc, metadata);
   return doc;
 }
+test('release inventory binds a local build dependency to its actual name and exact locked version', () => {
+  const packages = { ...lock.packages,
+    'node_modules/matcher': { link: true, resolved: 'scripts/matcher' },
+    'scripts/matcher': { name: '@nerdsshell/matcher', version: '1.0.0', dev: true }
+  };
+  const sourceLock = { ...lock, packages };
+  const full = inventory(false);
+  assert.throws(() => validateInventory(JSON.stringify(full), version, sourceLock, false), /inventory differs/);
+  full.packages.push({ name: '@nerdsshell/matcher', versionInfo: '1.0.0' });
+  validateInventory(JSON.stringify(full), version, sourceLock, false);
+  validateInventory(JSON.stringify(inventory(true)), version, sourceLock, true);
+  const leaked = inventory(true);
+  leaked.packages.push({ name: '@nerdsshell/matcher', versionInfo: '1.0.0' });
+  assert.throws(() => validateInventory(JSON.stringify(leaked), version, sourceLock, true), /inventory differs/);
+  const orphan = { ...packages, 'scripts/extra': { name: 'extra', version: '1.0.0' } };
+  assert.throws(() => validateInventory(JSON.stringify(full), version, { ...lock, packages: orphan }, false), /placement/);
+  const altered = { ...packages, 'scripts/matcher': { ...packages['scripts/matcher'], version: '2.0.0' } };
+  assert.throws(() => validateInventory(JSON.stringify(full), version, { ...lock, packages: altered }, false), /inventory differs/);
+  for (const target of ['scripts/missing', '../matcher', 'node_modules/runtime']) {
+    const wrong = { ...packages, 'node_modules/matcher': { link: true, resolved: target } };
+    assert.throws(() => validateInventory(JSON.stringify(full), version, { ...lock, packages: wrong }, false));
+  }
+});
 function run(workflow = 'build.yml', id = 1) {
   return { id, head_sha: sha, head_branch: 'main', head_repository: { full_name: REPO }, event: 'push',
     path: `.github/workflows/${workflow}`, status: 'completed', conclusion: 'success', run_attempt: 1,

@@ -11,7 +11,7 @@ async function exerciseLoopback({ Remote, StandardRemote, cycles = 100 }) {
   const trustedFingerprint = fingerprint(utils.parseKey(privateKey).getPublicSSH());
   const peers = new Set(), channels = new Set(); let shellCount = 0, controlCount = 0, forbiddenLaunches = 0, currentPeer;
   const stableId = 'f9c0a833-6eb5-4dc0-836d-b4e5a8d61036', identity = stableId + '|' + stableId;
-  const paneRows = [0, 1].map(index => ['$0', 'fixture', '@0', '0', 'Shell', '%' + index, String(index), '80', '24', '0', identity, '2', 'sh'].join('\t')).join('\n');
+  const paneRows = [0, 1].map(index => ['$0', 'fixture', '@0', '0', 'Shell', '%' + index, String(index), '80', '24', '0', identity, '2', 'sh'].join(' | ')).join('\n');
   const track = (stream, peer) => { channels.add(stream); stream.on('error', () => {}); stream.on('close', () => channels.delete(stream)); peer.once('close', () => channels.delete(stream)); stream.resume(); return stream; };
   const server = new Server({ hostKeys: [privateKey] }, peer => {
     peers.add(peer); currentPeer = peer; peer._sock.setNoDelay(true); peer.on('error', () => {}); peer.on('close', () => peers.delete(peer));

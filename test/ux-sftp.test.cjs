@@ -6,7 +6,7 @@ const { parseDrag, attach } = require('../ui/local-files.js');
 const { BrowserState } = require('../ui/files.js');
 const { EventEmitter } = require('node:events');
 const { Readable, Writable } = require('node:stream');
-const { upload } = require('../src/transfer.cjs');
+const { upload, captureUploadSource } = require('../src/transfer.cjs');
 const { download } = require('../src/sftp-browser.cjs');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { resolve, promise }; };
@@ -108,6 +108,14 @@ test('local upload revalidation remains active after initial selection until con
   const rejected = assert.rejects(copying, /changed/);
   await entered.promise; // Replace only after capture reaches the confirmation boundary.
   await fs.writeFile(path.join(h.home, 'marker.txt'), 'replaced file'); wait.resolve(); await rejected;
+});
+test('the per-pane upload compares its selection with the file identity reviewed by the transfer prompt', async t => {
+  const h = await fixture(t), file = path.join(h.home, 'marker.txt');
+  await h.files.list('host/a', 'a', '~'); h.files.rememberRemote('host/a', 'a', remoteListing());
+  const reviewed = await captureUploadSource(file);
+  reviewed.stat.ino += 1n;
+  const i = install(h, { sendFiles: async (...args) => args[6]([reviewed]) });
+  await assert.rejects(i.handlers.get('localFilesUpload')('host/a', 'a', file, '/remote'), /file changed/);
 });
 test('a pending folder picker cannot grant a replacement owner', async t => {
   const h = await fixture(t), wait = deferred(), i = install(h, { dialog: { showOpenDialog: () => wait.promise } });

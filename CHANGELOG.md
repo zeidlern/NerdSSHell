@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.11 — Ubuntu tmux compatibility and security fixes
+
+- Restore Persistent SSH discovery on Ubuntu 26.04 LTS with tmux 3.6a. Reconnecting can find sessions left running by an earlier failed attempt. Session names containing spaces, underscores and pipes retain their identity.
+- Make concurrent first-use host approvals respect the first saved fingerprint. A failed settings write leaves the endpoint untrusted so the next connection asks again.
+- Bind SFTP uploads to the local file the user reviewed. Reject path controls that can disguise names or extensions, while preserving ordinary Unicode filenames.
+- Update the packaged runtime and development SDK to Electron 45.3.4. Remove the affected picomatch dependency from node-gyp's build-file lookup and refresh the dependency inventories.
+- Verified discovery, attachment and reconnection against real Ubuntu OpenSSH and tmux. See [validation results](docs/VALIDATION.md) for the test environment and Windows release checks.
+
 ## 1.2.10 — November dependency maintenance
 
 - Ship official Electron 45.3.3 with Node 24.22.3 and Chromium 156.0.8078.100, including the November Node security fixes and upstream security backports. Pin the official Windows archive SHA-256 independently of the npm launcher package, whose latest available version remains 45.3.2 at this review.

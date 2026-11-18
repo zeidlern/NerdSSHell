@@ -13,7 +13,15 @@ npm audit --package-lock-only --ignore-scripts --audit-level=low
 
 `Verify-Publication.cjs` checks that optional lockfile placements are actually absent. The [full SPDX inventory](SBOM.spdx.json) includes the locked build graph. The [runtime SPDX inventory](SBOM-runtime.spdx.json) and [third-party notices](THIRD-PARTY-NOTICES.md) describe the packaged JavaScript subset; Electron/Chromium distribute their own notices beside the executable.
 
-Regenerate inventories with `npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs`, as pinned in every Windows build workflow. The generator rejects missing/duplicate SPDX package IDs before writing an inventory. Node's bundled npm 10.9.9 emits duplicate package IDs for this graph. The pinned npm plus explicit binary provenance emits 283 unique full entries and 12 runtime entries, including the official Electron binary separately from its npm launcher.
+Regenerate inventories with `npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs`, as pinned in every Windows build workflow. The generator rejects missing/duplicate SPDX package IDs before writing an inventory. Node's bundled npm 10.9.9 has emitted duplicate package IDs for this project. The pinned npm plus explicit binary provenance emits 281 unique full entries and 12 runtime entries for 1.2.11, including the official Electron binary separately from its npm launcher.
+
+## November 18, 2026 maintenance for 1.2.11
+
+Both lockfile audits on 1.2.10 reported nine high-severity package entries attributed to one advisory in picomatch 4.0.7. Electron-builder pulls it in through @electron/rebuild, node-gyp and tinyglobby. The vulnerable matcher processes glob patterns during development. Its only consumer in this project uses two fixed filename patterns for Windows builds, and packaging disables native rebuilding. The runtime inventory excludes this chain. Upstream listed no patched picomatch release at review time. [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
+
+The override for node-gyp 12.4.0 resolves its tinyglobby import to the repository's private build helper in `scripts/node-gyp-glob`. It accepts `build/*.sln` and `build/*.mk` with directory expansion disabled, using the existing glob 14.0.6 dependency. Both the supported install and the full lockfile now exclude upstream tinyglobby, fdir and picomatch. A regression verifies file selection and refusal of unsupported searches. Revisit the override when node-gyp changes or an upstream fix ships. The full inventory records the helper under its project-owned package name and version.
+
+The verified Electron Windows binary and npm launcher both advance to 45.3.4, which fixes retention of removed DOM elements after a right-click. Embedded Node remains 24.22.3 and Chromium remains 156.0.8078.100. Resedit 3.1.1 updates the PE packaging library to 2.0.3. The remaining direct npm packages, build Node security floors and full-SHA Actions pins were current on their selected channels. [Electron 45.3.4](https://releases.electronjs.org/release/v45.3.4) · [resedit 3.1.1](https://github.com/jet2jet/resedit-js/releases/tag/v3.1.1)
 
 ## November 14, 2026 maintenance for 1.2.10
 

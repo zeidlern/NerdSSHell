@@ -96,13 +96,20 @@ function parseSessionIdentity(value) {
   if (current && legacy && current !== legacy) throw new Error('Conflicting remote session identities. No session was changed.');
   return { sessionToken: current || legacy, sessionIdentityOption: current ? SESSION_IDENTITY_OPTION : legacy ? LEGACY_SESSION_IDENTITY_OPTION : null };
 }
-const PANE_FORMAT = '#{session_id}\t#{q:session_name}\t#{window_id}\t#{window_index}\t#{q:window_name}\t#{pane_id}\t#{pane_index}\t#{pane_width}\t#{pane_height}\t#{pane_dead}\t' + SESSION_IDENTITY_FORMAT + '\t#{window_panes}\t#{q:pane_current_command}';
+// tmux 3.6 replaces literal tabs in list formats with underscores. Its q:
+// modifier escapes every pipe in a name, so quoted text cannot contain " | ".
+const PANE_SEPARATOR = ' | ';
+const PANE_FORMAT = [
+  '#{session_id}', '#{q:session_name}', '#{window_id}', '#{window_index}', '#{q:window_name}',
+  '#{pane_id}', '#{pane_index}', '#{pane_width}', '#{pane_height}', '#{pane_dead}',
+  SESSION_IDENTITY_FORMAT, '#{window_panes}', '#{q:pane_current_command}'
+].join(PANE_SEPARATOR);
 function parsePanes(data) {
   const result = [];
   for (const line of data.replace(/\n+$/, '').split('\n')) {
     if (!line) continue;
     if (result.length >= MAX_DISCOVERED_PANES) throw resourceLimitError(`The server session list exceeds the ${MAX_DISCOVERED_PANES}-pane safety limit. No sessions were changed.`);
-    const a = line.split('\t');
+    const a = line.split(PANE_SEPARATOR);
     if (a.length !== 13) throw new Error('The server returned an unrecognized session list.');
     result.push({ sessionId: id(a[0], '$'), sessionName: unescapeFormat(a[1]), windowId: id(a[2], '@'),
       windowIndex: Number(a[3]), windowName: unescapeFormat(a[4]), paneId: id(a[5], '%'), paneIndex: Number(a[6]),

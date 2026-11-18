@@ -66,6 +66,16 @@ class StateStore {
     this.data.profiles = prior.filter(x => x.id !== p.id).concat(p);
     try { this.save(); } catch (error) { this.data.profiles = prior; throw error; } return p;
   }
+  pinHost(target, fingerprint) {
+    const pins = this.data.pins;
+    if (Object.hasOwn(pins, target)) {
+      if (pins[target] !== fingerprint) throw new Error('The saved server identity changed. Connection blocked.');
+      return;
+    }
+    pins[target] = fingerprint;
+    // Persistence is synchronous. No other connection can observe an uncommitted pin.
+    try { this.save(); } catch (error) { delete pins[target]; throw error; }
+  }
   setQuickConnectDefaults(value) {
     const defaults = quickSettings(value), prior = this.data.quickConnect;
     return this.putQuickConnect({ defaults, recent: defaults.historyEnabled ? prior.recent : [] });

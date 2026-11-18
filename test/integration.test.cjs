@@ -24,6 +24,11 @@ test('real SSH: create, capture, resize, reattach without restarting, upload, en
   t.after(async () => { try { if (!r.connected) { r = fixture(socket); await r.connect(); } await r.exec(`${r.prefix} kill-server 2>/dev/null; rm -rf ${q('/tmp/' + socket + '-uploads')} ${q('/tmp/' + socket + '-proof')}`); } finally { r.disconnect(); } });
   await r.connect(); assert.equal(r.panes.length, 0);
   const pane = await r.create('Mission one'); assert.ok(pane.key.includes(pane.sessionToken));
+  // A printable field separator must also survive when it appears in a label.
+  const windowName = 'logs_1 | live output';
+  await r.checked(`${r.prefix} rename-window -t ${q(pane.windowId)} ${q(windowName)}`);
+  const [listed] = await r.discover();
+  assert.equal(listed.windowName, windowName); assert.equal(listed.key, pane.key);
   const limit = (await r.checked(`${r.prefix} display-message -p -t ${q(pane.paneId)} ${q('#{history_limit}')}`)).trim(); assert.equal(Number(limit), 100000);
   let snapshot; r.on('snapshot', (key, value) => { if (key === pane.key) snapshot = value; });
   await r.open(pane.key); assert.ok(snapshot && snapshot.cols > 0 && snapshot.rows > 0);

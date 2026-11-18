@@ -1,3 +1,15 @@
+# Version 1.2.11 Ubuntu Persistent SSH and security validation
+
+On November 18, 2026, the Windows client was tested against an isolated Ubuntu 26.04.1 LTS guest running distribution OpenSSH 10.2p1 and tmux 3.6a-2ubuntu0.2. Standard SSH accepted input. In 1.2.10, Persistent SSH authenticated and created a shell, then failed discovery with “The server returned an unrecognized session list.” This tmux build rendered literal tabs in the requested format as underscores.
+
+With the corrected format, the client found the session left by 1.2.10, opened a new Persistent shell, sent input, disconnected and reattached with the same pane key and process ID, and ended the test session on request. The real SSH lifecycle integration passed, including a window name containing the printable separator, resizing, SFTP and the one-launch check. The guest used WSL2. The reporter's Proxmox configuration and logs were unavailable.
+
+Windows 11 Pro x64 with Node 22.23.5 passed the supported install, source checks and 1,154 regression tests. Two platform checks skipped locally (macOS ASAR merging and Windows file-symlink creation privilege). Focused checks covered concurrent first-use approvals, failed pin persistence, reviewed upload identities, Unicode filenames, and package inventory validation. Both npm audits reported zero known vulnerabilities. The full SPDX inventory contains 281 entries and the runtime inventory contains 12.
+
+The protected pull request and the main-branch workflows record the exact source revision for hosted Linux integration, Windows packaging and smoke tests, both npm audits, secret scanning and CodeQL. The installer published by the release workflow comes from the accepted main build.
+
+---
+
 # Version 1.2.10 Electron 45.3.3 validation
 
 The owner authorized integration and official publication of 1.2.10 after the direct-binary investigation. The final candidate uses official Electron 45.3.3 / Node 24.22.3 / Chromium 156.0.8078.100, with the archive and original executable SHA-256 pins recorded in package.json. The npm electron 45.3.2 package remains a separately identified launcher; packaging and SDK selection use the explicit 45.3.3 runtime. These results supersede the earlier 45.3.2 candidate below.

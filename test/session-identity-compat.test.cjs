@@ -9,7 +9,7 @@ const { profile, PANE_FORMAT, parsePanes, paneKey, parseSessionIdentity, SESSION
 const token = '11111111-2222-4333-8444-555555555555';
 const replacement = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const settings = { id: 'fixture', host: 'server.example', username: 'tester', auth: 'password' };
-function row(identity) { return ['$0', 'Existing work', '@0', '0', 'Shell', '%0', '0', '80', '24', '0', identity, '1', 'bash'].join('\t') + '\n'; }
+function row(identity) { return ['$0', 'Existing work', '@0', '0', 'Shell', '%0', '0', '80', '24', '0', identity, '1', 'bash'].join(' | ') + '\n'; }
 function remote() { const r = new Remote(settings); r.connected = true; r.client = {}; return r; }
 function pane(identity) { const p = parsePanes(row(identity))[0]; return { ...p, key: paneKey(settings.id, p.sessionToken, p.paneId), profileId: settings.id }; }
 
@@ -19,7 +19,8 @@ test('default upload directory adopts NerdSSHell while saved explicit legacy fol
 });
 
 test('13-column discovery distinguishes current, legacy, matching dual and old plain-token identities', () => {
-  assert.equal(PANE_FORMAT.split('\t').length, 13);
+  assert.doesNotMatch(PANE_FORMAT, /[^\x20-\x7e]/, 'tmux 3.6 normalizes literal control characters in list formats');
+  assert.equal(PANE_FORMAT.split(' | ').length, 13);
   for (const [identity, marker] of [[token + '|', SESSION_IDENTITY_OPTION], ['|' + token, LEGACY_SESSION_IDENTITY_OPTION],
     [token + '|' + token, SESSION_IDENTITY_OPTION], [token, LEGACY_SESSION_IDENTITY_OPTION]]) {
     const p = pane(identity);

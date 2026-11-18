@@ -17,7 +17,7 @@ test.after(() => { for (const p of temporaryDirectories) fs.rmSync(p, { recursiv
 function temporary(_t) { const p = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-test-')); temporaryDirectories.push(p); return p; }
 class Stream extends EventEmitter { constructor() { super(); this.writes = []; } write(s) { this.writes.push(s); return true; } destroy() { this.destroyed = true; } }
 function channel(t, options) { const s = new Stream(); const c = new Control(s, options); t.after(() => c.detach()); c.feed(Buffer.from('%begin 1 1 0\n%end 1 1 0\n')); return { c, s }; }
-const paneLine = `$0\tmission\\ one\t@1\t0\tShell\t%2\t0\t120\t40\t0\t${token}\t1\tbash\n`;
+const paneLine = `$0 | mission\\ one | @1 | 0 | Shell | %2 | 0 | 120 | 40 | 0 | ${token} | 1 | bash\n`;
 
 test('profile validates and drops all secret/unknown fields', () => { const p = profile({ ...base, password: 'never-save', passphrase: 'never-save', command: 'evil' }); assert.equal(p.scrollback, 100000); assert.equal(p.record, false); assert.equal(p.startup, 'all'); assert.ok(!JSON.stringify(p).includes('never-save')); assert.ok(!('command' in p)); });
 for (const host of ['-oProxyCommand=bad', 'host;rm', 'host\ncommand', 'host/path', '$(id)', '']) test('reject unsafe host ' + JSON.stringify(host), () => assert.throws(() => profile({ ...base, host })));
@@ -68,6 +68,34 @@ test('negative known_hosts patterns take precedence', () => assert.equal(knownHo
 test('certificate authority entries do not silently trust raw server keys', () => assert.equal(knownHostStatus('@cert-authority ' + known, 'server.example', 22, hostkey), 'unknown'));
 test('saved trust pins cannot be bypassed by another known_hosts key', async () => { const r = new Remote({ ...base, host: 'server.example' }, { pins: { 'server.example:22': fingerprint(otherkey) }, knownHosts: known }); await assert.rejects(r.verifyHost(hostkey), /changed/); });
 test('unknown host requires affirmative confirmation before persisting trust', async () => { let saved = false; const r = new Remote(base, { pins: {}, knownHosts: '', trust: async () => false, savePin: () => { saved = true; } }); assert.equal(await r.verifyHost(hostkey), false); assert.equal(saved, false); });
+
+test('first-use approval honors the pin another profile saved while its prompt was open', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-pin-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const store = new StateStore(directory);
+  let approve;
+  const options = { pins: store.data.pins, knownHosts: '', savePin: (target, fp) => store.pinHost(target, fp) };
+  const queued = new Remote(base, { ...options, trust: () => new Promise(resolve => { approve = resolve; }) });
+  const first = new Remote(base, { ...options, trust: async () => true });
+  const pending = queued.verifyHost(otherkey);
+  assert.equal(await first.verifyHost(hostkey), true);
+  approve(true);
+  await assert.rejects(pending, /changed/);
+  assert.deepEqual(new StateStore(directory).data.pins, { '127.0.0.1:22': fingerprint(hostkey) });
+  assert.equal(await queued.verifyHost(hostkey), true);
+});
+
+test('a failed first-use settings write leaves the endpoint unpinned for the next connection', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-pin-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const store = new StateStore(directory);
+  store.save = () => { throw new Error('Storage unavailable'); };
+  const remote = new Remote(base, { pins: store.data.pins, knownHosts: '', trust: async () => true, savePin: (target, fp) => store.pinHost(target, fp) });
+  await assert.rejects(remote.verifyHost(hostkey), /Storage unavailable/);
+  assert.deepEqual(store.data.pins, {});
+  remote.trust = async () => false;
+  assert.equal(await remote.verifyHost(hostkey), false);
+});
 
 test('workspace validation clamps splits and deduplicates tabs', () => assert.deepEqual(workspace({ layout: 4, splitX: 100, splitY: -1, order: ['a', 'a', 42] }), { layout: 4, twoPaneOrientation: 'side-by-side', splitX: 80, splitY: 20, order: ['a'], slots: [], active: '' }));
 test('stacked layout and its divider persist without changing existing layout values', t => { const dir = temporary(t), s = new StateStore(dir); s.setWorkspace({ layout: 2, twoPaneOrientation: 'stacked', splitY: 63 }); const loaded = new StateStore(dir); assert.equal(loaded.data.workspace.layout, 2); assert.equal(loaded.data.workspace.twoPaneOrientation, 'stacked'); assert.equal(loaded.data.workspace.splitY, 63); assert.equal(workspace({ layout: 2 }).twoPaneOrientation, 'side-by-side'); assert.equal(workspace({ twoPaneOrientation: 'unexpected' }).twoPaneOrientation, 'side-by-side'); });

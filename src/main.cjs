@@ -28,7 +28,7 @@ const { installSessionCommands } = require('./session-commands.cjs');
 const { createSessionNotifications } = require('./session-notifications.cjs');
 const { configureScratchpadSpelling, installScratchpadSpelling } = require('./scratchpad-spelling.cjs');
 let workbench, sessionCommands, sessionNotifications, startupUpdater;
-const { upload } = require('./transfer.cjs');
+const { upload, captureUploadSource } = require('./transfer.cjs');
 const { profile, integer, pasteText } = require('./core.cjs');
 const { parseAddress } = require('./quick-connect.cjs');
 const { MAX_OPEN_VIEWS, ViewBudget, resourceLimitError } = require('./session-limits.cjs');
@@ -220,13 +220,15 @@ async function sendFiles(id, remote, directory, files, key = '', validateOwner =
   }
   assertRemote(id, remote); validateOwner();
   if (!Array.isArray(files) || files.length < 1 || files.length > 50 || files.some(f => typeof f !== 'string' || !path.isAbsolute(f) || f.length > 4096)) throw new Error('Invalid file selection.');
+  const sources = await Promise.all(files.map(captureUploadSource));
+  assertRemote(id, remote); validateOwner();
   if (!await confirm('Upload files', `Upload ${files.length} file(s) to ${remote.profile.name}?`, `${remote.profile.username}@${remote.profile.host}\nDestination: ${directory}\n\n${files.join('\n')}\n\nFiles will not be executed.`)) return [];
-  assertRemote(id, remote); validateOwner(); await validateSelection(); assertRemote(id, remote); validateOwner();
+  assertRemote(id, remote); validateOwner(); await validateSelection(sources); assertRemote(id, remote); validateOwner();
   const { controller, transferId } = beginTransfer(id);
   emit('transfer', { id: transferId, profileId: id, key, status: 'starting', name: path.basename(files[0]) });
   try {
-    return await upload(remote, files, { directory, signal: controller.signal,
-      confirmOverwrite: async target => { const accepted = await confirm('Replace existing remote file?', target, `Server: ${remote.profile.name}. The previous file will be replaced only after this upload completes.`); assertRemote(id, remote); validateOwner(); if (accepted) await validateSelection(); assertRemote(id, remote); validateOwner(); return accepted; },
+    return await upload(remote, sources, { directory, signal: controller.signal,
+      confirmOverwrite: async target => { const accepted = await confirm('Replace existing remote file?', target, `Server: ${remote.profile.name}. The previous file will be replaced only after this upload completes.`); assertRemote(id, remote); validateOwner(); if (accepted) await validateSelection(sources); assertRemote(id, remote); validateOwner(); return accepted; },
       progress: data => emit('transfer', { id: transferId, profileId: id, key, status: 'running', ...data }) });
   } finally { transfers.delete(transferId); emit('transfer', { id: transferId, profileId: id, key, status: 'finished' }); }
 }
@@ -429,7 +431,10 @@ async function connect(id, secrets, quickSlot) {
       onRemember: choice => { if (eligible && credentialVersion(id) === passwordVersion) rememberChoice = choice; } });
     return temporary ? task.finally(() => { r.authPrompts--; }) : task;
   }, secrets: r.secrets, pins: store.data.pins,
-    savePin: (target, fp) => { if (active()) { store.data.pins[target] = fp; store.save(); } },
+    savePin: (target, fp) => {
+      if (!active()) throw new Error('Sign-in cancelled.');
+      store.pinHost(target, fp);
+    },
     trust: async v => {
       if (!active()) return false;
       const accepted = await ask({ kind: 'host-trust', title: 'Verify server identity', profileId: id, valid: active, signal: temporary?.controller?.signal,

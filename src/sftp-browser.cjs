@@ -6,15 +6,16 @@ const { Transform } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 const { openSftp, call } = require('./transfer.cjs');
 const { publishExport } = require('./storage.cjs');
+const { FILE_PATH_CONTROLS } = require('./file-paths.cjs');
 
 function remotePath(value) {
-  if (typeof value !== 'string' || value.length > 4096 || /[\x00-\x1f\x7f-\x9f]/.test(value) || !value || !(value.startsWith('/') || value === '~' || value.startsWith('~/') || value === '.')) {
+  if (typeof value !== 'string' || value.length > 4096 || FILE_PATH_CONTROLS.test(value) || !value || !(value.startsWith('/') || value === '~' || value.startsWith('~/') || value === '.')) {
     throw new Error('Use an absolute remote path or ~/; control characters are not allowed.');
   }
   return value;
 }
 function safeName(value) {
-  return typeof value === 'string' && value.length > 0 && value.length <= 255 && value !== '.' && value !== '..' && !/[\/\\\x00-\x1f\x7f-\x9f]/.test(value);
+  return typeof value === 'string' && value.length > 0 && value.length <= 255 && value !== '.' && value !== '..' && !/[\/\\]/.test(value) && !FILE_PATH_CONTROLS.test(value);
 }
 function downloadName(value) {
   let name = path.posix.basename(remotePath(value)).replace(/[<>:"/\\|?*\x00-\x1f\x7f-\x9f]/g, '_').replace(/[. ]+$/, '').slice(0, 180);

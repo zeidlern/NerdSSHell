@@ -4,6 +4,8 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { pipeline } = require('node:stream/promises');
+const { Readable } = require('node:stream');
+const { FILE_PATH_CONTROLS } = require('./file-paths.cjs');
 const OPERATION_TIMEOUT_MS = 20000;
 const STREAM_IDLE_TIMEOUT_MS = 30000;
 // Listings and transfers share the transport's channel budget. A caller timing
@@ -82,8 +84,32 @@ function call(s, method, args, signal, timeoutMs) {
     try { s[method](...args, (error, value) => finish(error, value)); } catch (error) { finish(error); }
   });
 }
-async function writeTemp(s, local, temp, stat, progress, signal, idleTimeoutMs) {
-  const source = fs.createReadStream(local), destination = s.createWriteStream(temp, { flags: 'wx', mode: 0o600 });
+async function captureUploadSource(file) {
+  if (typeof file !== 'string' || !path.isAbsolute(file) || file.length > 4096 || FILE_PATH_CONTROLS.test(file)) throw new Error('Invalid local upload path.');
+  const stat = await fsp.lstat(file, { bigint: true });
+  if (!stat.isFile()) throw new Error('Only regular files can be uploaded.');
+  if (!stat.ino || !Number.isSafeInteger(Number(stat.size))) throw new Error('Cannot verify the selected local file identity or size.');
+  return { file, stat };
+}
+function sameUploadFile(actual, expected) {
+  return actual.isFile() && actual.ino === expected.ino && actual.dev === expected.dev &&
+    actual.size === expected.size && actual.mtimeNs === expected.mtimeNs && actual.ctimeNs === expected.ctimeNs;
+}
+async function openUploadSource({ file, stat }) {
+  const flags = fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0) | (fs.constants.O_NONBLOCK ?? 0);
+  const handle = await fsp.open(file, flags);
+  try {
+    if (!sameUploadFile(await handle.stat({ bigint: true }), stat)) throw new Error('The selected local file changed. Review the upload again.');
+    return handle;
+  } catch (error) {
+    await handle.close();
+    throw error;
+  }
+}
+async function writeTemp(s, handle, temp, size, progress, signal, idleTimeoutMs) {
+  const destination = s.createWriteStream(temp, { flags: 'wx', mode: 0o600 });
+  // Read only the reviewed object and length, even if its path changes while streaming.
+  const source = size ? handle.createReadStream({ end: size - 1 }) : Readable.from([]);
   const controller = new AbortController(); let transferred = 0, timer, lastProgress = 0;
   const abort = () => controller.abort(cancelled(signal));
   const idle = () => { clearTimeout(timer); timer = setTimeout(() => {
@@ -97,9 +123,10 @@ async function writeTemp(s, local, temp, stat, progress, signal, idleTimeoutMs) 
     idle(); const task = pipeline(source, destination, { signal: controller.signal });
     source.on('data', bytes => {
       transferred += bytes.length; idle();
-      if (Date.now() - lastProgress >= 100) { lastProgress = Date.now(); progress?.({ transferred, total: stat.size }); }
+      if (Date.now() - lastProgress >= 100) { lastProgress = Date.now(); progress?.({ transferred, total: size }); }
     });
     await task;
+    if (transferred !== size) throw new Error('The selected local file changed during upload.');
   } finally {
     clearTimeout(timer); signal?.removeEventListener('abort', abort);
   }
@@ -114,9 +141,11 @@ async function upload(remote, files, { confirmOverwrite, progress, signal, timeo
   try {
     const home = await request('realpath', '.');
     let dir = directory ?? remote.profile.uploadDirectory;
-    if (typeof dir !== 'string' || dir.length > 4096 || /[\x00-\x1f\x7f-\x9f]/.test(dir)) throw new Error('Invalid upload directory.');
-    if (dir === '~') dir = home;
-    else if (dir.startsWith('~/')) dir = path.posix.join(home, dir.slice(2));
+    if (typeof dir !== 'string' || dir.length > 4096 || FILE_PATH_CONTROLS.test(dir)) throw new Error('Invalid upload directory.');
+    if (dir === '~' || dir.startsWith('~/')) {
+      if (typeof home !== 'string' || !home.startsWith('/') || home.length > 4096 || FILE_PATH_CONTROLS.test(home)) throw new Error('Invalid remote home directory.');
+      dir = path.posix.join(home, dir.slice(2));
+    }
     if (!dir.startsWith('/')) throw new Error('The upload folder must be an absolute Linux path or start with ~/.');
     dir = path.posix.normalize(dir);
     let current = '/';
@@ -133,19 +162,20 @@ async function upload(remote, files, { confirmOverwrite, progress, signal, timeo
       if (stat.isSymbolicLink?.()) throw new Error(`Upload folder contains a symbolic link: ${current}`);
       if (!stat.isDirectory()) throw new Error(`${current} is not a directory.`);
     }
-    for (const local of files) {
+    for (const selected of files) {
       signal?.throwIfAborted();
-      const stat = await fsp.lstat(local); if (!stat.isFile()) throw new Error('Only regular files can be uploaded.');
-      const name = path.basename(local); if (/[\x00-\x1f\x7f-\x9f]/.test(name)) throw new Error('Filenames containing control characters cannot be uploaded.');
+      const source = typeof selected === 'string' ? await captureUploadSource(selected) : selected;
+      const name = path.basename(source.file), size = Number(source.stat.size);
       const target = path.posix.join(dir, name); const temp = path.posix.join(dir, `.nerdsshell-${randomUUID()}.part`);
       let existing;
       try { existing = await request('lstat', target); } catch (error) { if (error.code !== 2) throw error; }
       if (existing?.isSymbolicLink?.()) throw new Error('The destination is a symbolic link. Upload to a different filename.');
       if (existing && !await confirmOverwrite(target)) continue;
       signal?.throwIfAborted();
+      const handle = await openUploadSource(source);
       let published = false;
       try {
-        await writeTemp(s, local, temp, stat, data => progress?.({ name, ...data }), signal, idleTimeoutMs);
+        await writeTemp(s, handle, temp, size, data => progress?.({ name, ...data }), signal, idleTimeoutMs);
         signal?.throwIfAborted();
         if (existing) {
           // OpenSSH POSIX rename replaces only after explicit overwrite confirmation.
@@ -164,13 +194,13 @@ async function upload(remote, files, { confirmOverwrite, progress, signal, timeo
           try { await request('unlink', temp); }
           catch (error) { throw new Error(`Upload was published, but temporary-file cleanup failed: ${error.message}`); }
         }
-        progress?.({ name, transferred: stat.size, total: stat.size, complete: true }); results.push(target);
+        progress?.({ name, transferred: size, total: size, complete: true }); results.push(target);
       } catch (error) {
         if (!published) try { await call(s, 'unlink', [temp], undefined, Math.min(timeoutMs, 5000)); } catch {}
         throw error;
-      }
+      } finally { await handle.close(); }
     }
     return results;
   } finally { try { s.end(); } catch {} }
 }
-module.exports = { upload, openSftp, call, SFTP_CHANNEL_LIMIT };
+module.exports = { upload, captureUploadSource, sameUploadFile, openSftp, call, SFTP_CHANNEL_LIMIT };

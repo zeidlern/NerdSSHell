@@ -77,7 +77,7 @@ test('changed host identity keeps its non-retryable verification error', async (
   r.disconnect();
 });
 
-function paneLine(cols, rows) { return `$0\tExample\t@1\t0\tShell\t%1\t0\t${cols}\t${rows}\t0\t${token}\t1\tbash\n`; }
+function paneLine(cols, rows) { return `$0 | Example | @1 | 0 | Shell | %1 | 0 | ${cols} | ${rows} | 0 | ${token} | 1 | bash\n`; }
 test('discovery bounds valid pane records before any session reconciliation', async () => {
   const listing = paneLine(120, 36).repeat(MAX_DISCOVERED_PANES);
   assert.equal(parsePanes(listing).length, MAX_DISCOVERED_PANES);

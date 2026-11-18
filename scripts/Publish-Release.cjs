@@ -8,6 +8,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { runtimePackage, validateRuntime } = require('./lib/electron-inventory.cjs');
+const { lockedPackages } = require('./lib/lock-packages.cjs');
 const REPO = 'zeidlern/NerdSSHell';
 const BASE = `/repos/${REPO}`;
 const STABLE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -111,9 +112,7 @@ function validateInventory(bytes, version, lock, runtime, metadata = null) {
   const wanted = new Set([`nerdsshell@${version}`]);
   const binary = metadata ? validateRuntime(doc, metadata) : null;
   if (binary) wanted.add(`${binary.name}@${binary.versionInfo}`);
-  for (const [location, item] of Object.entries(lock.packages)) {
-    if (!location || item.link || (runtime && (item.dev || item.optional))) continue;
-    assert.ok(location.includes('node_modules/') && typeof item.version === 'string', 'Invalid locked package identity');
+  for (const [location, item] of lockedPackages(lock, runtime)) {
     const name = item.name || location.slice(location.lastIndexOf('node_modules/') + 'node_modules/'.length);
     wanted.add(`${name}@${item.version}`);
   }

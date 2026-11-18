@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const asar = require('@electron/asar');
+const { lockedPackages } = require('./lib/lock-packages.cjs');
 
 const root = path.resolve(__dirname, '..');
 const unpacked = path.resolve(process.argv[2] || path.join(root, 'dist', 'win-unpacked'));
@@ -17,8 +18,7 @@ for (const file of ['LICENSE', 'docs/THIRD-PARTY-NOTICES.md']) {
   assert.deepEqual(asar.extractFile(archive, file), fs.readFileSync(path.join(root, file)), `${file} differs in packaged ASAR`);
 }
 
-for (const [name, entry] of Object.entries(lock.packages)) {
-  if (!name.startsWith('node_modules/') || entry.dev || entry.optional) continue;
+for (const [name, entry] of lockedPackages(lock, true)) {
   const dir = path.join(root, ...name.split('/'));
   const packageJson = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
   assert.equal(packageJson.version, entry.version, `${name} version differs from lockfile`);

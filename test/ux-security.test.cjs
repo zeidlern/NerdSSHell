@@ -31,7 +31,7 @@ async function fixture(t, RemoteClass) {
     module, __dirname: path.dirname(filename), process, Buffer, console, setTimeout, clearTimeout, AbortController, Response, URL
   });
   await new Promise(resolve => setImmediate(resolve));
-  return { app, native, store: module.exports.getStore(), connections: module.exports.getConnections(), window, handlers,
+  return { app, native, dialog, directory, store: module.exports.getStore(), connections: module.exports.getConnections(), window, handlers,
     event: () => ({ sender: window.webContents, senderFrame: window.webContents.mainFrame }) };
 }
 
@@ -51,13 +51,33 @@ test('actual main IPC refuses new open/create resources at capacity and preserve
   const state = await h.handlers.get('nerdsshell:state')(h.event()); assert.equal(state.sessionLimits.maxOpenViews, MAX_OPEN_VIEWS);
 });
 
+test('the upload picker binds the local file before asking for transfer consent', async t => {
+  const h = await fixture(t), local = path.join(h.directory, 'sample.txt');
+  fs.writeFileSync(local, 'reviewed text');
+  h.dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [local] });
+  const profile = { id: 'fixture', host: 'fixture.invalid', username: 'test', name: 'Fixture', uploadDirectory: '/uploads' };
+  let writes = 0, prompts = 0;
+  const sftp = { realpath(_path, done) { done(null, '/home/test'); }, end() {},
+    lstat(file, done) { if (file === '/uploads') done(null, { isDirectory: () => true }); else done(Object.assign(new Error('Missing'), { code: 2 })); },
+    createWriteStream() { writes++; throw new Error('Unexpected write'); } };
+  h.connections.set('fixture', { profile, remote: { profile, connected: true, pane() {}, sftp: async () => sftp } });
+  h.window.webContents.send = (_channel, event) => {
+    if (event.type !== 'prompt') return;
+    assert.equal(event.title, 'Upload files'); prompts++;
+    fs.writeFileSync(local, 'edited while the confirmation was open');
+    void h.handlers.get('nerdsshell:promptReply')(h.event(), event.id, 'choice:0');
+  };
+  await assert.rejects(h.handlers.get('nerdsshell:upload')(h.event(), 'fixture/pane', null), /selected local file changed/);
+  assert.equal(prompts, 1); assert.equal(writes, 0);
+});
+
 test('oversized hostile discovery stops automatic reconnect and clears retry credentials in actual main', async t => {
   const { parsePanes } = require('../src/core.cjs'), { MAX_DISCOVERED_PANES } = require('../src/session-limits.cjs');
   class HostileDiscovery extends EventEmitter {
     constructor(profile) { super(); this.profile = profile; this.panes = []; }
     async connect() {
       this.connected = true;
-      return parsePanes(('$0\tFixture\t@0\t0\tShell\t%0\t0\t120\t36\t0\t11111111-2222-4333-8444-555555555555\t1\tbash\n').repeat(MAX_DISCOVERED_PANES + 1));
+      return parsePanes(('$0 | Fixture | @0 | 0 | Shell | %0 | 0 | 120 | 36 | 0 | 11111111-2222-4333-8444-555555555555 | 1 | bash\n').repeat(MAX_DISCOVERED_PANES + 1));
     }
     disconnect() { this.connected = false; this.closing = true; }
   }

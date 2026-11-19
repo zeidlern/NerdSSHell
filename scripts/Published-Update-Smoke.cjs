@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const { Readable } = require('node:stream');
 const { createHash, randomBytes } = require('node:crypto');
 const { Module, createRequire } = require('node:module');
 const asar = require('@electron/asar');
@@ -16,8 +17,8 @@ const { profile } = require('../src/core.cjs');
 
 const REPOSITORY = 'zeidlern/NerdSSHell';
 const GUID = '48ee049e-c2f6-57b2-ab6e-7f5df516dcc0';
-const FROM = Object.freeze({ version: '1.2.1', sha256: '446b31fab8a00bca32b68d2e4ca9d257392e60b21eb03e16fc7105fc91269e24' });
-const TO = Object.freeze({ version: '1.2.2', sha256: '8376baa0339283db4400098c8b68f0d6ce8dfbab2bdb576d1a3a19c85b07b74c' });
+const FROM = Object.freeze({ version: '1.2.10', sha256: 'cbecfeea754b5f5ae1532ed9359e45ec91428f98967f21001b5c5971c4693ecf' });
+const PUBLIC_SAMPLE = Object.freeze({ version: '1.2.11', sha256: 'b594cbd8142c1d18554244ece6b58a6980b8505fe8c401c0213f9226769e5a2f' });
 function hostedEnvironment(environment = process.env, platform = process.platform) {
   assert.equal(platform, 'win32', 'Real installer acceptance requires Windows.');
   assert.equal(environment.GITHUB_ACTIONS, 'true', 'Do not run consumer installers on a workstation.');
@@ -203,13 +204,13 @@ async function runCandidateController() {
   const plan = JSON.parse(fs.readFileSync(file, 'utf8')), { app, net } = require('electron'), protocol = controllerProtocol(directory, plan.protocolNonce);
   let handoff, ready, failure, stageSampler;
   const send = value => protocol.publish(value);
-  const report = { scope: 'Exact canonical candidate-ASAR modules under locked SDK with controlled current-version identity from actual installed legacy parent and pinned tagged public 1.2.2 selection. Real public HTTPS, fixed Windows helper, consent-release, old parent exit and actual NSIS; not candidate production startup.', status: 'running' };
+  const report = { scope: 'Candidate ASAR under the locked SDK. The Chromium transport fetches an immutable public sample. The candidate installer bytes come from the verified workflow build. The native helper targets the actual installed parent.', status: 'running' };
   const persist = () => fs.writeFileSync(plan.output, JSON.stringify(report, null, 2) + '\n');
   try {
     await app.whenReady(); const packed = createRequire(path.join(plan.archive, 'src', 'main.cjs'));
     const metadata = packed('../package.json');
     assert.equal(metadata.version, plan.candidateVersion, 'Use the exact canonical candidate package.');
-    assert.ok(newer(metadata.version, TO.version), 'The patched candidate must be newer than the immutable sample.');
+    assert.ok(newer(metadata.version, PUBLIC_SAMPLE.version), 'The patched candidate must be newer than the immutable sample.');
     report.candidateVersion = metadata.version; report.candidateAsarSha256 = createHash('sha256').update(require('original-fs').readFileSync(plan.archive)).digest('hex');
     const updater = packed('./release-updater.cjs');
     // Filled with the exact candidate transport's public export; never substitute
@@ -217,13 +218,26 @@ async function runCandidateController() {
     const transport = packed('./release-transport.cjs').createReleaseFetch(net);
     const latest = await updater.readMetadata(transport, metadata.version);
     report.realLatestCheck = { currentVersion: metadata.version, status: latest ? 'available' : 'current', ...(latest ? { availableVersion: latest.version, releaseId: latest.releaseId } : {}) };
-    const tagged = await transport('https://api.github.com/repos/' + REPOSITORY + '/releases/tags/v' + TO.version, { method: 'GET', redirect: 'manual', credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(15000), headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'NerdSSHell/' + metadata.version, 'X-GitHub-Api-Version': '2022-11-28' } });
+    const tagged = await transport('https://api.github.com/repos/' + REPOSITORY + '/releases/tags/v' + PUBLIC_SAMPLE.version, { method: 'GET', redirect: 'manual', credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(15000), headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'NerdSSHell/' + metadata.version, 'X-GitHub-Api-Version': '2022-11-28' } });
     assert.equal(tagged.status, 200); const reader = tagged.body.getReader(); let total = 0; const chunks = [];
     try { while (true) { const part = await reader.read(); if (part.done) break; total += part.value.byteLength; assert.ok(total <= updater.MAX_METADATA); chunks.push(Buffer.from(part.value)); } } finally { await reader.cancel(); }
-    const release = updater.publishedRelease(JSON.parse(Buffer.concat(chunks, total).toString('utf8')), FROM.version); assert.equal(release.version, TO.version); assert.equal(release.sha256, TO.sha256);
-    report.controlledSelection = { taggedVersion: TO.version, currentVersion: FROM.version, actualLatestFeedUnmodified: true };
-    ready = await updater.downloadInstaller(transport, release, FROM.version);
-    report.installerSha256 = digest(ready.installerPath); assert.equal(report.installerSha256, TO.sha256);
+    const release = updater.publishedRelease(JSON.parse(Buffer.concat(chunks, total).toString('utf8')), FROM.version); assert.equal(release.version, PUBLIC_SAMPLE.version); assert.equal(release.sha256, PUBLIC_SAMPLE.sha256);
+    report.controlledSelection = { taggedVersion: PUBLIC_SAMPLE.version, currentVersion: FROM.version, actualLatestFeedUnmodified: true };
+    const sample = await updater.downloadInstaller(transport, release, FROM.version);
+    try { report.publicSampleSha256 = digest(sample.installerPath); assert.equal(report.publicSampleSha256, PUBLIC_SAMPLE.sha256); }
+    finally { sample.cleanup(); }
+    // The candidate may be unpublished or newer than the current public release.
+    // Use the actual verified-build NSIS file for the handoff, independently of the HTTPS check.
+    const installerName = 'NerdSSHell-' + metadata.version + '-x64-Setup.exe';
+    const installerFile = path.join(process.cwd(), 'dist', installerName);
+    const built = { version: metadata.version, url: 'https://github.com/' + REPOSITORY + '/releases/download/v' + metadata.version + '/' + installerName,
+      size: fs.statSync(installerFile).size, sha256: plan.candidateInstallerSha256 };
+    const localBytes = async url => {
+      assert.equal(url, built.url);
+      return new Response(Readable.toWeb(fs.createReadStream(installerFile)), { headers: { 'Content-Length': String(built.size) } });
+    };
+    ready = await updater.downloadInstaller(localBytes, built, FROM.version);
+    report.installerSha256 = digest(ready.installerPath); assert.equal(report.installerSha256, built.sha256);
     report.instrumentationScope = plan.postResultDiagnostics ? 'Post-result-only worker observation after original invocation returns; no runner/installer/instance wrappers or before-operation code. This is not uninstrumented acceptance.' : plan.diagnostics ? 'Diagnostic-only passive bootstrap hooks delegate real runner and installer without replacing registry/process checks, payload, arguments or timeouts; timing may differ. This is not uninstrumented acceptance.' : 'Exact bundled helper bootstrap/source/arguments, with passive broker and stage observations only; no injected worker wrappers.';
     report.stageDirectory = ready.stageDirectory;
     stageSampler = setInterval(() => { try { report.stageObservation = { utc: new Date().toISOString(), exists: fs.existsSync(ready.stageDirectory), files: fs.existsSync(ready.stageDirectory) ? fs.readdirSync(ready.stageDirectory).slice(0, 32) : [] }; persist(); } catch {} }, 500);
@@ -237,7 +251,7 @@ async function runCandidateController() {
       child.once('exit', code => { report.nativeBroker.exitCode = code; persist(); }); return child;
     };
     handoff = await packed('./update-handoff.cjs').armUpdate({ ...ready, executablePath: plan.executablePath, userDataDirectory: plan.userDataDirectory, parentPid: plan.parentPid }, plan.diagnostics ? { execute: executeObserved } : undefined);
-    report.status = 'prepared'; persist(); send({ type: 'READY', sha256: release.sha256, size: release.size, targetVersion: release.version, parentPid: plan.parentPid, candidateVersion: metadata.version, candidateAsarSha256: report.candidateAsarSha256, realLatestCheck: report.realLatestCheck, stageDirectory: ready.stageDirectory, nativeBrokerPid: report.nativeBroker?.pid, diagnosticInstrumentation: plan.diagnostics === true, diagnosticMode: plan.postResultDiagnostics ? 'post-result' : plan.diagnostics ? 'full' : 'none' });
+    report.status = 'prepared'; persist(); send({ type: 'READY', sha256: ready.sha256, size: ready.size, targetVersion: ready.targetVersion, publicSampleSha256: report.publicSampleSha256, parentPid: plan.parentPid, candidateVersion: metadata.version, candidateAsarSha256: report.candidateAsarSha256, realLatestCheck: report.realLatestCheck, stageDirectory: ready.stageDirectory, nativeBrokerPid: report.nativeBroker?.pid, diagnosticInstrumentation: plan.diagnostics === true, diagnosticMode: plan.postResultDiagnostics ? 'post-result' : plan.diagnostics ? 'full' : 'none' });
     while (true) {
       let command; await until(() => { command = protocol.takeCommand(); return !!command; }, 'Candidate controller did not receive its next command.', 1200000);
       if (command === 'GO') { assert.equal(report.status, 'prepared'); await handoff.release(); report.status = 'released'; persist(); send({ type: 'GO' }); }
@@ -250,12 +264,13 @@ async function runCandidateController() {
 }
 // Accessibility actions are scoped to the exact owned root PID and executable.
 // No debugging switch or altered ASAR is used, so startup eligibility is real.
-async function accessibleAction(pid, executable, action, requiredName = '') {
+async function accessibleAction(pid, executable, action, requiredName = '', waitMs = 20000) {
   assert.ok(['Not now', 'Upgrade', 'close', 'inspect', 'observe'].includes(action));
+  assert.ok(Number.isInteger(waitMs) && waitMs >= 20000 && waitMs <= 180000);
   const code = String.raw`Add-Type -AssemblyName UIAutomationClient;Add-Type -AssemblyName UIAutomationTypes;${ownedWindowType}
     $owned=[Diagnostics.Process]::GetProcessById(${pid});try{
       if(-not [string]::Equals($owned.MainModule.FileName,${psquote(executable)},[StringComparison]::OrdinalIgnoreCase)){throw 'Owned app identity changed'};
-      $limit=[DateTime]::UtcNow.AddSeconds(20);$root=$null;
+      $limit=[DateTime]::UtcNow.AddMilliseconds(${waitMs});$root=$null;
       while([DateTime]::UtcNow -lt $limit){$owned.Refresh();if($owned.HasExited){throw 'Owned application exited before accessibility action'};
         $window=[NerdSSHellPublishedWindow]::Find([uint32]$owned.Id);
         if($window -ne [IntPtr]::Zero){if(${psquote(action)} -eq 'close'){if(-not [NerdSSHellPublishedWindow]::Close($window,[uint32]$owned.Id)){throw 'Normal owned WM_CLOSE failed'};return};$root=[Windows.Automation.AutomationElement]::FromHandle($window);break};Start-Sleep -Milliseconds 100};
@@ -280,7 +295,7 @@ async function accessibleAction(pid, executable, action, requiredName = '') {
           @{invoked=${psquote(action)};requiredNameObserved=$true;pid=$owned.Id}|ConvertTo-Json -Compress;return};Start-Sleep -Milliseconds 100
       };if(${psquote(action)} -eq 'observe'){@{observedMilliseconds=$observationClock.ElapsedMilliseconds;snapshots=$observations;newerOfferObserved=$observedNewerOffer;completionClaimed=$false}|ConvertTo-Json -Compress;return};throw 'Expected owned update consent was unavailable'
     }finally{$owned.Dispose()}`;
-  const result = await powershell(code, { timeout: action === 'observe' ? 45000 : 30000 });
+  const result = await powershell(code, { timeout: action === 'observe' ? 45000 : waitMs + 10000 });
   return result ? JSON.parse(result) : null;
 }
 async function registrations() {
@@ -340,7 +355,7 @@ async function main() {
   const output = path.join(process.cwd(), '.local', 'published-update-acceptance');
   fs.mkdirSync(output, { recursive: true }); fs.mkdirSync(data);
   const executable = path.join(install, 'NerdSSHell.exe');
-  const report = { status: 'running', scope: 'Actual published 1.2.1 startup discovers the current real latest stable release and refuses its broken legacy download safely after accessibility consent. Separate exact canonical candidate-ASAR SDK controller selects pinned tagged public 1.2.2 using a controlled current-version identity, exercises patched Chromium transport and real helper against that actual old parent, then real public NSIS/restart/data preservation. Final manual candidate NSIS bootstrap verifies the exact new installed ASAR and actual fused application. This does not claim legacy clients automatically install. Disposable GitHub-hosted Windows, synthetic data; no clipboard, remote session, UAC or physical mouse acceptance.', source: process.env.GITHUB_SHA, checks: [], from: FROM, to: TO };
+  const report = { status: 'running', scope: 'Unmodified published Electron 45 client checks the real latest release and refuses its automatic handoff after UI approval. A separate controller loads the exact candidate ASAR, downloads a digest-pinned public sample with its Chromium transport, then stages the verified workflow-built candidate installer from disk. Its unmodified native helper performs the upgrade of the original installed parent. Acceptance checks the restarted fused app, exact installed ASAR and synthetic user data on a disposable Windows VM.', source: process.env.GITHUB_SHA, checks: [], from: FROM, publicTransportSample: PUBLIC_SAMPLE, targetVersion: canonicalVersion };
   const persist = () => fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2) + '\n');
   const check = (name, value = true) => { assert.equal(value, true, name); report.checks.push(name); persist(); console.log(name); };
   const staged = []; let app, restarted, controller, handoff;
@@ -352,14 +367,14 @@ async function main() {
   try {
     check('Hosted runner starts without NerdSSHell registration or running applications', (await registrations()).length === 0 && (await applications()).length === 0);
     const target = await readMetadata(fetch, FROM.version);
-    check('Unauthenticated latest endpoint offers a valid stable release to legacy 1.2.1', !!target && (target.version === TO.version || newer(target.version, TO.version)));
+    check('Unauthenticated latest endpoint offers a valid stable release to the published baseline', !!target && (target.version === PUBLIC_SAMPLE.version || newer(target.version, PUBLIC_SAMPLE.version)));
     report.actualLatest = { version: target.version, releaseId: target.releaseId, sha256: target.sha256 };
     const baselineResponse = await fetch('https://api.github.com/repos/' + REPOSITORY + '/releases/tags/v' + FROM.version, { redirect: 'error', credentials: 'omit', headers: { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } });
     assert.equal(baselineResponse.status, 200);
     const baseline = publishedRelease(await baselineResponse.json(), '0.0.0');
-    check('Published baseline installer digest matches immutable 1.2.1', baseline.version === FROM.version && baseline.sha256 === FROM.sha256);
+    check('Published baseline installer digest matches the immutable baseline', baseline.version === FROM.version && baseline.sha256 === FROM.sha256);
     const ready = await downloadInstaller(fetch, baseline, '0.0.0'); staged.push(ready);
-    check('Public 1.2.1 download verifies exact size, EXE magic and SHA-256', digest(ready.installerPath) === FROM.sha256);
+    check('Public baseline download verifies exact size, EXE magic and SHA-256', digest(ready.installerPath) === FROM.sha256);
     await installConsumer(ready.installerPath, install);
     check('Real current-user NSIS installs exact baseline version', (await executableVersion(executable)) === FROM.version + '.0');
     const registration = await registrations();
@@ -367,7 +382,8 @@ async function main() {
     const archive = path.join(install, 'resources', 'app.asar');
     report.fromAsarSha256 = digest(archive);
     const actualUpdater = updaterFromArchive(archive), packedMetadata = JSON.parse(asar.extractFile(archive, 'package.json'));
-    check('Exact installed 1.2.1 updater discovers real current latest', packedMetadata.version === FROM.version && (await actualUpdater.readMetadata(fetch, FROM.version))?.sha256 === target.sha256);
+    check('Published Electron 45 installation contains dxcompiler.dll and omits dxil.dll', packedMetadata.electronRuntime.version.startsWith('45.') && fs.existsSync(path.join(install, 'dxcompiler.dll')) && !fs.existsSync(path.join(install, 'dxil.dll')));
+    check('Exact installed baseline updater discovers real current latest', packedMetadata.version === FROM.version && (await actualUpdater.readMetadata(fetch, FROM.version))?.sha256 === target.sha256);
     check('Exact installed updater recognizes real same-version latest as already current', await actualUpdater.readMetadata(fetch, target.version) === null);
     await assert.rejects(actualUpdater.readMetadata(async () => new Response('', { status: 503 }), FROM.version));
     await assert.rejects(actualUpdater.readMetadata(async () => new Response('{"draft":true}'), FROM.version));
@@ -384,24 +400,27 @@ async function main() {
     app = trackApp();
     const declined = await accessibleAction(app.pid, executable, 'Not now', 'NerdSSHell ' + target.version + ' is available. Upgrade now?');
     await delay(1000);
-    check('Actual eligible fused 1.2.1 shows update and honors native-accessibility Not now', declined.invoked === 'Not now' && !app.ended && !app.launchError && (await executableVersion(executable)) === FROM.version + '.0');
+    check('Actual eligible fused baseline shows update and honors native-accessibility Not now', declined.invoked === 'Not now' && !app.ended && !app.launchError && (await executableVersion(executable)) === FROM.version + '.0');
     check('Actual Not now never creates an installer download stage', !fs.readdirSync(fs.realpathSync.native(os.tmpdir())).some(name => name.startsWith('nerdsshell-update-' + app.pid + '-')));
     await accessibleAction(app.pid, executable, 'close'); await until(() => app.ended, 'Declined baseline app did not exit normally.');
     app = trackApp(); const oldPid = app.pid;
     const approved = await accessibleAction(oldPid, executable, 'Upgrade', 'NerdSSHell ' + target.version + ' is available. Upgrade now?');
     check('Actual eligible fused application receives explicit accessibility Upgrade approval', approved.invoked === 'Upgrade');
-    const refused = await accessibleAction(oldPid, executable, 'inspect', 'The update check or download could not finish.');
-    check('Actual legacy download failure visibly preserves its running original version', refused.names.some(name => name.startsWith('The update check or download could not finish.')) && !app.ended && await executableVersion(executable) === FROM.version + '.0');
-    check('Actual legacy download refusal leaves no installer stage or installation', !fs.readdirSync(fs.realpathSync.native(os.tmpdir())).some(name => name.startsWith('nerdsshell-update-' + oldPid + '-')));
+    const refusalMessage = 'Windows update helper could not be prepared.';
+    const refused = await accessibleAction(oldPid, executable, 'inspect', refusalMessage, 180000);
+    check('Unmodified published updater shows its helper refusal and keeps its original version running', refused.names.some(name => name.startsWith(refusalMessage)) && !app.ended && await executableVersion(executable) === FROM.version + '.0');
     report.legacyAutomaticInstallation = false;
     const candidateArchive = fs.realpathSync.native(path.join(process.cwd(), 'dist', 'win-unpacked', 'resources', 'app.asar'));
+    const candidateInstaller = path.join(process.cwd(), 'dist', 'NerdSSHell-' + canonicalVersion + '-x64-Setup.exe');
+    report.candidateInstallerSha256 = digest(candidateInstaller);
     const diagnosticMode = process.env.NERDSSHELL_UPDATE_DIAGNOSTICS;
-    controller = candidateController(candidateArchive, { executablePath: executable, userDataDirectory: data, parentPid: oldPid, candidateVersion: canonicalVersion, diagnostics: ['1', 'post-result'].includes(diagnosticMode), postResultDiagnostics: diagnosticMode === 'post-result' }, path.join(output, 'candidate-controller.json'));
+    controller = candidateController(candidateArchive, { executablePath: executable, userDataDirectory: data, parentPid: oldPid, candidateVersion: canonicalVersion, candidateInstallerSha256: report.candidateInstallerSha256, diagnostics: ['1', 'post-result'].includes(diagnosticMode), postResultDiagnostics: diagnosticMode === 'post-result' }, path.join(output, 'candidate-controller.json'));
     handoff = await controller.ready();
     report.handoff = handoff;
     report.candidateRealLatestCheck = handoff.realLatestCheck;
     check('Exact candidate modules return a distinct current or available result from the real latest feed', ['current', 'available'].includes(handoff.realLatestCheck?.status) && handoff.realLatestCheck.currentVersion === canonicalVersion);
-    check('Exact candidate Chromium transport downloads pinned public installer and prepares real helper for original parent', handoff.sha256 === TO.sha256 && handoff.parentPid === oldPid && handoff.candidateVersion === canonicalVersion);
+    check('Exact candidate Chromium transport downloads the immutable public sample', handoff.publicSampleSha256 === PUBLIC_SAMPLE.sha256);
+    check('Candidate helper prepares the actual candidate NSIS for the existing Electron 45 parent', handoff.sha256 === report.candidateInstallerSha256 && handoff.targetVersion === canonicalVersion && handoff.candidateVersion === canonicalVersion && handoff.parentPid === oldPid);
     report.instrumentationScope = handoff.diagnosticMode === 'post-result' ? 'Post-result-only write after exact original worker call returns; no operation wrappers or before-operation worker observers. Not uninstrumented acceptance.' : handoff.diagnosticInstrumentation ? 'Diagnostic-only worker wrappers delegate original operations; process/marker/version observations are passive but timing may differ. This run is not uninstrumented frozen-helper acceptance.' : 'No injected helper wrappers; exact bundled bootstrap/source/arguments. External process/marker/version observations remain passive.';
     report.beforeGoSnapshot = await runtimeSnapshot(executable); persist();
     await controller.release();
@@ -418,40 +437,26 @@ async function main() {
     const snapshotAt = Date.now() + 20000;
     await until(() => { observeCompletedWorker(); return Date.now() >= snapshotAt; }, 'Passive native observation wait exceeded its bound.', 21000);
     try { report.nativeAt20Seconds = await nativeProcessSnapshot(handoff, output); } catch (inspectionError) { report.nativeAt20Seconds = { inspectionError: inspectionError.message }; } persist();
-    await until(async () => { observeCompletedWorker(); try { return await executableVersion(executable) === TO.version + '.0'; } catch { return false; } }, 'Real installer did not finish exact 1.2.2 installation.', 630000);
+    await until(async () => { observeCompletedWorker(); try { return await executableVersion(executable) === canonicalVersion + '.0'; } catch { return false; } }, 'The candidate installer did not finish installing its exact version.', 630000);
     await until(async () => { restarted = (await applications({ rootWindowOnly: true })).find(value => value.pid !== oldPid && value.executable.toLowerCase() === executable.toLowerCase()); return !!restarted; }, 'Actual helper did not restart the upgraded application with its owned root window.', 120000);
     report.restartedPid = restarted.pid;
-    check('Real helper waits for old app exit, installs 1.2.2 and restarts actual application', app.ended && restarted.pid !== oldPid);
-    if (newer(target.version, TO.version)) await accessibleAction(restarted.pid, executable, 'Not now', 'NerdSSHell ' + target.version + ' is available. Upgrade now?');
+    report.toAsarSha256 = digest(archive);
+    check('Real helper waits for old app exit, installs the exact candidate ASAR and restarts the fused application', app.ended && restarted.pid !== oldPid && report.toAsarSha256 === handoff.candidateAsarSha256);
+    if (newer(target.version, canonicalVersion)) await accessibleAction(restarted.pid, executable, 'Not now', 'NerdSSHell ' + target.version + ' is available. Upgrade now?');
     const visible = await accessibleAction(restarted.pid, executable, 'inspect', 'Synthetic preserved connection');
     check('Restarted actual app uses its original synthetic saved connection', visible.names.some(name => name.startsWith('Synthetic preserved connection')));
     const after = JSON.parse(fs.readFileSync(store.file, 'utf8'));
     check('Upgrade preserves saved profiles, host pins, preferences and archive bytes', JSON.stringify(after.profiles) === JSON.stringify(original.profiles) && JSON.stringify(after.pins) === JSON.stringify(original.pins) && JSON.stringify(after.appearance) === JSON.stringify(original.appearance) && JSON.stringify(after.notifications) === JSON.stringify(original.notifications) && JSON.stringify(after.sessionDefaults) === JSON.stringify(original.sessionDefaults) && digest(sentinel) === sentinelHash);
     const updatedUpdater = updaterFromArchive(archive);
-    const publicSampleOffer = await updatedUpdater.readMetadata(fetch, TO.version);
-    check('Exact installed public sample correctly compares the real latest release', target.version === TO.version ? publicSampleOffer === null : publicSampleOffer?.version === target.version);
-    report.toAsarSha256 = digest(archive);
+    const currentOffer = await updatedUpdater.readMetadata(fetch, canonicalVersion);
+    check('Exact upgraded client compares the real latest release to the candidate version', newer(target.version, canonicalVersion) ? currentOffer?.version === target.version : currentOffer === null);
+    const observation = await accessibleAction(restarted.pid, executable, 'observe');
+    report.restartedStartup = observation;
+    check('Restarted fused client completes bounded observation beyond the startup timeout', observation.observedMilliseconds > 15000 && observation.snapshots > 0 && observation.completionClaimed === false);
     await accessibleAction(restarted.pid, executable, 'close');
     await until(async () => (await applications()).length === 0, 'Owned upgraded app did not close normally.');
     check('All actual installed application processes close normally', (await applications()).length === 0);
     await controller.complete();
-    const candidateVersion = handoff.candidateVersion;
-    const candidateInstaller = fs.realpathSync.native(path.join(process.cwd(), 'dist', 'NerdSSHell-' + candidateVersion + '-x64-Setup.exe'));
-    report.candidateBootstrap = { version: candidateVersion, installerSha256: digest(candidateInstaller), candidateAsarSha256: handoff.candidateAsarSha256, unsigned: true };
-    check('Manual candidate bootstrap starts only after all owned production apps close', (await applications()).length === 0);
-    await installConsumer(candidateInstaller, install);
-    check('Real candidate NSIS installs exact new version and candidate-ASAR bytes', await executableVersion(executable) === candidateVersion + '.0' && digest(archive) === handoff.candidateAsarSha256);
-    app = trackApp();
-    if (newer(target.version, candidateVersion)) await accessibleAction(app.pid, executable, 'Not now', 'NerdSSHell ' + target.version + ' is available. Upgrade now?');
-    const patchedView = await accessibleAction(app.pid, executable, 'inspect', 'Synthetic preserved connection');
-    check('Actual fused patched application opens its original saved connection after bootstrap', patchedView.names.some(name => name.startsWith('Synthetic preserved connection')));
-    const startupObservation = await accessibleAction(app.pid, executable, 'observe'); report.candidateBootstrap.startupObservation = startupObservation;
-    check('Actual fused launch has bounded observation beyond the startup timeout without a visible failure or obsolete offer', startupObservation.observedMilliseconds > 15000 && startupObservation.snapshots > 0 && startupObservation.completionClaimed === false);
-    const bootstrapped = JSON.parse(fs.readFileSync(store.file, 'utf8'));
-    check('Candidate bootstrap preserves saved profiles, host pins, preferences and archive bytes', JSON.stringify(bootstrapped.profiles) === JSON.stringify(original.profiles) && JSON.stringify(bootstrapped.pins) === JSON.stringify(original.pins) && JSON.stringify(bootstrapped.appearance) === JSON.stringify(original.appearance) && JSON.stringify(bootstrapped.notifications) === JSON.stringify(original.notifications) && JSON.stringify(bootstrapped.sessionDefaults) === JSON.stringify(original.sessionDefaults) && digest(sentinel) === sentinelHash);
-    await accessibleAction(app.pid, executable, 'close'); await until(() => app.ended, 'Owned patched app did not close normally.');
-    await until(async () => (await applications()).length === 0, 'Owned patched app left production processes.');
-    check('Actual fused patched application closes normally after bootstrap acceptance', (await applications()).length === 0);
     report.status = 'passed'; persist();
   } catch (error) {
     report.status = 'failed'; report.failure = error.message; report.ownedAppStderr = app?.stderrText; report.ownedAppEnded = app?.ended === true; report.candidateControllerDiagnostics = controller?.diagnostics;
@@ -469,6 +474,6 @@ async function main() {
     report.disposableRunnerOnly = true; persist();
   }
 }
-module.exports = { hostedEnvironment, FROM, TO, updaterFromArchive, controllerProtocol, isCandidateControllerEntry, diagnosticBootstrap, postResultBootstrap, readPostResultObservation };
+module.exports = { hostedEnvironment, FROM, PUBLIC_SAMPLE, updaterFromArchive, controllerProtocol, isCandidateControllerEntry, diagnosticBootstrap, postResultBootstrap, readPostResultObservation };
 if (isCandidateControllerEntry(process.versions.electron, process.argv, __filename)) runCandidateController().catch(error => { console.error(error.message); require('electron').app.exit(1); });
 else if (!process.versions.electron && require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });

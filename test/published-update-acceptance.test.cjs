@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const os = require('node:os');
 const fs = require('node:fs'), path = require('node:path'), { randomBytes } = require('node:crypto');
 const asar = require('@electron/asar');
-const { hostedEnvironment, FROM, TO, controllerProtocol, isCandidateControllerEntry, updaterFromArchive, readPostResultObservation } = require('../scripts/Published-Update-Smoke.cjs');
+const { hostedEnvironment, FROM, PUBLIC_SAMPLE, controllerProtocol, isCandidateControllerEntry, updaterFromArchive, readPostResultObservation } = require('../scripts/Published-Update-Smoke.cjs');
 const permitted = {
   GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted', GITHUB_REPOSITORY: 'zeidlern/NerdSSHell',
   RUNNER_TEMP: os.tmpdir(), GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_ACTOR: 'zeidlern', GITHUB_REF: 'refs/heads/main'
@@ -22,8 +22,8 @@ test('real consumer installer fixture refuses workstations, self-hosted runners,
   assert.throws(() => hostedEnvironment({ ...internal, NERDSSHELL_ACCEPTANCE_HEAD_REPOSITORY: 'other/NerdSSHell' }, 'win32'));
 });
 test('published consumer acceptance binds original immutable installers rather than newly rebuilt bytes', () => {
-  assert.deepEqual(FROM, { version: '1.2.1', sha256: '446b31fab8a00bca32b68d2e4ca9d257392e60b21eb03e16fc7105fc91269e24' });
-  assert.deepEqual(TO, { version: '1.2.2', sha256: '8376baa0339283db4400098c8b68f0d6ce8dfbab2bdb576d1a3a19c85b07b74c' });
+  assert.deepEqual(FROM, { version: '1.2.10', sha256: 'cbecfeea754b5f5ae1532ed9359e45ec91428f98967f21001b5c5971c4693ecf' });
+  assert.deepEqual(PUBLIC_SAMPLE, { version: '1.2.11', sha256: 'b594cbd8142c1d18554244ece6b58a6980b8505fe8c401c0213f9226769e5a2f' });
 });
 function protocolFixture(t) {
   const temporary = fs.realpathSync.native(os.tmpdir()), directory = fs.mkdtempSync(path.join(temporary, 'nerdsshell-candidate-controller-'));

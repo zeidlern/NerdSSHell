@@ -168,7 +168,7 @@ async function prepareUpdate(plan, internalDependencies = {}) {
         return cancelTask;
       }
     });
-  } catch {
+  } catch (error) {
     // Closing stdin before GO cannot install. Never terminate another process.
     try { child?.stdin.destroy(); } catch {}
     if (!child) cleanup();
@@ -180,11 +180,11 @@ async function prepareUpdate(plan, internalDependencies = {}) {
       while (fs.existsSync(checked.stage.actual) && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 20));
       cleanup();
     }
-    throw new Error('Windows update helper could not be prepared. NerdSSHell can keep running.');
+    throw error;
   }
 }
 async function armUpdate(plan, internalDependencies) {
   try { return await prepareUpdate(plan, internalDependencies); }
-  catch { throw new Error('Windows update helper could not be prepared. NerdSSHell can keep running.'); }
+  catch { throw new Error('Windows update helper could not be prepared. NerdSSHell can keep running. For a manual update, open Help and about → Releases.'); }
 }
 module.exports = { armUpdate, validatePlan, bootstrap, cleanupOwned };

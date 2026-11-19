@@ -1,3 +1,13 @@
+# Version 1.2.12 Windows update helper
+
+The Windows PowerShell event log for the reported 1.2.10 → 1.2.11 attempt identified the first failure during preparation. The bundled helper requested `dxil.dll` from the installed application directory before it signaled readiness. The 1.2.10 installer and both official Electron 45 SDKs used by 1.2.10 and 1.2.11 omit that file. The older hosted test had run the candidate helper against an installation with a different Electron layout.
+
+On Windows 11 x64, the corrected helper read and revalidated the installed 1.2.10 and packaged 1.2.11 program files. Each inventory contained 20 hashed files and a record of the absent alternate DLL. The public 1.2.10 and 1.2.11 clients require a one-time manual installation to obtain the fix.
+
+Node 22.23.5 on Windows passed source checks and 1,155 regression tests with two platform-specific skips. The native recovery checks exercised legacy and current layouts, missing required files, changed or newly present alternate DLLs, and directory substitution. Both npm audits returned zero known advisories. The local 1.2.12 package passed fuse, ASAR integrity, containment, notice and startup-update smoke checks. The hosted Windows acceptance workflow exercises the old-client refusal and the repaired helper with actual NSIS installation, restart, and disposable saved data.
+
+---
+
 # Version 1.2.11 Ubuntu Persistent SSH and security validation
 
 On November 18, 2026, the Windows client was tested against an isolated Ubuntu 26.04.1 LTS guest running distribution OpenSSH 10.2p1 and tmux 3.6a-2ubuntu0.2. Standard SSH accepted input. In 1.2.10, Persistent SSH authenticated and created a shell, then failed discovery with “The server returned an unrecognized session list.” This tmux build rendered literal tabs in the requested format as underscores.

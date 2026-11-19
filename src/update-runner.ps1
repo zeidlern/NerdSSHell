@@ -178,18 +178,43 @@ function Wait-UpdateShutdownChildren($Parent,$Children,[string]$Nonce,[int]$Time
 }
 function Get-UpdateRecoveryFiles([string]$Directory) {
   # Only known installed program files, never profiles, archives or credentials.
-  return @('NerdSSHell.exe','chrome_100_percent.pak','chrome_200_percent.pak','d3dcompiler_47.dll','dxcompiler.dll','dxil.dll','ffmpeg.dll','icudtl.dat',
+  return @('NerdSSHell.exe','chrome_100_percent.pak','chrome_200_percent.pak','d3dcompiler_47.dll','dxcompiler.dll','dxil.dll','NerdSSHell_wer.dll','ffmpeg.dll','icudtl.dat',
     'resources.pak','snapshot_blob.bin','v8_context_snapshot.bin','vk_swiftshader_icd.json','vk_swiftshader.dll','vulkan-1.dll','locales\en-US.pak','resources\app.asar','resources\app.asar.unpacked\node_modules\ssh2\util\pagent.exe',
     'resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty.node',
     'resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty\conpty.dll',
     'resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty\OpenConsole.exe') | ForEach-Object {[IO.Path]::Combine($Directory,$_)}
 }
-function Get-UpdateRecoveryIdentity([string]$Directory) {
-  $records=@(); foreach($file in @(Get-UpdateRecoveryFiles $Directory)) {$held=New-Object NerdSSHell.UpdatePath($file,$false);try{$records+=@{path=$held.Path;hash=(Get-UpdateHash $held.Stream)}}finally{$held.Dispose()}}
+function Test-UpdateFileMissing([string]$Path) {
+  # File.Exists also returns false for inaccessible files and directories.
+  try {[void][IO.File]::GetAttributes($Path);return $false}catch [IO.FileNotFoundException] {return $true}
+}
+function Get-UpdateRecoveryIdentity([string]$Directory,[version]$InstalledVersion) {
+  # From 1.2.10 the Electron 45 package contains the WER DLL and omits DXIL.
+  # A leftover alternate component is protected along with the required files.
+  $alternate=if($InstalledVersion -ge [version]'1.2.10'){'dxil.dll'}else{'NerdSSHell_wer.dll'}
+  $records=@()
+  foreach($file in @(Get-UpdateRecoveryFiles $Directory)) {
+    if([IO.Path]::GetFileName($file) -ceq $alternate -and (Test-UpdateFileMissing $file)) {
+      $records+=@{path=$file;hash=$null}
+      continue
+    }
+    $held=New-Object NerdSSHell.UpdatePath($file,$false)
+    try{$records+=@{path=$held.Path;hash=(Get-UpdateHash $held.Stream)}}finally{$held.Dispose()}
+  }
   return $records
 }
 function Test-UpdateRecoveryIdentity($Records) {
-  try {foreach($record in $Records){$held=New-Object NerdSSHell.UpdatePath($record.path,$false);try{if((Get-UpdateHash $held.Stream) -cne $record.hash){return $false}}finally{$held.Dispose()}};return $true}catch{return $false}
+  try {
+    foreach($record in $Records) {
+      if($null -eq $record.hash) {
+        if(-not (Test-UpdateFileMissing $record.path)){return $false}
+        continue
+      }
+      $held=New-Object NerdSSHell.UpdatePath($record.path,$false)
+      try{if((Get-UpdateHash $held.Stream) -cne $record.hash){return $false}}finally{$held.Dispose()}
+    }
+    return $true
+  }catch{return $false}
 }
 function Start-UpdateInstaller([string]$Installer,[string]$Scope,[string]$Directory) {
   # NSIS /D is deliberately the final, unquoted remainder of the command line.
@@ -285,7 +310,7 @@ function Invoke-UpdateRunner([string]$Path,[string]$ManifestSha256,[int]$BrokerP
     $executable=New-Object NerdSSHell.UpdatePath($manifest.executablePath,$false)
     try {if([IO.Path]::GetFileName($executable.Path) -ine 'NerdSSHell.exe'){throw 'Invalid application'};$directory=[IO.Path]::GetDirectoryName($executable.Path);$oldVersion=Get-UpdateVersion $executable.Path;if([version]$manifest.targetVersion -le [version]$oldVersion){throw 'Version must increase'};if($directory.Length -gt 900){throw 'Install path too long'};$scope=Get-UpdateScope $directory}finally{$executable.Dispose()}
     if($names -contains 'userDataDirectory'){$data=New-Object NerdSSHell.UpdatePath($manifest.userDataDirectory,$true);try{if((Within-UpdatePath $directory $data.Path) -or (Within-UpdatePath $stage.Path $data.Path) -or (Within-UpdatePath $data.Path $stage.Path)){throw 'User data overlaps update paths'};$manifest.userDataDirectory=$data.Path}finally{$data.Dispose()}}
-    $oldIdentity=Get-UpdateRecoveryIdentity $directory
+    $oldIdentity=Get-UpdateRecoveryIdentity $directory $oldVersion
     $parent=[Diagnostics.Process]::GetProcessById([int]$manifest.parentPid);$script:UpdateParentLease=$parent;$parentHandle=$parent.Handle;$parentStart=$parent.StartTime.ToUniversalTime().Ticks
     $parentFile=New-Object NerdSSHell.UpdatePath($parent.MainModule.FileName,$false);try{if($parent.HasExited -or -not (Same-UpdatePath $parentFile.Path $manifest.executablePath) -or $parent.StartTime.ToUniversalTime().Ticks -ne $parentStart){throw 'Wrong parent identity'}}finally{$parentFile.Dispose()}
     $shutdownChildren=@(Get-UpdateShutdownChildren $parent $manifest.executablePath);foreach($child in $shutdownChildren){$leases.Add($child)}

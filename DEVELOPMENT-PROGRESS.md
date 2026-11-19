@@ -359,3 +359,7 @@ The first integrated PR run passed real-installer acceptance but exposed a fresh
 ## November 18, 2026 — Persistent SSH on Ubuntu 26.04 and security maintenance
 
 The owner authorized a patch release, protected merge and publication. Development began at v1.2.10 (`2e0d8a8`). An isolated Ubuntu 26.04.1 SSH server reproduced the Persistent discovery error and verified the format repair, including reattachment to the session left by the old client. Version 1.2.11 also tightens first-use SSH trust and SFTP file handling and refreshes Electron and the build dependency graph. See [validation](docs/VALIDATION.md) for measured scope and the protected pull request and release for exact build evidence.
+
+## November 18, 2026 — Windows updater preparation repair
+
+A reported 1.2.10 → 1.2.11 attempt reached the Windows helper after download verification. The local PowerShell event for that attempt recorded the missing DXIL component in the installed application directory. The recovery inventory now recognizes the Electron 45 layout introduced in 1.2.10 and continues to bind files to the installed version before restart. See [validation](docs/VALIDATION.md), [installation](docs/wiki/Installation.md), and the 1.2.12 protected release checks.

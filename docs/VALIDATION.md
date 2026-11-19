@@ -6,6 +6,8 @@ On Windows 11 x64, the corrected helper read and revalidated the installed 1.2.1
 
 Node 22.23.5 on Windows passed source checks and 1,155 regression tests with two platform-specific skips. The native recovery checks exercised legacy and current layouts, missing required files, changed or newly present alternate DLLs, and directory substitution. Both npm audits returned zero known advisories. The local 1.2.12 package passed fuse, ASAR integrity, containment, notice and startup-update smoke checks. The hosted Windows acceptance workflow exercises the old-client refusal and the repaired helper with actual NSIS installation, restart, and disposable saved data.
 
+The [hosted Windows installer test](https://github.com/zeidlern/NerdSSHell/actions/runs/44465027673) observed the public 1.2.10 client decline preparation after update approval. It then loaded the repair from the candidate ASAR, staged the candidate installer from the workflow build, and verified normal exit, NSIS installation, restart, exact installed ASAR bytes, and preservation of the synthetic profile, host pins, preferences, and archive. The separate download check used the public 1.2.11 asset.
+
 ---
 
 # Version 1.2.11 Ubuntu Persistent SSH and security validation

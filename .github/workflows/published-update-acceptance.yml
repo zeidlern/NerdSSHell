@@ -42,7 +42,7 @@ jobs:
       - run: npm exec --yes --package=npm@12.2.2 -- node scripts/Generate-SupplyChain.cjs
       - run: npm run dist
       - run: npm run verify:package
-      - name: Legacy refusal and patched candidate transport with actual public NSIS in this disposable VM
+      - name: Reproduce the Electron 45 refusal and upgrade its real installation with the candidate helper
         run: node scripts/Published-Update-Smoke.cjs
       - name: Preserve bounded acceptance evidence
         if: ${{ always() }}

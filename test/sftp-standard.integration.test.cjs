@@ -6,6 +6,15 @@ const { StandardRemote } = require('../src/standard-remote.cjs');
 const { listDirectory, download } = require('../src/sftp-browser.cjs');
 const { upload } = require('../src/transfer.cjs');
 
+// Read the kernel's input and output speeds directly. Ubuntu's uutils stty
+// and GNU stty do not consistently support the same "speed" subcommand.
+const ptySpeeds = `python3 -c '
+import termios
+rates = {value: name[1:] for name, value in vars(termios).items() if name.startswith("B") and name[1:].isdigit()}
+input_rate, output_rate = termios.tcgetattr(0)[4:6]
+print("PTY_SPEED", rates[input_rate], rates[output_rate])
+'`;
+
 test('real OpenSSH: standard PTY and its SFTP sidecar browse, download, upload without tmux', { skip: !process.env.NERDSSHELL_TEST_KEY, timeout: 60000 }, async t => {
   const host = process.env.NERDSSHELL_TEST_HOST || '127.0.0.1';
   if (host !== '127.0.0.1') throw new Error('This test only supports the disposable loopback fixture.');
@@ -48,7 +57,7 @@ test('real OpenSSH: terminal baud modes are observable per PTY and tmux owns sep
       if (error) return reject(error);
       const out = [], err = [];
       channel.on('data', bytes => out.push(bytes)); channel.stderr.on('data', bytes => err.push(bytes));
-      channel.on('error', reject); channel.on('close', code => code === 0 ? resolve(Buffer.concat(out).toString().trim()) : reject(new Error(Buffer.concat(err).toString() || 'Fixture command failed.')));
+      channel.on('error', reject); channel.on('close', code => code === 0 ? resolve(Buffer.concat(out).toString().trim()) : reject(new Error((Buffer.concat([...err, ...out]).toString().trim() || 'Fixture command failed.').slice(0, 500))));
     });
   });
   t.after(async () => { try { await exec(`tmux -L ${socket} kill-server`); } catch {} client.end(); });
@@ -58,16 +67,19 @@ test('real OpenSSH: terminal baud modes are observable per PTY and tmux owns sep
       privateKey: fs.readFileSync(process.env.NERDSSHELL_TEST_KEY), hostVerifier: key => expected.equals(key) });
   });
   const pty = rate => ({ term: 'xterm-256color', rows: 36, cols: 120, modes: { TTY_OP_ISPEED: rate, TTY_OP_OSPEED: rate } });
-  assert.equal(await exec('stty speed', pty(9600)), '9600');
-  assert.equal(await exec('stty speed', pty(115200)), '115200');
-  const normal = await exec('stty speed', { term: 'xterm-256color', rows: 36, cols: 120 });
-  assert.equal(normal, '38400', 'Omitted modes retain the disposable OpenSSH Linux default.');
+  assert.equal(await exec(ptySpeeds, pty(9600)), 'PTY_SPEED 9600 9600');
+  assert.equal(await exec(ptySpeeds, pty(115200)), 'PTY_SPEED 115200 115200');
+  const normal = await exec(ptySpeeds, { term: 'xterm-256color', rows: 36, cols: 120 });
+  assert.equal(normal, 'PTY_SPEED 38400 38400', 'Omitted modes retain the disposable OpenSSH Linux default.');
   await exec(`tmux -L ${socket} new-session -d -s baud 'sleep 30'`);
   const paneTty = await exec(`tmux -L ${socket} display-message -p -t baud '#{pane_tty}'`);
   assert.match(paneTty, /^\/dev\/pts\/\d+$/);
-  assert.equal(await exec(`stty -F ${paneTty} speed`, pty(9600)), normal, 'The SSH PTY speed does not change the independent tmux pane.');
-  const shared = await Promise.all([exec('stty speed; sleep 0.1; stty speed', pty(9600)), exec('stty speed; sleep 0.1; stty speed', pty(115200))]);
-  assert.deepEqual(shared.map(value => value.split(/\s+/)), [['9600', '9600'], ['115200', '115200']], 'One transport supports independent concurrent PTYs.');
+  assert.equal(await exec(`${ptySpeeds} < ${paneTty}`, pty(9600)), normal, 'The SSH PTY speed does not change the independent tmux pane.');
+  const twice = `${ptySpeeds}; sleep 0.1; ${ptySpeeds}`;
+  const shared = await Promise.all([exec(twice, pty(9600)), exec(twice, pty(115200))]);
+  assert.deepEqual(shared.map(value => value.split(/\r?\n/)), [
+    ['PTY_SPEED 9600 9600', 'PTY_SPEED 9600 9600'], ['PTY_SPEED 115200 115200', 'PTY_SPEED 115200 115200']
+  ], 'One transport supports independent concurrent PTYs.');
 });
 
 test('real OpenSSH: NerdSSHell saved profile, new-window override and task baud values become Linux PTY speeds', { skip: !process.env.NERDSSHELL_TEST_KEY, timeout: 30000 }, async t => {
@@ -84,15 +96,16 @@ test('real OpenSSH: NerdSSHell saved profile, new-window override and task baud 
     await remote.open(pane.key);
     const until = Date.now() + 10000;
     while (Date.now() < until) {
-      const match = /(?:^|[\r\n])(\d+)(?:[\r\n]|$)/.exec(output.get(pane.key) || '');
-      if (match) return Number(match[1]);
+      const match = /(?:^|[\r\n])PTY_SPEED (\d+) (\d+)[\r\n]/.exec(output.get(pane.key) || '');
+      if (match) return [Number(match[1]), Number(match[2])];
       await new Promise(resolve => setTimeout(resolve, 10));
     }
     throw new Error('Owned disposable PTY did not publish its terminal speed.');
   };
-  const first = await remote.create('Saved profile', 'stty speed; sleep 1');
-  const second = await remote.create('New window override', 'stty speed; sleep 1', 115200);
-  assert.deepEqual(await Promise.all([readSpeed(first), readSpeed(second)]), [9600, 115200]);
-  const normal = await remote.create('Server default', 'stty speed; sleep 1', 0); assert.equal(await readSpeed(normal), 38400);
-  const task = await remote.createTask('Inherited task speed', 'stty speed; sleep 1'); assert.equal(await readSpeed(task), 9600);
+  const command = `${ptySpeeds}; sleep 1`;
+  const first = await remote.create('Saved profile', command);
+  const second = await remote.create('New window override', command, 115200);
+  assert.deepEqual(await Promise.all([readSpeed(first), readSpeed(second)]), [[9600, 9600], [115200, 115200]]);
+  const normal = await remote.create('Server default', command, 0); assert.deepEqual(await readSpeed(normal), [38400, 38400]);
+  const task = await remote.createTask('Inherited task speed', command); assert.deepEqual(await readSpeed(task), [9600, 9600]);
 });

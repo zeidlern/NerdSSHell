@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.12 — Windows update helper repair
+
+- Fix update preparation on the Electron 45 package layout introduced in 1.2.10. The Windows helper now checks the recovery files for the installed application's version and verifies that their state is consistent before an old installation can be reopened.
+- **Upgrading from 1.2.10 or 1.2.11:** save any unsaved work, quit NerdSSHell normally, and run the official 1.2.12 Windows installer once. Those clients run their own older helper and can stop after downloading the update. Later updates use the repaired helper.
+- Add Windows regression coverage for the installed package layout and a link to manual-update guidance in the helper failure message. See [validation results](docs/VALIDATION.md).
+
 ## 1.2.11 — Ubuntu tmux compatibility and security fixes
 
 - Restore Persistent SSH discovery on Ubuntu 26.04 LTS with tmux 3.6a. Reconnecting can find sessions left running by an earlier failed attempt. Session names containing spaces, underscores and pipes retain their identity.

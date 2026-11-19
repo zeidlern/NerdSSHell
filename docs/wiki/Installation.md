@@ -22,6 +22,8 @@ Do not expose a home server's SSH port to the internet just to use NerdSSHell; a
 
 ## Route A: an official installer
 
+**Upgrading from 1.2.10 or 1.2.11:** these versions can finish downloading an update and then report “Windows update helper could not be prepared.” Their helper expects a DLL absent from the official Electron 45 package. Save your notes, finish local or Standard SSH work, quit normally, and install 1.2.12 or later once using the steps below. Persistent sessions stay on the server and can be reattached after startup.
+
 Versions through 1.2.3 can announce a newer release but fail to download it. Download and install the latest official Windows x64 installer from [Releases](https://github.com/zeidlern/NerdSSHell/releases) manually once; it includes the updater repair introduced in 1.2.4. Save notes, finish local/Standard SSH work and exit normally before installing.
 
 Versions 1.2.4–1.2.6 can cancel an approved upgrade when their control pipe closes during normal app shutdown. If the app closes but does not finish upgrading or restart, manually install the latest official installer once to receive the handoff repair introduced in 1.2.7. Reopening the old client and retrying its update offer may encounter the same race.

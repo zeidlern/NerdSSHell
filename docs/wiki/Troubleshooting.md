@@ -6,6 +6,8 @@ Record the About version, full source SHA for source builds, Windows version, se
 
 ## Installation and build problems
 
+**“Windows update helper could not be prepared” on 1.2.10 or 1.2.11:** the installed helper expects an older Electron file layout. A retry on the same installation can stop at the same point. Quit normally and use the official 1.2.12 or newer Windows installer once. [Installation instructions](Installation.md)
+
 **A release/download is not found:** use the official [repository](https://github.com/zeidlern/NerdSSHell) and [Releases](https://github.com/zeidlern/NerdSSHell/releases). Check whether the intended version includes a Windows installer or source only. Avoid random forks and download mirrors.
 
 **Node/npm is missing:** install the documented Node 22 x64 toolchain and open a new terminal. Use `npm.cmd` in Windows PowerShell where its script shim is blocked. Do not bypass organizational policy.

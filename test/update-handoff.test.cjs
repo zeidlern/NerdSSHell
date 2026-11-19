@@ -117,6 +117,61 @@ test('Windows runner source keeps process lifetime, registry scope, no-kill, exa
   const source = fs.readFileSync(path.join(__dirname, '../src/update-runner.ps1'), 'utf8');
   assert.match(source, /parent\.Handle/); assert.match(source, /parent\.StartTime/); assert.match(source, /parent\.MainModule\.FileName/); assert.match(source, /ReadLineAsync/); assert.match(source, /CANCEL /); assert.match(source, /parent\.HasExited/); assert.match(source, /Assert-NoUpdateInstances/); assert.match(source, /Registry64/); assert.match(source, /48ee049e-c2f6-57b2-ab6e-7f5df516dcc0/); assert.match(source, /\/S \/'\+\$Scope\+' \/D='/); assert.match(source, /\$held\.MarkDelete\(\)/); assert.match(source, /SetFileInformationByHandle/); assert.match(source, /manifest\.installerIdentity/); assert.match(source, /Conflicting registration/); assert.match(source, /targetVersion/); assert.doesNotMatch(source, /Stop-Process|\.Kill\(|taskkill|ExecutionPolicy|--force-run|--delete-app-data|Recurse/);
 });
+test('Windows recovery validates legacy and Electron 45 payloads, including absent and leftover components', { skip: process.platform !== 'win32' }, t => {
+  const { home } = fixture(t), install = path.join(home, 'recovery-layout');
+  const common = [
+    'NerdSSHell.exe', 'chrome_100_percent.pak', 'chrome_200_percent.pak', 'd3dcompiler_47.dll', 'dxcompiler.dll', 'ffmpeg.dll', 'icudtl.dat',
+    'resources.pak', 'snapshot_blob.bin', 'v8_context_snapshot.bin', 'vk_swiftshader_icd.json', 'vk_swiftshader.dll', 'vulkan-1.dll',
+    'locales/en-US.pak', 'resources/app.asar', 'resources/app.asar.unpacked/node_modules/ssh2/util/pagent.exe',
+    ...['conpty.node', 'conpty/conpty.dll', 'conpty/OpenConsole.exe'].map(name => 'resources/app.asar.unpacked/node_modules/node-pty/prebuilds/win32-x64/' + name)
+  ];
+  for (const name of common) {
+    const file = path.join(install, name);
+    fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, 'fixture ' + name);
+  }
+  const quote = value => "'" + value.replaceAll("'", "''") + "'";
+  const code = `
+    $ErrorActionPreference='Stop'
+    . ([ScriptBlock]::Create([IO.File]::ReadAllText(${quote(path.resolve(__dirname, '../src/update-runner.ps1'))})))
+    $install=${quote(install)}
+    function Assert-RecoveryRefused([string]$version){
+      try {[void](Get-UpdateRecoveryIdentity $install $version)}catch{return}
+      throw "Incomplete or nonordinary $version layout accepted"
+    }
+    foreach($version in @('1.2.9','1.2.10','1.2.12')){
+      if([version]$version -ge [version]'1.2.10'){$required='NerdSSHell_wer.dll';$alternate='dxil.dll'}
+      else{$required='dxil.dll';$alternate='NerdSSHell_wer.dll'}
+      $required=Join-Path $install $required;$alternate=Join-Path $install $alternate
+      Assert-RecoveryRefused $version
+      [IO.File]::WriteAllText($required,'required')
+      $records=@(Get-UpdateRecoveryIdentity $install $version)
+      $absent=@($records|Where-Object {$null -eq $_.hash})
+      if($records.Count -ne 21 -or $absent.Count -ne 1 -or $absent[0].path -cne $alternate -or -not (Test-UpdateRecoveryIdentity $records)){throw "Ordinary $version layout refused"}
+      [IO.File]::WriteAllText($alternate,'retained')
+      if(Test-UpdateRecoveryIdentity $records){throw 'Added alternate accepted'}
+      $withBoth=@(Get-UpdateRecoveryIdentity $install $version)
+      if(-not (Test-UpdateRecoveryIdentity $withBoth)){throw 'Existing ordinary alternate refused'}
+      [IO.File]::WriteAllText($alternate,'modified')
+      if(Test-UpdateRecoveryIdentity $withBoth){throw 'Changed alternate accepted'}
+      [IO.File]::Delete($alternate)
+      if(Test-UpdateRecoveryIdentity $withBoth){throw 'Removed existing alternate accepted'}
+      [void][IO.Directory]::CreateDirectory($alternate)
+      Assert-RecoveryRefused $version
+      [IO.Directory]::Delete($alternate)
+      $core=Join-Path $install 'dxcompiler.dll';$moved=Join-Path $install 'fixture.saved'
+      [IO.File]::Move($core,$moved);Assert-RecoveryRefused $version
+      if(Test-UpdateRecoveryIdentity $records){throw 'Missing common file accepted'}
+      [IO.File]::Move($moved,$core)
+      [IO.File]::Delete($required)
+      if(Test-UpdateRecoveryIdentity $records){throw 'Removed required variant accepted'}
+    }
+    [Console]::WriteLine('PASS')`;
+  const shell = path.win32.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  const result = spawnSync(shell, ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(code, 'utf16le').toString('base64')],
+    { windowsHide: true, shell: false, encoding: 'utf8', timeout: 20000 });
+  assert.equal(result.status, 0, result.stderr); assert.equal(result.stdout.trim(), 'PASS');
+});
+
 test('Windows Toolhelp snapshot proves actual parent lineage and rejects independent IDs and ancestry cycles', {skip:process.platform!=='win32'}, () => {
   const source=path.join(__dirname,'../src/update-runner.ps1'),quote=value=>"'"+value.replaceAll("'","''")+"'";
   const code="$ErrorActionPreference='Stop';. ([ScriptBlock]::Create([IO.File]::ReadAllText("+quote(source)+")));$parents=[NerdSSHell.UpdateProcesses]::Parents();if(-not $parents.ContainsKey($PID) -or $parents[$PID] -ne "+process.pid+" -or -not [NerdSSHell.UpdateProcesses]::DescendsFrom($parents,$PID,"+process.pid+")){throw 'Actual child lineage mismatch'};$fixture=New-Object 'System.Collections.Generic.Dictionary[int,int]';$fixture.Add(2,1);$fixture.Add(3,2);$fixture.Add(4,5);$fixture.Add(5,4);if(-not [NerdSSHell.UpdateProcesses]::DescendsFrom($fixture,3,1) -or [NerdSSHell.UpdateProcesses]::DescendsFrom($fixture,6,1) -or [NerdSSHell.UpdateProcesses]::DescendsFrom($fixture,4,1)){throw 'Independent or cyclic lineage accepted'};Write-Output 'PASS'";

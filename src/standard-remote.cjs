@@ -20,7 +20,7 @@ class StandardRemote extends Remote {
     this.emit('panes', this.panes); return this.panes;
   }
   activeShellCount() { return [...this.shells.values()].filter(s => !s.dead).length; }
-  async create(name, launchCommand, baud = this.profile.terminalBaud, registerShell) {
+  async create(name, launchCommand, { baud = this.profile.terminalBaud, registerShell } = {}) {
     if (this.profile.terminalType === 'generic' && launchCommand !== undefined) throw new Error('Network-device connections open plain SSH shells without startup commands.');
     const rate = terminalBaud(baud);
     sessionName(name);

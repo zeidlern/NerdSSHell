@@ -11,7 +11,7 @@ function preferences(value = {}) {
   if (!Array.isArray(favorites) || favorites.length > 3 || favorites.some(id => !actions.some(a => a.id === id))) throw new Error('Choose up to three built-in favorite actions.');
   return { favorites: [...new Set(favorites)] };
 }
-function installWorkbench({ handle, connections, getStore, app, dialog, getWindow, emit, queueOutput, discardOutput, output, forKey, actionTarget = () => undefined, shellProvider = installedShells, localFactory = (s, o) => new LocalRemote(s, o), launchWithViewSlot = (_remote, operation) => operation(), pendingPromptCount = () => 0 }) {
+function installWorkbench({ handle, connections, getStore, app, dialog, getWindow, emit, queueOutput, discardOutput, output, forKey, actionTarget = () => undefined, shellProvider = installedShells, localFactory = (s, o) => new LocalRemote(s, o), launchWithViewSlot = (_remote, operation) => operation({}), pendingPromptCount = () => 0 }) {
   const facts = new WeakMap(), probes = new WeakMap(), reviews = new ReviewTickets(), locks = new Map(), journal = [];
   let activeProbes = 0, launches = 0, confirmations = 0;
   const localConsoleSequence = new Map();
@@ -81,17 +81,17 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
   async function launch(o, title, code, cwd, validateReview = () => {}) {
     if (launches >= 4) throw new Error('Wait for a console launch to finish.');
     launches++;
-    try { return await launchWithViewSlot(o.local ? null : o.remote, async registerShell => {
+    try { return await launchWithViewSlot(o.local ? null : o.remote, async launchReservation => {
       o.validate(); assertAutomation(o);
       const r = o.local ? await getLocal(o.shell, cwd) : connections.get(o.id);
       o.validate(); assertAutomation(o); validateReview(); // Last check before submitting creation; no await before create/createTask.
       const family = o.local ? (o.shell.family || shellFamily(o.shell.baseId || o.shell.id)) : '';
       if (o.local && code === undefined) localConsoleSequence.set(family, (localConsoleSequence.get(family) || 0) + 1);
       const name = o.local && code === undefined ? `${family === 'cmd' ? 'Command Prompt' : 'PowerShell'} ${localConsoleSequence.get(family)}` : (code === undefined ? 'Shell-' : 'Task-') + randomUUID().slice(0, 8);
-      const launchOptions = { cwd, registerShell, validate() { o.validate(); assertAutomation(o); validateReview(); } };
+      const launchOptions = { ...launchReservation, cwd, validate() { o.validate(); assertAutomation(o); validateReview(); } };
       let pending;
       if (code === undefined) pending = r.remote.create(name, undefined, launchOptions);
-      else if (!o.local && r.remote.createTaskFor) pending = r.remote.createTaskFor(name, code, o.persistent, registerShell);
+      else if (!o.local && r.remote.createTaskFor) pending = r.remote.createTaskFor(name, code, o.persistent, launchOptions);
       else pending = r.remote.createTask(name, code, launchOptions);
       const pane = await pending;
       try { o.validate(); } catch { throw new Error('Destination changed after launch was submitted. The console or task may have started on the original target. It was not retried; inspect that target before trying again.'); }

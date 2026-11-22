@@ -195,7 +195,7 @@ class LocalRemote extends StandardRemote {
   }
   async connect() { if (this.closing) throw new Error('Local console was closed.'); this.connected = true; return this.discover(); }
   async create(name, command, launch = {}) {
-    const pane = await this.launchContext.run(launch, () => super.create(name, command, undefined, launch?.registerShell)); pane.local = true; pane.administrator = !!this.shell.administrator; pane.command = this.shell.name; return pane;
+    const pane = await this.launchContext.run(launch, () => super.create(name, command, launch)); pane.local = true; pane.administrator = !!this.shell.administrator; pane.command = this.shell.name; return pane;
   }
   async createTask(name, code, launch) { return this.create(name, scriptText(code), launch); }
   async input(key, data) {

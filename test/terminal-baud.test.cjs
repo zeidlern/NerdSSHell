@@ -101,37 +101,41 @@ test('terminal baud accepts only supported integer rates; zero means omission ra
 
 test('saved and per-window rates reach both actual SSH wire fields without changing existing PTYs', { timeout: 10000 }, async t => {
   const h = await wireFixture(t, { terminalBaud: 9600 });
-  const first = await h.remote.create('Connection setting'), second = await h.remote.create('Window override', undefined, 115200), normal = await h.remote.create('Server default', undefined, 0);
+  const first = await h.remote.create('Connection setting'), second = await h.remote.create('Window override', undefined, { baud: 115200 }), normal = await h.remote.create('Server default', undefined, { baud: 0 });
   assert.deepEqual(h.requests.map(r => r.modes), [{ 128: 9600, 129: 9600 }, { 128: 115200, 129: 115200 }, {}]);
   assert.deepEqual([first.terminalBaud, second.terminalBaud, normal.terminalBaud], [9600, 115200, 0]);
   assert.deepEqual(h.requests[2].bytes, Buffer.from([0]), 'Server default never sends speed 0/B0.');
   await h.remote.open(first.key); await h.remote.resize(first.key, 99, 30);
   assert.equal(h.requests.length, 3); assert.deepEqual(h.commands, []);
-  await assert.rejects(h.remote.create('Bad rate', undefined, '9600; stty 0'), /terminal baud/);
+  await assert.rejects(h.remote.create('Bad rate', undefined, { baud: '9600; stty 0' }), /terminal baud/);
   assert.equal(h.requests.length, 3); assert.equal(h.remote.activeShellCount(), 3, 'Invalid options allocate neither channels nor records.');
 });
 
 test('Standard task PTYs inherit the profile setting, and mixed Standard creation preserves an override', { timeout: 10000 }, async t => {
   const h = await wireFixture(t, { terminalBaud: 57600 });
-  await h.remote.createTask('Task', 'printf synthetic-fixture');
+  let registeredTask;
+  const task = await h.remote.createTask('Task', 'printf synthetic-fixture', { registerShell(owner, record) { registeredTask = { owner, record }; } });
+  assert.equal(registeredTask.owner, h.remote); assert.equal(registeredTask.record, h.remote.shells.get(task.key));
   assert.deepEqual(h.requests[0].modes, { 128: 57600, 129: 57600 });
   assert.equal(h.commands.length, 1); assert.ok(!h.commands[0].includes('stty'));
   const mixed = new MixedRemote(base); mixed.standard = h.remote;
-  await mixed.createSession('Mixed Standard', false, 19200);
+  await mixed.createSession('Mixed Standard', false, { baud: 19200 });
   assert.deepEqual(h.requests[1].modes, { 128: 19200, 129: 19200 });
-  await mixed.createTaskFor('Mixed task', 'printf synthetic-fixture', false);
+  let registeredMixedTask;
+  const mixedTask = await mixed.createTaskFor('Mixed task', 'printf synthetic-fixture', false, { registerShell(owner, record) { registeredMixedTask = { owner, record }; } });
+  assert.equal(registeredMixedTask.owner, mixed); assert.equal(registeredMixedTask.record, h.remote.shells.get(mixedTask.key));
   assert.deepEqual(h.requests[2].modes, { 128: 57600, 129: 57600 });
   let enabled = 0; mixed.enablePersistence = () => { enabled++; throw Error('Should not enable tmux.'); };
-  await assert.rejects(mixed.createSession('Persistent', true, 9600), /only.*Standard/);
+  await assert.rejects(mixed.createSession('Persistent', true, { baud: 9600 }), /only.*Standard/);
   assert.equal(enabled, 0); assert.equal(h.requests.length, 3);
 });
 
 test('create IPC rejects malformed, Persistent and local overrides before reserving or launching work', () => {
   const handlers = new Map(), created = [], reserved = [], remote = { profile: { local: false }, createSession: (...args) => created.push(args), create: (...args) => created.push(args) };
   const registerShell = () => {};
-  installSessionActions({ handle: (name, handler) => handlers.set(name, handler), runtime: () => ({ remote }), launchWithViewSlot: (owner, launch) => { reserved.push(owner); return launch(registerShell); } });
+  installSessionActions({ handle: (name, handler) => handlers.set(name, handler), runtime: () => ({ remote }), launchWithViewSlot: (owner, launch) => { reserved.push(owner); return launch({ registerShell }); } });
   const create = handlers.get('create');
-  create('fixture', 'Standard', false, 9600); assert.deepEqual(created, [['Standard', false, 9600, registerShell]]); assert.equal(reserved.length, 1);
+  create('fixture', 'Standard', false, 9600); assert.deepEqual(created, [['Standard', false, { registerShell, baud: 9600 }]]); assert.equal(reserved.length, 1);
   for (const invalid of ['9600; sleep', null, true, [], 9601]) assert.throws(() => create('fixture', 'Invalid', false, invalid), /terminal baud/);
   assert.throws(() => create('fixture', 'Persistent', true, 9600), /only.*Standard/);
   remote.profile.local = true; assert.throws(() => create('fixture', 'Local', false, 9600), /only.*Standard/);

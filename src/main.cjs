@@ -43,13 +43,17 @@ function emit(type, data = {}) {
   if (['snapshot', 'detached', 'ended', 'standard-ended'].includes(type)) sessionCommands?.forget(data.key);
   if (['detached', 'ended', 'standard-ended'].includes(type)) sessionNotifications?.forget(data.key);
   if (type === 'status' && ['connecting', 'disconnected'].includes(data.state)) sessionNotifications?.clearProfile(data.profileId); if (window && !window.isDestroyed() && !window.webContents.isDestroyed?.()) window.webContents.send('nerdsshell:event', { type, ...data }); }
-function confirm(title, message, detail = '') { return dialog.showMessageBox(window, { type: 'question', title, message, detail, buttons: ['Cancel', 'Continue'], defaultId: 0, cancelId: 0, noLink: true }).then(x => x.response === 1); }
+function confirm(title, message, detail = '', { signal, valid } = {}) {
+  return dialog.showMessageBox(window, { type: 'question', title, message, detail,
+    buttons: ['Cancel', 'Continue'], defaultId: 0, cancelId: 0, noLink: true, signal, valid }).then(result => result.response === 1);
+}
 function presentMessageBox(...args) {
   const options = args.at(-1), buttons = options.buttons || ['OK'];
   const cancelId = buttons.length === 1 ? 0 : options.cancelId;
   if (!Array.isArray(buttons) || buttons.length < 1 || buttons.length > 8 || buttons.some(label => typeof label !== 'string' || !label || label.length > 160) || !Number.isInteger(cancelId) || cancelId < 0 || cancelId >= buttons.length) throw new Error('Invalid confirmation buttons.');
   if (quitting || rendererReloading || !window || window.isDestroyed() || window.webContents.isDestroyed?.() || args.length > 1 && args[0] !== window) return Promise.resolve({ response: cancelId });
-  return queuePrompt({ kind: 'confirmation', title: options.title || 'NerdSSHell', message: options.message || '', detail: options.detail || '', buttons, cancelId, defaultId: cancelId }).then(value => {
+  return queuePrompt({ kind: 'confirmation', title: options.title || 'NerdSSHell', message: options.message || '', detail: options.detail || '',
+    buttons, cancelId, defaultId: cancelId, signal: options.signal, valid: options.valid }).then(value => {
     const index = typeof value === 'string' && /^choice:[0-7]$/.test(value) ? Number(value.slice(7)) : cancelId;
     return { response: index < buttons.length ? index : cancelId };
   });
@@ -328,7 +332,7 @@ async function quickConnect(address) {
   const reservation = reserveQuickView();
   pendingQuick++;
   try {
-    return await viewBudget.launch(null, async registerShell => {
+    return await viewBudget.launch(null, async launchOptions => {
       quickEntries.set(id, entry); emit('profile', { profile: quickPublic(entry) });
       let username = target.username;
       if (!username) username = await ask({ title: 'Quick Connect username', message: 'Username for ' + target.host,
@@ -337,7 +341,7 @@ async function quickConnect(address) {
       if (username === null || entry.cancelled || quickEntries.get(id) !== entry || quitting) throw new Error('Quick Connect cancelled.');
       entry.profile = profile({ ...entry.profile, username });
       emit('profile', { profile: quickPublic(entry) });
-      const panes = await connect(id, undefined, registerShell);
+      const panes = await connect(id, undefined, launchOptions);
       if (entry.cancelled || quickEntries.get(id) !== entry || !connections.get(id)?.remote?.connected || !connections.get(id)?.remote?.activeShellCount?.() || !panes?.length) throw entry.failure || new Error('Quick Connect cancelled.');
       entry.pending = false;
       try { emit('quick-preferences', store.rememberQuickConnect({ host: entry.profile.host, port: entry.profile.port, username: entry.profile.username })); }
@@ -367,7 +371,7 @@ function persistedWorkspace(value) {
     slots: Array.isArray(value.slots) ? value.slots.map(key => valid(key) ? key : null) : [], active: valid(value.active) ? value.active : '' };
 }
 
-async function connect(id, secrets, quickSlot) {
+async function connect(id, secrets, quickLaunchOptions) {
   const temporary = quickEntries.get(id);
   const p = temporary?.profile || saved(id); let r = connections.get(id);
   if (r?.busy) return;
@@ -426,8 +430,8 @@ async function connect(id, secrets, quickSlot) {
     if (!r.wanted || r.remote !== remote) { remote.disconnect(); return []; }
     if (!temporary && remote.passwordRejected === true) rejectRememberedPassword(p, { level: 'client-authentication' }, passwordVersion, remote, true);
     if (p.sessionMode === 'standard') {
-      if (quickSlot) await remote.createSession('Shell', false, undefined, quickSlot);
-      else await viewBudget.launch(remote, registerShell => remote.createSession('Shell', false, undefined, registerShell));
+      if (quickLaunchOptions) await remote.createSession('Shell', false, quickLaunchOptions);
+      else await viewBudget.launch(remote, launchOptions => remote.createSession('Shell', false, launchOptions));
       panes = remote.panes;
     }
     if (!active()) { remote.disconnect(); return []; }

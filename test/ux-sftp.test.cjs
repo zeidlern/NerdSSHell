@@ -135,6 +135,20 @@ test('local upload revalidation remains active after initial selection until con
   await fs.writeFile(path.join(h.home, 'marker.txt'), 'replaced file'); wait.resolve(true); await rejected;
   assert.equal(i.calls.length, 0);
 });
+test('a terminal upload picked from disk cannot use approval after its pane is replaced on the same connection', async t => {
+  const h = await fixture(t), wait = deferred(), entered = deferred(), source = path.join(h.home, 'marker.txt');
+  const i = install(h, {
+    dialog: { showOpenDialog: async () => ({ filePaths: [source] }) },
+    confirm: () => { entered.resolve(); return wait.promise; }
+  });
+  const uploading = i.invoke('upload', 'host/a', null);
+  await entered.promise;
+  h.views.set('host/a', { active: true });
+  wait.resolve(true);
+  assert.deepEqual(await uploading, []);
+  assert.equal(i.calls.length, 0);
+  assert.equal(i.events.length, 0);
+});
 test('the per-pane upload compares its selection with the file identity reviewed by the transfer prompt', async t => {
   const h = await fixture(t), file = path.join(h.home, 'marker.txt');
   const reviewed = await captureUploadSource(file);

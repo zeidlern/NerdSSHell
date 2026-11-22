@@ -74,24 +74,25 @@ class MixedRemote extends Remote {
   }
   isStandard(key) { return typeof key === 'string' && key.startsWith(this.profile.id + '/standard-'); }
   activeShellCount() { return this.standard.activeShellCount(); }
-  #createStandard(name, command, baud, registerShell) {
+  #createStandard(name, command, launchOptions) {
     // The app's budget counts the Mixed provider that owns this shared registry.
-    return this.standard.create(name, command, baud, registerShell && ((_standard, record) => registerShell(this, record)));
+    const { registerShell } = launchOptions;
+    return this.standard.create(name, command, { ...launchOptions, registerShell: registerShell && ((_standard, record) => registerShell(this, record)) });
   }
-  async createSession(name, persistent = !this.generic(), baud, registerShell) {
+  async createSession(name, persistent = !this.generic(), launchOptions = {}) {
     if (persistent) this.assertServerAutomation();
-    if (persistent && baud !== undefined) throw new Error('Terminal baud overrides apply only to new Standard SSH shells.');
+    if (persistent && launchOptions.baud !== undefined) throw new Error('Terminal baud overrides apply only to new Standard SSH shells.');
     if (typeof persistent !== 'boolean') throw new Error('Choose whether the session is persistent.');
-    if (!persistent) return this.#createStandard(name, undefined, baud, registerShell);
+    if (!persistent) return this.#createStandard(name, undefined, launchOptions);
     await this.enablePersistence(); return Remote.prototype.create.call(this, name);
   }
   async create(name, command) { this.assertServerAutomation(); await this.enablePersistence(); return Remote.prototype.create.call(this, name, command); }
-  async createTask(name, code) { return this.createTaskFor(name, code, this.profile.sessionMode !== 'standard'); }
-  async createTaskFor(name, code, persistent = true, registerShell) {
+  async createTask(name, code, launchOptions) { return this.createTaskFor(name, code, this.profile.sessionMode !== 'standard', launchOptions); }
+  async createTaskFor(name, code, persistent = true, launchOptions = {}) {
     this.assertServerAutomation();
     if (typeof persistent !== 'boolean') throw new Error('Choose whether the task is persistent.');
     const command = require('./action-catalog.cjs').taskCommand(code);
-    if (!persistent) return this.#createStandard(name, command, undefined, registerShell);
+    if (!persistent) return this.#createStandard(name, command, launchOptions);
     return this.create(name, command);
   }
   open(key) { return this.isStandard(key) ? this.standard.open(key) : super.open(key); }

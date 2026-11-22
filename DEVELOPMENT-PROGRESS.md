@@ -371,3 +371,7 @@ Branch `codex/architecture-deepening` starts from `16cff47`. File SFTP operation
 On Windows x64 with Node 22.23.5, `npm run check` passed and `npm test` reported 1,158 passes, zero failures and two skips. A fresh unpacked build passed `npm run verify:package`. All 13 changed runtime files matched their ASAR bytes. The packaged per-pane and Quick Connect fixtures passed 230 and 54 checks respectively. Two appliance integration tests passed, including 300 loopback SSH cycles. The unpacked build's ASAR SHA-256 was `d37511cf7b958e817629e1afe8f82f6ad354943f088295554ec500076d107967`.
 
 The disposable native handoff fixture stopped when the running-instance guard detected the installed NerdSSHell. The native recovery-layout tests passed. Full installer acceptance and real OpenSSH/tmux integration remain to be verified in disposable environments.
+
+The review follow-up after `deb8b68` names file-operation identities by scope, binds pending upload approval to the originating pane, and passes shell registration through named launch options. The upload regressions cover closing the original pane and replacing it with another view on the same connection.
+
+Windows x64 with Node 22.23.5 passed `npm run check` and `npm test` with 1,160 passes, zero failures and two skips. A fresh unpacked build passed package verification, 230 per-pane checks and 54 Quick Connect checks. The nine changed runtime files matched their ASAR bytes. The ASAR SHA-256 was `cfaf778f7a8896f18360fb841e2de30839e5747201028c66914a847533cbfe5e`.

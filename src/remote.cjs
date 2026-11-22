@@ -433,7 +433,7 @@ class Remote extends EventEmitter {
       if (this.opening.get(view.pane.sessionId)?.token === view.pane.sessionToken) this.opening.delete(view.pane.sessionId);
     }
   }
-  async createTask(name, code) { return this.create(name, require('./action-catalog.cjs').taskCommand(code)); }
+  async createTask(name, code, launchOptions) { return this.create(name, require('./action-catalog.cjs').taskCommand(code), launchOptions); }
   async create(name, launchCommand) {
     sessionName(name);
     // Only this explicit action creates a process. Reconnect and discovery never call it.

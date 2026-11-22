@@ -29,7 +29,7 @@ async function fixture(t, options = {}) {
       }
       this.connected = true; return this.panes;
     }
-    async createSession(name, persistent, _baud, registerShell) {
+    async createSession(name, persistent, { registerShell } = {}) {
       assert.equal(persistent, false); assert.equal(name, 'Shell');
       const key = this.profile.id + '/standard-fixture';
       const pane = { key, profileId: this.profile.id, sessionId: 'fixture', sessionToken: 'stable-fixture', sessionName: name, standard: true, terminalType: 'generic', dead: false, cols: 120, rows: 36 };

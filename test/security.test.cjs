@@ -176,14 +176,14 @@ test('a delayed provider and its registered Standard shell share one slot while 
   const budget = new ViewBudget(new Map([['fixture', { remote: r }], ['sibling', { remote: sibling }]]));
   let provide;
   const provider = new Promise(resolve => { provide = resolve; });
-  const first = budget.launch(null, async registerShell => {
+  const first = budget.launch(null, async launchOptions => {
     const remote = await provider;
-    return remote.createSession('First', false, undefined, registerShell);
+    return remote.createSession('First', false, launchOptions);
   }); first.catch(() => {});
   await r.ensureSupport();
   provide(r);
   await Promise.resolve();
-  const second = budget.launch(r, registerShell => r.createSession('Second', false, undefined, registerShell)); second.catch(() => {});
+  const second = budget.launch(r, launchOptions => r.createSession('Second', false, launchOptions)); second.catch(() => {});
   assert.equal(callbacks.length, 2); assert.equal(r.shells.size, 2);
   await assert.rejects(budget.launch(r, () => assert.fail('An extra shell must not start')), /limit 64/);
   assert.equal(await budget.open(sibling, 'prior-0', () => 'same view'), 'same view');

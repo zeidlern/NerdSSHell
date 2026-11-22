@@ -51,7 +51,7 @@ class ViewBudget {
         Object.assign(slot, { remote: provider, key: record.pane.key, kind: 'shell', resource: record });
         observe(provider);
       };
-      return operation(registerShell);
+      return operation({ registerShell });
     });
   }
   async #reserve(remote, operation) {

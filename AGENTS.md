@@ -18,3 +18,17 @@ Use semantic versioning: patch releases for compatible fixes, minor releases for
 ## Active development and recovery
 
 Use the official NerdSSHell repository at https://github.com/zeidlern/NerdSSHell.git. The maintainer's active local checkout is D:\Dev\NerdSSHell; D:\Dev\BetterSSH is a retired redirect, not a source tree. Do not import source, tests, dependencies, installers or Git history from retired development copies. Read DEVELOPMENT-PROGRESS.md before resuming this feature branch; the owner explicitly requested tracked checkpoints for recovery. Official merging, publication and installation require the owner's authorization; 1.0.4 is authorized in the current recovery record. Preserve all existing releases/tags/assets, including v1.0.3. Create fresh version tags only from validated main. Keep feature-branch installer uploads disabled.
+
+## Agent skills
+
+### Issue tracker
+
+Read [issue-tracker.md](docs/agents/issue-tracker.md) when fetching, publishing or updating tickets in NerdSSHell's GitHub Issues.
+
+### Triage labels
+
+Read [triage-labels.md](docs/agents/triage-labels.md) when mapping triage roles to GitHub labels.
+
+### Domain docs
+
+Read [domain.md](docs/agents/domain.md) when exploring domain terminology or architectural decisions in this single-context repository.

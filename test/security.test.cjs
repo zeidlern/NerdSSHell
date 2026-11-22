@@ -99,23 +99,23 @@ test('app-wide view budget deduplicates live shells and permits reconnect at the
   }
   const connections = new Map([['first', { remote }], ['second', { remote: sibling }]]), budget = new ViewBudget(connections);
   let called = 0;
-  await assert.rejects(budget.run(remote, 'new', () => { called++; }), /limit 64 across the app/);
+  await assert.rejects(budget.open(remote, 'new', () => { called++; }), /limit 64 across the app/);
   assert.equal(called, 0);
-  await budget.run(remote, 'pane-1', () => { called++; }); assert.equal(called, 1);
+  await budget.open(remote, 'pane-1', () => { called++; }); assert.equal(called, 1);
   sibling.views.delete('pane-0'); sibling.shells.get('pane-0').dead = true;
-  await budget.run(remote, 'new', () => { called++; }); assert.equal(called, 2);
+  await budget.open(remote, 'new', () => { called++; }); assert.equal(called, 2);
 });
 
 test('pending opens reserve capacity before awaits and release after failure or cancellation', async () => {
   const remote = { views: new Map(), shells: new Map(), client: new EventEmitter() }, connections = new Map([['fixture', { remote }]]), budget = new ViewBudget(connections);
   const controls = [];
-  const pending = Array.from({ length: MAX_OPEN_VIEWS }, (_, i) => budget.run(remote, 'pending-' + i, () => new Promise((resolve, reject) => controls.push({ resolve, reject }))));
+  const pending = Array.from({ length: MAX_OPEN_VIEWS }, (_, i) => budget.open(remote, 'pending-' + i, () => new Promise((resolve, reject) => controls.push({ resolve, reject }))));
   const settled = Promise.allSettled(pending); let called = 0;
   assert.equal(remote.client.listenerCount('close'), 1, 'all reservations share one cleanup listener per transport');
-  await assert.rejects(budget.run(remote, 'overflow', () => { called++; }), /limit 64/);
+  await assert.rejects(budget.open(remote, 'overflow', () => { called++; }), /limit 64/);
   assert.equal(called, 0);
   controls[0].reject(Error('synthetic failed open')); await pending[0].catch(() => {});
-  await budget.run(remote, 'replacement', () => { called++; }); assert.equal(called, 1);
+  await budget.open(remote, 'replacement', () => { called++; }); assert.equal(called, 1);
   for (const control of controls.slice(1)) control.resolve({ cancelled: true }); await settled;
   assert.equal(budget.pending.size, 0);
   assert.equal(remote.client.listenerCount('close'), 0);
@@ -124,8 +124,8 @@ test('pending opens reserve capacity before awaits and release after failure or 
 test('pending Standard shells count before a renderer view exists', async () => {
   const remote = { views: new Map(), shells: new Map(Array.from({ length: MAX_OPEN_VIEWS }, (_, i) => ['pending-' + i, { dead: false, stream: null }])) };
   const budget = new ViewBudget(new Map([['fixture', { remote }]])); let called = 0;
-  await assert.rejects(budget.run(remote, undefined, () => { called++; }), /limit 64/);
-  await budget.run(remote, 'pending-0', () => { called++; }); assert.equal(called, 1);
+  await assert.rejects(budget.launch(remote, () => { called++; }), /limit 64/);
+  await budget.open(remote, 'pending-0', () => { called++; }); assert.equal(called, 1);
 });
 
 test('closed persistent generations retain separate slots while hostile attachment callbacks are withheld', async () => {
@@ -135,12 +135,12 @@ test('closed persistent generations retain separate slots while hostile attachme
   r.checked = async command => command.includes('display-message -p') ? token : '';
   const budget = new ViewBudget(new Map([['security-test', { remote: r }]])), pending = [];
   for (let i = 0; i < MAX_OPEN_VIEWS; i++) {
-    const opening = budget.run(r, pane.key, () => r.open(pane.key)); pending.push(opening);
+    const opening = budget.open(r, pane.key, () => r.open(pane.key)); pending.push(opening);
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(callbacks.length, i + 1); r.closeView(pane.key);
   }
   const settled = Promise.allSettled(pending);
-  await assert.rejects(budget.run(r, pane.key, () => r.open(pane.key)), error => error.code === 'NERDSSHELL_RESOURCE_LIMIT');
+  await assert.rejects(budget.open(r, pane.key, () => r.open(pane.key)), error => error.code === 'NERDSSHELL_RESOURCE_LIMIT');
   assert.equal(callbacks.length, MAX_OPEN_VIEWS, 'the 65th channel open must never reach the hostile server');
   for (const callback of callbacks) callback(null, { destroy() {} });
   assert.ok((await settled).every(result => result.status === 'rejected'));
@@ -150,8 +150,8 @@ test('closed persistent generations retain separate slots while hostile attachme
 test('repeat opens join their current pending view without another attachment', async () => {
   const remote = { views: new Map(), shells: new Map() }, budget = new ViewBudget(new Map([['fixture', { remote }]]));
   let resolve, opened = 0;
-  const first = budget.run(remote, 'same', () => { remote.views.set('same', { active: true }); opened++; return new Promise(done => { resolve = done; }); });
-  const second = budget.run(remote, 'same', () => { opened++; });
+  const first = budget.open(remote, 'same', () => { remote.views.set('same', { active: true }); opened++; return new Promise(done => { resolve = done; }); });
+  const second = budget.open(remote, 'same', () => { opened++; });
   resolve('synthetic pane'); assert.deepEqual(await Promise.all([first, second]), ['synthetic pane', 'synthetic pane']);
   assert.equal(opened, 1); assert.equal(budget.pending.size, 0);
 });
@@ -160,11 +160,11 @@ test('actual transport closure releases abandoned-open capacity without waiting 
   const remote = { connected: true, client: new EventEmitter(), views: new Map(), shells: new Map() };
   const connections = new Map([['fixture', { remote }]]), budget = new ViewBudget(connections, 1);
   let finish;
-  const pending = budget.run(remote, 'held', () => { remote.views.set('held', { active: true }); return new Promise(resolve => { finish = resolve; }); });
-  await assert.rejects(budget.run({}, 'other', () => {}), /limit 1/);
+  const pending = budget.open(remote, 'held', () => { remote.views.set('held', { active: true }); return new Promise(resolve => { finish = resolve; }); });
+  await assert.rejects(budget.open({}, 'other', () => {}), /limit 1/);
   remote.connected = false; remote.client.emit('close');
   assert.equal(budget.pending.size, 0);
-  await budget.run({}, 'other', () => {});
+  await budget.open({}, 'other', () => {});
   finish(); await pending; assert.equal(remote.client.listenerCount('close'), 0);
 });
 
@@ -176,17 +176,17 @@ test('a delayed provider and its registered Standard shell share one slot while 
   const budget = new ViewBudget(new Map([['fixture', { remote: r }], ['sibling', { remote: sibling }]]));
   let provide;
   const provider = new Promise(resolve => { provide = resolve; });
-  const first = budget.run(null, undefined, async registerShell => {
+  const first = budget.launch(null, async registerShell => {
     const remote = await provider;
     return remote.createSession('First', false, undefined, registerShell);
   }); first.catch(() => {});
   await r.ensureSupport();
   provide(r);
   await Promise.resolve();
-  const second = budget.run(r, undefined, registerShell => r.createSession('Second', false, undefined, registerShell)); second.catch(() => {});
+  const second = budget.launch(r, registerShell => r.createSession('Second', false, undefined, registerShell)); second.catch(() => {});
   assert.equal(callbacks.length, 2); assert.equal(r.shells.size, 2);
-  await assert.rejects(budget.run(r, undefined, () => assert.fail('An extra shell must not start')), /limit 64/);
-  assert.equal(await budget.run(sibling, 'prior-0', () => 'same view'), 'same view');
+  await assert.rejects(budget.launch(r, () => assert.fail('An extra shell must not start')), /limit 64/);
+  assert.equal(await budget.open(sibling, 'prior-0', () => 'same view'), 'same view');
   for (const callback of callbacks) callback(Error('synthetic cancellation'));
   assert.ok((await Promise.allSettled([first, second])).every(result => result.status === 'rejected'));
   assert.equal(budget.pending.size, 0); assert.equal(r.shells.size, 0);
@@ -200,9 +200,9 @@ test('session, reviewed task, local and administrator launch routes all honor th
     views: new Map(Array.from({ length: MAX_OPEN_VIEWS }, (_, i) => ['pane-' + i, { active: true }])),
     createSession() { calls.push('session'); }, createTask() { calls.push('task'); } };
   const connections = new Map([['fixture', { profile: remote.profile, remote }]]), budget = new ViewBudget(connections);
-  const handle = (name, fn) => { handlers[name] = fn; }, withViewSlot = (owner, key, operation) => budget.run(owner, key, operation);
-  installSessionActions({ handle, runtime: id => connections.get(id), connections, withViewSlot });
-  const workbench = installWorkbench({ handle, connections, withViewSlot, getStore: () => ({ data: {} }),
+  const handle = (name, fn) => { handlers[name] = fn; }, launchWithViewSlot = (owner, operation) => budget.launch(owner, operation);
+  installSessionActions({ handle, runtime: id => connections.get(id), connections, launchWithViewSlot });
+  const workbench = installWorkbench({ handle, connections, launchWithViewSlot, getStore: () => ({ data: {} }),
     app: { isPackaged: false }, dialog: { showMessageBox: async () => ({ response: 0 }) }, getWindow: () => ({}),
     shellProvider: () => [{ id: 'local:powershell', name: 'Synthetic PowerShell', executable: 'synthetic-fixed-executable' }],
     localFactory: () => { calls.push('local factory'); throw Error('Native execution is forbidden'); } });

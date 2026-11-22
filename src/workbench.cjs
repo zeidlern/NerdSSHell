@@ -11,7 +11,7 @@ function preferences(value = {}) {
   if (!Array.isArray(favorites) || favorites.length > 3 || favorites.some(id => !actions.some(a => a.id === id))) throw new Error('Choose up to three built-in favorite actions.');
   return { favorites: [...new Set(favorites)] };
 }
-function installWorkbench({ handle, connections, getStore, app, dialog, getWindow, emit, queueOutput, discardOutput, output, forKey, actionTarget = () => undefined, shellProvider = installedShells, localFactory = (s, o) => new LocalRemote(s, o), withViewSlot = (_remote, _key, operation) => operation(), pendingPromptCount = () => 0 }) {
+function installWorkbench({ handle, connections, getStore, app, dialog, getWindow, emit, queueOutput, discardOutput, output, forKey, actionTarget = () => undefined, shellProvider = installedShells, localFactory = (s, o) => new LocalRemote(s, o), launchWithViewSlot = (_remote, operation) => operation(), pendingPromptCount = () => 0 }) {
   const facts = new WeakMap(), probes = new WeakMap(), reviews = new ReviewTickets(), locks = new Map(), journal = [];
   let activeProbes = 0, launches = 0, confirmations = 0;
   const localConsoleSequence = new Map();
@@ -81,7 +81,7 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
   async function launch(o, title, code, cwd, validateReview = () => {}) {
     if (launches >= 4) throw new Error('Wait for a console launch to finish.');
     launches++;
-    try { return await withViewSlot(o.local ? null : o.remote, undefined, async registerShell => {
+    try { return await launchWithViewSlot(o.local ? null : o.remote, async registerShell => {
       o.validate(); assertAutomation(o);
       const r = o.local ? await getLocal(o.shell, cwd) : connections.get(o.id);
       o.validate(); assertAutomation(o); validateReview(); // Last check before submitting creation; no await before create/createTask.

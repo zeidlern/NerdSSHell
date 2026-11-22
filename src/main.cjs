@@ -195,9 +195,9 @@ function reserveQuickView() {
   if (retained + quickViewReservations.size >= MAX_OPEN_VIEWS) throw resourceLimitError('Close an unused Quick Connect tab before opening more (limit 64 including ended transcripts).');
   const token = {}; quickViewReservations.add(token); return token;
 }
-async function withViewSlot(remote, key, operation) {
-  const token = key === undefined && quickEntries.has(remote?.profile?.id) ? reserveQuickView() : null;
-  try { return await viewBudget.run(remote, key, operation); }
+async function launchWithViewSlot(remote, operation) {
+  const token = quickEntries.has(remote?.profile?.id) ? reserveQuickView() : null;
+  try { return await viewBudget.launch(remote, operation); }
   finally { if (token) quickViewReservations.delete(token); }
 }
 function finishGenericOpenWaits(error) {
@@ -229,7 +229,7 @@ function deferredGenericOpen(key, r, remote) {
   job.task = wait.then(() => {
     job.validate();
     if (rendererReloading) throw new Error('The app view started loading again. Try opening this shell after it finishes.');
-    return viewBudget.run(remote, key, () => { const task = remote.open(key); job.openedView = remote.views.get(key); return task; });
+    return viewBudget.open(remote, key, () => { const task = remote.open(key); job.openedView = remote.views.get(key); return task; });
   }).finally(() => { if (genericOpenWaits.get(key) === job) genericOpenWaits.delete(key); });
   genericOpenWaits.set(key, job);
   let watched = genericWaitTransports.get(remote);
@@ -328,7 +328,7 @@ async function quickConnect(address) {
   const reservation = reserveQuickView();
   pendingQuick++;
   try {
-    return await viewBudget.run(null, undefined, async bind => {
+    return await viewBudget.launch(null, async registerShell => {
       quickEntries.set(id, entry); emit('profile', { profile: quickPublic(entry) });
       let username = target.username;
       if (!username) username = await ask({ title: 'Quick Connect username', message: 'Username for ' + target.host,
@@ -337,7 +337,7 @@ async function quickConnect(address) {
       if (username === null || entry.cancelled || quickEntries.get(id) !== entry || quitting) throw new Error('Quick Connect cancelled.');
       entry.profile = profile({ ...entry.profile, username });
       emit('profile', { profile: quickPublic(entry) });
-      const panes = await connect(id, undefined, bind);
+      const panes = await connect(id, undefined, registerShell);
       if (entry.cancelled || quickEntries.get(id) !== entry || !connections.get(id)?.remote?.connected || !connections.get(id)?.remote?.activeShellCount?.() || !panes?.length) throw entry.failure || new Error('Quick Connect cancelled.');
       entry.pending = false;
       try { emit('quick-preferences', store.rememberQuickConnect({ host: entry.profile.host, port: entry.profile.port, username: entry.profile.username })); }
@@ -427,7 +427,7 @@ async function connect(id, secrets, quickSlot) {
     if (!temporary && remote.passwordRejected === true) rejectRememberedPassword(p, { level: 'client-authentication' }, passwordVersion, remote, true);
     if (p.sessionMode === 'standard') {
       if (quickSlot) await remote.createSession('Shell', false, undefined, quickSlot);
-      else await viewBudget.run(remote, undefined, registerShell => remote.createSession('Shell', false, undefined, registerShell));
+      else await viewBudget.launch(remote, registerShell => remote.createSession('Shell', false, undefined, registerShell));
       panes = remote.panes;
     }
     if (!active()) { remote.disconnect(); return []; }
@@ -474,8 +474,8 @@ function registerIPC() {
   handle('forgetPassword', id => forgetPassword(id));
   handle('connect', id => { saved(id); return connect(id); }); handle('disconnect', async id => { const approved = await approveDisconnect(id); if (!approved) return false; approved(); disconnect(id); return true; });
   handle('discover', id => runtime(id).remote.discover());
-  handle('open', key => { const { remote } = forKey(key); if (remote.profile.terminalType === 'generic' && (rendererReloading || genericOpenWaits.has(key))) return deferredGenericOpen(key, connections.get(remote.profile.id), remote); return viewBudget.run(remote, key, () => remote.open(key)); });
-  installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow: () => window, withViewSlot, afterClose: closeQuickView,
+  handle('open', key => { const { remote } = forKey(key); if (remote.profile.terminalType === 'generic' && (rendererReloading || genericOpenWaits.has(key))) return deferredGenericOpen(key, connections.get(remote.profile.id), remote); return viewBudget.open(remote, key, () => remote.open(key)); });
+  installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow: () => window, launchWithViewSlot, afterClose: closeQuickView,
     forget: key => { workbench?.forget(key); sessionCommands?.forget(key); sessionNotifications?.forget(key); fileOperations.cancelView(key); discardOutput(key); } });
   handle('input', (key, data) => { workbench?.assertInput(key); return forKey(key).remote.input(key, data); });
   handle('resize', (key, cols, rows) => { integer(cols, 20, 1000, 'columns'); integer(rows, 5, 500, 'rows'); return forKey(key).remote.resize(key, cols, rows); });
@@ -503,7 +503,7 @@ function registerIPC() {
   });
   handle('dataFolder', () => shell.openPath(app.getPath('userData')));
   installPublicLinks({ handle, shell });
-  workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key), withViewSlot, pendingPromptCount: () => prompts.size });
+  workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key), launchWithViewSlot, pendingPromptCount: () => prompts.size });
   sessionCommands = installSessionCommands({ handle, connections, forKey, assertInput: key => workbench.assertInput(key), resolveAction: (key, id, argument) => workbench.resolvePaneAction(key, id, argument) });
 }
 // Resolve storage before the single-instance lock so upgrades share the same

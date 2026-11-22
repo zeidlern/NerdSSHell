@@ -4,7 +4,7 @@ const { terminalBaud } = require('./core.cjs');
 function isStandardSession(remote, key) {
   return !!(remote?.profile?.local || remote?.isStandard?.(key) || remote?.shells?.has(key));
 }
-function installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow, forget, afterClose = () => {}, withViewSlot = (_remote, _key, operation) => operation() }) {
+function installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow, forget, afterClose = () => {}, launchWithViewSlot = (_remote, operation) => operation() }) {
   const pending = new Set();
   function capture(key) {
     const r = forKey(key), remote = r.remote, pane = remote.pane(key), token = pane.sessionToken;
@@ -29,7 +29,7 @@ function installSessionActions({ handle, runtime, connections, forKey, dialog, g
     if (baud !== undefined) terminalBaud(baud);
     const remote = runtime(id).remote;
     if (baud !== undefined && (remote.profile.local || persistent)) throw new Error('Terminal baud overrides apply only to new Standard SSH shells.');
-    return withViewSlot(remote, undefined, registerShell => remote.profile.local
+    return launchWithViewSlot(remote, registerShell => remote.profile.local
       ? remote.create(name, undefined, { registerShell })
       : remote.createSession(name, persistent, baud, registerShell));
   });

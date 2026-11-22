@@ -30,28 +30,44 @@ class ViewBudget {
     }
     return entries;
   }
-  async run(remote, key, operation) {
-    const entries = this.entries();
-    const view = key !== undefined && remote?.views?.get(key), shell = key !== undefined && remote?.shells?.get(key);
+  async open(remote, key, operation) {
+    const view = remote?.views?.get(key), shell = remote?.shells?.get(key);
     // Repeated opens of the same current view join its operation. A closed or
     // replaced generation must reserve separately even when its key is reused.
-    const prior = key !== undefined && [...this.pending].find(slot => slot.remote === remote && slot.key === key && slot.kind === 'view' && slot.resource === view && view?.active);
+    const prior = [...this.pending].find(slot => slot.remote === remote && slot.key === key && slot.kind === 'view' && slot.resource === view && view?.active);
     if (prior) return prior.task;
-    const existing = key !== undefined && (view?.active || shell && !shell.dead);
-    if (!existing && [...entries.values()].reduce((sum, keys) => sum + keys.size, 0) >= this.limit) {
+    if (view?.active || (shell && !shell.dead)) return operation();
+    return this.#reserve(remote, slot => {
+      const task = operation();
+      Object.assign(slot, { key, kind: 'view', resource: remote?.views?.get(key), task });
+      return task;
+    });
+  }
+  launch(remote, operation) {
+    return this.#reserve(remote, (slot, observe) => {
+      // The provider supplies its exact shell while the channel is still opening.
+      const registerShell = (provider, record) => {
+        if (!this.pending.has(slot)) throw new Error('The terminal launch reservation ended. Open a new shell explicitly.');
+        Object.assign(slot, { remote: provider, key: record.pane.key, kind: 'shell', resource: record });
+        observe(provider);
+      };
+      return operation({ registerShell });
+    });
+  }
+  async #reserve(remote, operation) {
+    const count = [...this.entries().values()].reduce((sum, keys) => sum + keys.size, 0);
+    if (count >= this.limit) {
       throw resourceLimitError(`Close an unused terminal tab before opening more (limit ${this.limit} across the app). Remote sessions were left running.`);
     }
-    const slot = existing ? null : { remote, key, resource: null, kind: null, task: null, transport: null };
-    if (slot) this.pending.add(slot); // Reserve synchronously, before any dialog/await.
+    const slot = { remote, key: null, resource: null, kind: null, task: null, transport: null };
+    this.pending.add(slot); // Reserve synchronously, before any dialog/await.
     const unobserve = () => {
-      if (!slot?.transport) return;
+      if (!slot.transport) return;
       const state = this.transports.get(slot.transport); state.slots.delete(slot);
       if (!state.slots.size) slot.transport.off('close', state.closed);
       slot.transport = null;
     };
-    const release = () => { if (slot) { this.pending.delete(slot); unobserve(); } };
     const observe = provider => {
-      if (!slot) return;
       const transport = provider?.client;
       if (slot.transport === transport) return;
       unobserve();
@@ -66,28 +82,13 @@ class ViewBudget {
         state.slots.add(slot); slot.transport = transport;
       }
     };
-    observe(remote);
-    const bind = (provider, identity) => {
-      if (!slot) return;
-      slot.remote = provider; slot.key = identity;
-      observe(provider);
-      const record = provider?.shells?.get(identity);
-      slot.kind = record ? 'shell' : 'view'; slot.resource = record || provider?.views?.get(identity);
-    };
-    const before = new Set(remote?.shells?.keys() || []);
     try {
-      const task = operation(bind);
-      if (slot) {
-        if (key !== undefined) bind(remote, key);
-        else {
-          const created = [...(remote?.shells?.keys() || [])].find(identity => !before.has(identity));
-          if (created !== undefined) bind(remote, created);
-        }
-        slot.task = task;
-      }
-      return await task;
+      observe(remote);
+      return await operation(slot, observe);
+    } finally {
+      this.pending.delete(slot);
+      unobserve();
     }
-    finally { release(); }
   }
 }
 

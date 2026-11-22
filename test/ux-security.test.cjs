@@ -60,7 +60,8 @@ test('the upload picker binds the local file before asking for transfer consent'
   const sftp = { realpath(_path, done) { done(null, '/home/test'); }, end() {},
     lstat(file, done) { if (file === '/uploads') done(null, { isDirectory: () => true }); else done(Object.assign(new Error('Missing'), { code: 2 })); },
     createWriteStream() { writes++; throw new Error('Unexpected write'); } };
-  h.connections.set('fixture', { profile, remote: { profile, connected: true, pane() {}, sftp: async () => sftp } });
+  const views = new Map([['fixture/pane', { active: true }]]);
+  h.connections.set('fixture', { profile, remote: { profile, connected: true, views, pane() {}, sftp: async () => sftp } });
   h.window.webContents.send = (_channel, event) => {
     if (event.type !== 'prompt') return;
     assert.equal(event.title, 'Upload files'); prompts++;
@@ -72,7 +73,7 @@ test('the upload picker binds the local file before asking for transfer consent'
 });
 
 test('oversized hostile discovery stops automatic reconnect and clears retry credentials in actual main', async t => {
-  const { parsePanes } = require('../src/core.cjs'), { MAX_DISCOVERED_PANES } = require('../src/session-limits.cjs');
+  const { parsePanes } = require('../src/tmux-sessions.cjs'), { MAX_DISCOVERED_PANES } = require('../src/session-limits.cjs');
   class HostileDiscovery extends EventEmitter {
     constructor(profile) { super(); this.profile = profile; this.panes = []; }
     async connect() {

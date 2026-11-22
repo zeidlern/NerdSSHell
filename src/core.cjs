@@ -1,6 +1,5 @@
 'use strict';
 const { randomUUID, createHash, createHmac, timingSafeEqual } = require('node:crypto');
-const { MAX_DISCOVERED_PANES, resourceLimitError } = require('./session-limits.cjs');
 const { hostName } = require('./quick-connect.cjs');
 
 function text(value, label, max = 4096) {
@@ -82,47 +81,6 @@ function unescapeOctal(input) {
   }
   return dst.subarray(0, w);
 }
-function unescapeFormat(s) { return s.replace(/\\(.)/g, '$1'); }
-const SESSION_IDENTITY_OPTION = '@nerdsshell-id';
-// Existing remote work keeps its original stable token throughout migration.
-const LEGACY_SESSION_IDENTITY_OPTION = '@betterssh-id';
-const SESSION_IDENTITY_FORMAT = `#{${SESSION_IDENTITY_OPTION}}|#{${LEGACY_SESSION_IDENTITY_OPTION}}`;
-function parseSessionIdentity(value) {
-  const pair = value.split('|');
-  if (pair.length > 2) throw new Error('Invalid session identity.');
-  // Old 13-column records used only the legacy token in this column.
-  const [current, legacy] = pair.length === 1 ? ['', pair[0]] : pair;
-  for (const token of [current, legacy]) if (token && !/^[a-f0-9-]{36}$/.test(token)) throw new Error('Invalid session identity.');
-  if (current && legacy && current !== legacy) throw new Error('Conflicting remote session identities. No session was changed.');
-  return { sessionToken: current || legacy, sessionIdentityOption: current ? SESSION_IDENTITY_OPTION : legacy ? LEGACY_SESSION_IDENTITY_OPTION : null };
-}
-// tmux 3.6 replaces literal tabs in list formats with underscores. Its q:
-// modifier escapes every pipe in a name, so quoted text cannot contain " | ".
-const PANE_SEPARATOR = ' | ';
-const PANE_FORMAT = [
-  '#{session_id}', '#{q:session_name}', '#{window_id}', '#{window_index}', '#{q:window_name}',
-  '#{pane_id}', '#{pane_index}', '#{pane_width}', '#{pane_height}', '#{pane_dead}',
-  SESSION_IDENTITY_FORMAT, '#{window_panes}', '#{q:pane_current_command}'
-].join(PANE_SEPARATOR);
-function parsePanes(data) {
-  const result = [];
-  for (const line of data.replace(/\n+$/, '').split('\n')) {
-    if (!line) continue;
-    if (result.length >= MAX_DISCOVERED_PANES) throw resourceLimitError(`The server session list exceeds the ${MAX_DISCOVERED_PANES}-pane safety limit. No sessions were changed.`);
-    const a = line.split(PANE_SEPARATOR);
-    if (a.length !== 13) throw new Error('The server returned an unrecognized session list.');
-    result.push({ sessionId: id(a[0], '$'), sessionName: unescapeFormat(a[1]), windowId: id(a[2], '@'),
-      windowIndex: Number(a[3]), windowName: unescapeFormat(a[4]), paneId: id(a[5], '%'), paneIndex: Number(a[6]),
-      ...geometry(Number(a[7]), Number(a[8])),
-      dead: a[9] === '1', ...parseSessionIdentity(a[10]), windowPanes: Number(a[11]), command: unescapeFormat(a[12]) });
-  }
-  return result;
-}
-function paneKey(profileId, token, paneId) {
-  if (!/^[a-f0-9-]{36}$/.test(token)) throw new Error('Invalid session identity.');
-  id(paneId, '%');
-  return `${profileId}/${token}/${paneId}`;
-}
 function restoreOrder(saved, current, policy = 'all') {
   const available = new Set(current); const out = [...new Set(saved)].filter(k => available.has(k));
   if (policy === 'none') return [];
@@ -162,5 +120,4 @@ function knownHostStatus(contents, host, port, key) {
   return trusted ? 'trusted' : matched ? 'changed' : 'unknown';
 }
 module.exports = { text, integer, geometry, terminalBaud, TERMINAL_BAUD_RATES, pasteText, id, shellQuote, sessionName, profile, tmuxPrefix, unescapeOctal,
-  PANE_FORMAT, parsePanes, paneKey, restoreOrder, fingerprint, knownHostStatus,
-  SESSION_IDENTITY_OPTION, LEGACY_SESSION_IDENTITY_OPTION, SESSION_IDENTITY_FORMAT, parseSessionIdentity };
+  restoreOrder, fingerprint, knownHostStatus };

@@ -104,8 +104,8 @@ test('real OpenSSH: NerdSSHell saved profile, new-window override and task baud 
   };
   const command = `${ptySpeeds}; sleep 1`;
   const first = await remote.create('Saved profile', command);
-  const second = await remote.create('New window override', command, 115200);
+  const second = await remote.create('New window override', command, { baud: 115200 });
   assert.deepEqual(await Promise.all([readSpeed(first), readSpeed(second)]), [[9600, 9600], [115200, 115200]]);
-  const normal = await remote.create('Server default', command, 0); assert.deepEqual(await readSpeed(normal), [38400, 38400]);
+  const normal = await remote.create('Server default', command, { baud: 0 }); assert.deepEqual(await readSpeed(normal), [38400, 38400]);
   const task = await remote.createTask('Inherited task speed', command); assert.deepEqual(await readSpeed(task), [9600, 9600]);
 });

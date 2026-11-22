@@ -176,25 +176,29 @@ function Wait-UpdateShutdownChildren($Parent,$Children,[string]$Nonce,[int]$Time
     Start-Sleep -Milliseconds 25
   }
 }
-function Get-UpdateRecoveryFiles([string]$Directory) {
+function Get-UpdateRecoveryLayout([string]$Directory,[version]$InstalledVersion) {
   # Only known installed program files, never profiles, archives or credentials.
-  return @('NerdSSHell.exe','chrome_100_percent.pak','chrome_200_percent.pak','d3dcompiler_47.dll','dxcompiler.dll','dxil.dll','NerdSSHell_wer.dll','ffmpeg.dll','icudtl.dat',
+  $common=@('NerdSSHell.exe','chrome_100_percent.pak','chrome_200_percent.pak','d3dcompiler_47.dll','dxcompiler.dll','ffmpeg.dll','icudtl.dat',
     'resources.pak','snapshot_blob.bin','v8_context_snapshot.bin','vk_swiftshader_icd.json','vk_swiftshader.dll','vulkan-1.dll','locales\en-US.pak','resources\app.asar','resources\app.asar.unpacked\node_modules\ssh2\util\pagent.exe',
     'resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty.node',
     'resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty\conpty.dll',
-    'resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty\OpenConsole.exe') | ForEach-Object {[IO.Path]::Combine($Directory,$_)}
+    'resources\app.asar.unpacked\node_modules\node-pty\prebuilds\win32-x64\conpty\OpenConsole.exe')
+  # Track the alternate's identity if an earlier install left it behind.
+  $required,$alternate=if($InstalledVersion -ge [version]'1.2.10'){'NerdSSHell_wer.dll','dxil.dll'}else{'dxil.dll','NerdSSHell_wer.dll'}
+  foreach($file in ($common + $required)) {
+    @{path=[IO.Path]::Combine($Directory,$file);optional=$false}
+  }
+  @{path=[IO.Path]::Combine($Directory,$alternate);optional=$true}
 }
 function Test-UpdateFileMissing([string]$Path) {
   # File.Exists also returns false for inaccessible files and directories.
   try {[void][IO.File]::GetAttributes($Path);return $false}catch [IO.FileNotFoundException] {return $true}
 }
 function Get-UpdateRecoveryIdentity([string]$Directory,[version]$InstalledVersion) {
-  # From 1.2.10 the Electron 45 package contains the WER DLL and omits DXIL.
-  # A leftover alternate component is protected along with the required files.
-  $alternate=if($InstalledVersion -ge [version]'1.2.10'){'dxil.dll'}else{'NerdSSHell_wer.dll'}
   $records=@()
-  foreach($file in @(Get-UpdateRecoveryFiles $Directory)) {
-    if([IO.Path]::GetFileName($file) -ceq $alternate -and (Test-UpdateFileMissing $file)) {
+  foreach($entry in @(Get-UpdateRecoveryLayout $Directory $InstalledVersion)) {
+    $file=$entry.path
+    if($entry.optional -and (Test-UpdateFileMissing $file)) {
       $records+=@{path=$file;hash=$null}
       continue
     }

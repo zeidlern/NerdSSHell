@@ -3,11 +3,30 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { getCurrentFuseWire, FuseV1Options } = require('@electron/fuses');
 const asar = require('@electron/asar');
 const { NtExecutable, NtExecutableResource } = require('resedit');
 const { verifyNativePty, NATIVE_HASHES } = require('../src/local-remote.cjs');
 const { APP_ID, PACKAGE_NAME, INSTALLER_GUID } = require('../src/branding.cjs');
+const { windowsPowerShellEnvironment } = require('../src/powershell-environment.cjs');
+
+function verifyRecoveryLayout(directory, version, runner) {
+  assert.equal(process.platform, 'win32', 'Windows is required for native update recovery verification');
+  const quote = value => "'" + value.replaceAll("'", "''") + "'";
+  const command = [
+    "$ErrorActionPreference='Stop'",
+    '$source=[Convert]::FromBase64String([Console]::In.ReadToEnd())',
+    '. ([ScriptBlock]::Create([Text.Encoding]::UTF8.GetString($source)))',
+    `[void](Get-UpdateRecoveryIdentity ${quote(path.resolve(directory))} ${quote(version)})`
+  ].join(';');
+  const executable = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  const result = spawnSync(executable, ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')], {
+    input: runner.toString('base64'), env: windowsPowerShellEnvironment(), encoding: 'utf8', timeout: 60_000, windowsHide: true
+  });
+  assert.ifError(result.error);
+  assert.equal(result.status, 0, `Packaged files do not satisfy the update recovery layout for ${version}.\n${result.stderr.trim()}`);
+}
 
 async function verify(directory) {
   const exe = path.join(directory, require('../package.json').build.productName + '.exe');
@@ -24,7 +43,9 @@ async function verify(directory) {
   assert.deepEqual(packagedMetadata.electronRuntime, sourceMetadata.electronRuntime, 'Packaged runtime provenance differs from source');
   assert.equal(sourceMetadata.build.electronVersion, sourceMetadata.electronRuntime.version, 'Builder and runtime pins differ');
   assert.ok(asar.extractFile(archive, 'src/runtime-identity.cjs').equals(fs.readFileSync(path.join(__dirname, '..', 'src/runtime-identity.cjs'))), 'Packaged runtime identity guard differs from source');
-  for (const name of ['src/main.cjs', 'src/release-updater.cjs', 'src/release-transport.cjs', 'src/update-handoff.cjs', 'src/update-runner.ps1']) {
+  const packagedRunner = asar.extractFile(archive, 'src/update-runner.ps1');
+  assert.ok(packagedRunner.equals(fs.readFileSync(path.join(__dirname, '..', 'src/update-runner.ps1'))), 'Packaged update runner differs from reviewed source');
+  for (const name of ['src/main.cjs', 'src/release-updater.cjs', 'src/release-transport.cjs', 'src/update-handoff.cjs']) {
     assert.ok(asar.extractFile(archive, name).equals(fs.readFileSync(path.join(__dirname, '..', name))), `Packaged update source differs: ${name}`);
   }
   const packagedPtyMetadata = JSON.parse(asar.extractFile(archive, path.join('node_modules', 'node-pty', 'package.json')).toString('utf8'));
@@ -55,7 +76,12 @@ async function verify(directory) {
   assert.deepEqual(outside.sort(), ['node_modules/ssh2/util/pagent.exe', ...Object.keys(NATIVE_HASHES).map(p => ptyPrefix + p)].sort(), 'Unexpected resource outside validated ASAR');
   verifyNativePty(path.join(unpacked, ...ptyPrefix.split('/')));
   assert.ok(!packaged.some(p => /node-pty\/(build|third_party)\//.test(p)), 'Unused native fallback directories must not be shipped');
-  console.log('Packaged Electron fuses, Windows ASAR integrity resource, and JS containment passed.');
+  verifyRecoveryLayout(directory, packagedMetadata.version, packagedRunner);
+  console.log('Packaged Electron fuses, Windows ASAR integrity resource, JS containment, and update recovery layout passed.');
 }
 
-verify(path.resolve(process.argv[2] || path.join(__dirname, '..', 'dist', 'win-unpacked'))).catch(error => { console.error(error); process.exitCode = 1; });
+if (require.main === module) {
+  verify(path.resolve(process.argv[2] || path.join(__dirname, '..', 'dist', 'win-unpacked'))).catch(error => { console.error(error); process.exitCode = 1; });
+}
+
+module.exports = { verifyRecoveryLayout };

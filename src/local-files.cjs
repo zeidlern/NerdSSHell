@@ -2,7 +2,7 @@
 const fs = require('node:fs/promises'), path = require('node:path'), os = require('node:os');
 const { browserToken } = require('./file-listings.cjs');
 const { FILE_PATH_CONTROLS } = require('./file-paths.cjs');
-const { download, downloadName, remotePath } = require('./sftp-browser.cjs');
+const { remotePath } = require('./sftp-browser.cjs');
 const { sameUploadFile } = require('./transfer.cjs');
 function inside(root, target) { const relative = path.relative(root, target); return relative === '' || !relative.startsWith('..' + path.sep) && relative !== '..' && !path.isAbsolute(relative); }
 function localPath(value) {
@@ -99,31 +99,4 @@ class LocalFiles {
     } };
   }
 }
-function installLocalFiles({ handle, fileOwner, dialog, getWindow, confirm, sendFiles, beginTransfer, transfers, emit, files = new LocalFiles(fileOwner), downloadFile = download }) {
-  let choosing = false;
-  handle('localFilesList', (key, id, directory = '~') => files.list(key, id, directory));
-  handle('localFilesChoose', async (key, id) => {
-    const owner = fileOwner(key); browserToken(id); if (choosing) throw new Error('Finish the folder picker first.'); choosing = true;
-    try {
-      const selected = await dialog.showOpenDialog(getWindow(), { title: 'Choose Local folder for File SFTP', properties: ['openDirectory'] });
-      if (selected.canceled) return null; owner.validate();
-      return await files.list(key, id, '~', selected.filePaths[0]);
-    } finally { choosing = false; }
-  });
-  handle('localFilesUpload', async (key, id, local, remoteDirectory) => {
-    remotePath(remoteDirectory); const remote = files.captureRemote(key, id, remoteDirectory, true), c = await files.capture(key, id, local);
-    const validate = () => { c.validate(); remote.validate(); };
-    const revalidate = async sources => { validate(); await c.revalidate(sources); validate(); };
-    return sendFiles(c.owner.profileId, c.owner.remote, remoteDirectory, [c.selected.path], key, validate, revalidate);
-  });
-  handle('localFilesDownload', async (key, id, source) => {
-    remotePath(source); const remote = files.captureRemote(key, id, source), c = await files.capture(key, id), target = path.join(c.directory, downloadName(source)), owner = c.owner;
-    if (!await confirm('Copy Remote → Local?', 'Download this file without replacing an existing local file?', `${owner.remote.profile.username}@${owner.remote.profile.host}\nRemote: ${source}\nLocal: ${target}`)) return null;
-    remote.validate(); await c.revalidate(); remote.validate(); const { controller, transferId } = beginTransfer(owner.profileId);
-    emit('transfer', { id: transferId, profileId: owner.profileId, key, status: 'starting', name: downloadName(source) });
-    try { return await downloadFile(owner.remote, source, target, { signal: controller.signal, progress: data => emit('transfer', { id: transferId, profileId: owner.profileId, key, status: 'running', ...data }) }); }
-    finally { transfers.delete(transferId); emit('transfer', { id: transferId, profileId: owner.profileId, key, status: 'finished' }); }
-  });
-  return files;
-}
-module.exports = { LocalFiles, installLocalFiles, inside, localPath };
+module.exports = { LocalFiles, inside, localPath };

@@ -3,7 +3,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { Remote } = require('../src/remote.cjs');
-const { paneKey, fingerprint } = require('../src/core.cjs');
+const { fingerprint } = require('../src/core.cjs');
+const { paneKey } = require('../src/tmux-sessions.cjs');
 
 const token = '11111111-2222-4333-8444-555555555555';
 const replacementToken = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';

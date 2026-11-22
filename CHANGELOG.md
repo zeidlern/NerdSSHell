@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.13 — Terminal upload approval and lifecycle fixes
+
+- Cancel pending terminal upload approval when its originating pane closes. Reopening the pane or replying to the old prompt cannot approve the upload.
+- Share File SFTP transfer cleanup and keep each operation tied to its reviewed pane and selection.
+- Consolidate Persistent SSH identity checks and bind terminal launch reservations to the exact shell record. Opening an existing terminal and launching a new one use the same capacity accounting.
+- Verify the built Windows package against the updater's versioned recovery layout before publication.
+- Add NerdSSHell's coding standards and agent review guidance. The architecture candidate passed real OpenSSH/tmux integration and the disposable Windows installer upgrade in [PR #45](https://github.com/zeidlern/NerdSSHell/pull/45).
+
 ## 1.2.12 — Windows update helper repair
 
 - Fix update preparation on the Electron 45 package layout introduced in 1.2.10. The Windows helper now checks the recovery files for the installed application's version and verifies that their state is consistent before an old installation can be reopened.

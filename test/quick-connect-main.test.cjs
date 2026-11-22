@@ -29,13 +29,14 @@ async function fixture(t, options = {}) {
       }
       this.connected = true; return this.panes;
     }
-    async createSession(name, persistent) {
+    async createSession(name, persistent, { registerShell } = {}) {
       assert.equal(persistent, false); assert.equal(name, 'Shell');
       const key = this.profile.id + '/standard-fixture';
       const pane = { key, profileId: this.profile.id, sessionId: 'fixture', sessionToken: 'stable-fixture', sessionName: name, standard: true, terminalType: 'generic', dead: false, cols: 120, rows: 36 };
       const stream = new EventEmitter(); stream.pauses = 0; stream.resumes = 0; stream.writes = [];
       stream.pause = () => { stream.pauses++; }; stream.resume = () => { stream.resumes++; }; stream.write = (bytes, done) => { stream.writes.push(bytes.toString()); done(); return true; };
-      this.shells.set(key, { pane, dead: false, stream, paused: true, serial: 0, pendingCount: 0, pendingBytes: 0, tail: Promise.resolve() }); this.panes = [pane]; this.emit('panes', this.panes);
+      const record = { pane, dead: false, stream, paused: true, serial: 0, pendingCount: 0, pendingBytes: 0, tail: Promise.resolve() };
+      this.shells.set(key, record); registerShell?.(this, record); this.panes = [pane]; this.emit('panes', this.panes);
       if (options.shellGate) await options.shellGate.promise;
       if (options.failShell) { this.closeView(key); throw new Error('Synthetic shell failed.'); }
       if (this.closing) throw new Error('Shell opening cancelled.'); return pane;
@@ -114,6 +115,22 @@ test('four pending attempts and the global terminal cap are reserved before SSH'
   for (const id of [...h.get().quickEntries.keys()]) await h.invoke('disconnect', id); gate.resolve(); await Promise.allSettled(tasks); assert.equal(h.get().viewBudget.pending.size, 0); assert.equal(h.get().pendingQuick, 0);
   h.get().connections.set('budget-fixture', { profile: { id: 'budget-fixture' }, remote: { connected: true, views: new Map(Array.from({ length: 64 }, (_, n) => ['v' + n, { active: true }])), shells: new Map(), disconnect() {} } });
   await assert.rejects(h.start('blocked'), /limit 64/); assert.equal(h.remotes.length, 4); assert.equal(h.get().quickEntries.size, 0);
+});
+test('Quick Connect counts a registered shell and its pending launch as one slot', async t => {
+  const gate = deferred(), h = await fixture(t, { shellGate: gate });
+  const views = new Map(Array.from({ length: 62 }, (_, n) => ['v' + n, { active: true }]));
+  h.get().connections.set('budget-fixture', { remote: { connected: true, views, shells: new Map(), disconnect() {} } });
+  const tasks = []; let settled;
+  try {
+    tasks.push(h.start('first')); await tick();
+    assert.equal(h.remotes[0].shells.size, 1);
+    tasks.push(h.start('second')); await tick();
+    assert.equal(h.remotes.length, 2); assert.equal(h.remotes[1].shells.size, 1);
+    await assert.rejects(h.start('overflow'), /limit 64/);
+  } finally {
+    gate.resolve(); settled = await Promise.allSettled(tasks);
+  }
+  assert.ok(settled.every(result => result.status === 'fulfilled'));
 });
 test('failed transport and failed shell both release every ephemeral registry and reservation', async t => {
   for (const options of [{ failConnect: true }, { failShell: true }]) { const h = await fixture(t, options); await assert.rejects(h.start(), /failed/); assert.equal(h.get().quickEntries.size, 0); assert.equal(h.get().connections.size, 0); assert.equal(h.get().credentialVersions.size, 0); assert.equal(h.get().viewBudget.pending.size, 0); assert.equal(h.get().store.data.quickConnect.recent.length, 0); }

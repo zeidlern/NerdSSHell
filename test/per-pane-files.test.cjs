@@ -192,24 +192,30 @@ test('invalid browser identities and cross-owner token reuse are rejected', asyn
 });
 
 function harness(t) {
-  const handlers = new Map(), requests = [], transfers = [], dialogs = [], app = new EventEmitter();
+  const handlers = new Map(), requests = [], transfers = [], dialogs = [], events = [], firstPrompt = deferred(), app = new EventEmitter();
   const data = fs.mkdtempSync(path.join(os.tmpdir(), 'nerdsshell-pane-main-'));
   t.after(() => fs.rmSync(data, { recursive: true, force: true }));
   Object.assign(app, { isPackaged: true, setPath() {}, commandLine: { getSwitchValue: () => data }, requestSingleInstanceLock: () => true, whenReady: () => new Promise(() => {}), quit() {}, getPath: () => data, getVersion: () => 'test' });
-  const frame = { url: 'nerdsshell://app/ui/index.html' }, webContents = { mainFrame: frame, send() {} };
+  const frame = { url: 'nerdsshell://app/ui/index.html' }, webContents = { mainFrame: frame, send(_channel, event) {
+    events.push(event);
+    if (event.type === 'prompt') firstPrompt.resolve(event);
+  } };
   const window = { webContents, isDestroyed: () => false }, req = createRequire(path.resolve(__dirname, '../src/main.cjs')), mod = { exports: {} };
   const electron = { app, BrowserWindow() {}, ipcMain: { handle: (n, fn) => handlers.set(n, fn) }, protocol: { registerSchemesAsPrivileged() {} },
     dialog: { showMessageBox: async () => ({ response: 1 }), showSaveDialog: () => { const d = deferred(); dialogs.push(d); return d.promise; } } };
-  const context = { require: name => name === 'electron' ? electron : name === './sftp-browser.cjs' ? {
-    ...req(name), listDirectory: (remote, dir, options) => { const wait = deferred(); requests.push({ remote, dir, ...options, wait }); return wait.promise; },
-    download: async (remote, source, target) => { transfers.push({ remote, source, target }); return target; }
+  const context = { require: name => name === 'electron' ? electron : name === './file-operations.cjs' ? {
+    createFileOperations: options => req(name).createFileOperations(options, {
+      listDirectory: (remote, dir, options) => { const wait = deferred(); requests.push({ remote, dir, ...options, wait }); return wait.promise; },
+      download: async (remote, source, target) => { transfers.push({ remote, source, target }); return target; },
+      upload: async (remote, sources, { directory }) => { transfers.push({ remote, sources, directory }); return ['/remote/uploaded.txt']; }
+    })
   } : req(name), module: mod, __dirname: path.resolve(__dirname, '../src'), process, Buffer, console, setTimeout, clearTimeout, AbortController, Response, URL };
-  vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../src/main.cjs'), 'utf8') + '\nmodule.exports={ setup(s,w){store=s;window=w;registerIPC();},connections,fileListings };', context);
-  const main = mod.exports; const p = { id: 'host', name: 'Host', username: 'test', host: 'host.example', sessionMode: 'persistent' };
+  vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../src/main.cjs'), 'utf8') + '\nmodule.exports={ setup(s,w){store=s;window=w;registerIPC();},connections };', context);
+  const main = mod.exports; const p = { id: 'host', name: 'Host', username: 'test', host: 'host.example', sessionMode: 'persistent', uploadDirectory: '/remote' };
   const views = new Map([['host/a', { active: true }], ['host/b', { active: true }]]);
   const remote = { profile: p, connected: true, views, pane: key => { if (!views.has(key)) throw new Error('missing pane'); return {}; }, closeView: key => views.delete(key) };
   main.setup({ data: { profiles: [p], pins: {} }, save() {} }, window); main.connections.set('host', { profile: p, remote });
-  return { main, remote, views, requests, transfers, dialogs, invoke: (name, ...args) => handlers.get('nerdsshell:' + name)({ sender: webContents, senderFrame: frame }, ...args) };
+  return { main, remote, views, requests, transfers, dialogs, events, firstPrompt: firstPrompt.promise, data, invoke: (name, ...args) => handlers.get('nerdsshell:' + name)({ sender: webContents, senderFrame: frame }, ...args) };
 }
 test('actual IPC wiring uses pane keys and isolates cancel on same-host browsers', async t => {
   const h = harness(t); const a = h.invoke('listFiles', 'host/a', 'a', '/alpha'), b = h.invoke('listFiles', 'host/b', 'b', '/beta');
@@ -226,6 +232,21 @@ test('actual view close cancels its listing without closing the sibling browser'
   const h = harness(t); const a = h.invoke('listFiles', 'host/a', 'a', '/alpha'), b = h.invoke('listFiles', 'host/b', 'b', '/beta');
   await tick(); await h.invoke('close', 'host/a'); assert.equal(h.requests[0].signal.aborted, true); assert.equal(h.requests[1].signal.aborted, false);
   h.requests[0].wait.resolve(listing()); h.requests[1].wait.resolve(listing('/beta')); await assert.rejects(a); await b;
+});
+test('actual Persistent view close dismisses its terminal upload approval on a live shared connection', { timeout: 5000 }, async t => {
+  const h = harness(t), file = path.join(h.data, 'upload-fixture.txt');
+  fs.writeFileSync(file, 'synthetic upload');
+  const uploading = h.invoke('upload', 'host/a', [file]);
+  const prompt = await h.firstPrompt;
+  t.after(() => h.invoke('promptReply', prompt.id, null));
+  assert.equal(prompt.title, 'Upload files');
+  assert.equal(await h.invoke('close', 'host/a'), true);
+  assert.ok(h.events.some(event => event.type === 'promptCancelled' && event.id === prompt.id));
+  assert.deepEqual(await uploading, []);
+  await h.invoke('promptReply', prompt.id, 'choice:0');
+  assert.equal(h.transfers.length, 0);
+  assert.equal(h.remote.connected, true);
+  assert.equal(h.views.get('host/b').active, true);
 });
 test('native download dialog cannot redirect a transfer after its owner closes', async t => {
   const h = harness(t); const download = h.invoke('downloadFile', 'host/a', '/alpha/report.txt');

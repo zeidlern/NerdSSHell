@@ -128,14 +128,15 @@ test('Standard task PTYs inherit the profile setting, and mixed Standard creatio
 
 test('create IPC rejects malformed, Persistent and local overrides before reserving or launching work', () => {
   const handlers = new Map(), created = [], reserved = [], remote = { profile: { local: false }, createSession: (...args) => created.push(args), create: (...args) => created.push(args) };
-  installSessionActions({ handle: (name, handler) => handlers.set(name, handler), runtime: () => ({ remote }), withViewSlot: (...args) => { reserved.push(args); return args[2](); } });
+  const registerShell = () => {};
+  installSessionActions({ handle: (name, handler) => handlers.set(name, handler), runtime: () => ({ remote }), withViewSlot: (...args) => { reserved.push(args); return args[2](registerShell); } });
   const create = handlers.get('create');
-  create('fixture', 'Standard', false, 9600); assert.deepEqual(created, [['Standard', false, 9600]]); assert.equal(reserved.length, 1);
+  create('fixture', 'Standard', false, 9600); assert.deepEqual(created, [['Standard', false, 9600, registerShell]]); assert.equal(reserved.length, 1);
   for (const invalid of ['9600; sleep', null, true, [], 9601]) assert.throws(() => create('fixture', 'Invalid', false, invalid), /terminal baud/);
   assert.throws(() => create('fixture', 'Persistent', true, 9600), /only.*Standard/);
   remote.profile.local = true; assert.throws(() => create('fixture', 'Local', false, 9600), /only.*Standard/);
   assert.equal(created.length, 1); assert.equal(reserved.length, 1);
-  create('fixture', 'Local'); assert.deepEqual(created[1], ['Local']);
+  create('fixture', 'Local'); assert.deepEqual(created[1], ['Local', undefined, { registerShell }]);
 });
 
 function newWindowUI() {

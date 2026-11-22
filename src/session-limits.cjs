@@ -67,21 +67,18 @@ class ViewBudget {
       }
     };
     observe(remote);
-    const bind = (provider, identity) => {
-      if (!slot) return;
-      slot.remote = provider; slot.key = identity;
+    // The provider supplies its exact shell while the channel is still opening.
+    const registerShell = (provider, record) => {
+      if (!slot || !this.pending.has(slot)) throw new Error('The terminal launch reservation ended. Open a new shell explicitly.');
+      slot.remote = provider; slot.key = record.pane.key;
+      slot.kind = 'shell'; slot.resource = record;
       observe(provider);
-      const record = provider?.shells?.get(identity);
-      slot.kind = record ? 'shell' : 'view'; slot.resource = record || provider?.views?.get(identity);
     };
-    const before = new Set(remote?.shells?.keys() || []);
     try {
-      const task = operation(bind);
+      const task = operation(registerShell);
       if (slot) {
-        if (key !== undefined) bind(remote, key);
-        else {
-          const created = [...(remote?.shells?.keys() || [])].find(identity => !before.has(identity));
-          if (created !== undefined) bind(remote, created);
+        if (key !== undefined) {
+          slot.kind = 'view'; slot.resource = remote?.views?.get(key);
         }
         slot.task = task;
       }

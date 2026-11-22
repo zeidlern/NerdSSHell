@@ -81,21 +81,18 @@ function installWorkbench({ handle, connections, getStore, app, dialog, getWindo
   async function launch(o, title, code, cwd, validateReview = () => {}) {
     if (launches >= 4) throw new Error('Wait for a console launch to finish.');
     launches++;
-    try { return await withViewSlot(o.local ? connections.get(o.id)?.remote : o.remote, undefined, async bind => {
+    try { return await withViewSlot(o.local ? null : o.remote, undefined, async registerShell => {
       o.validate(); assertAutomation(o);
       const r = o.local ? await getLocal(o.shell, cwd) : connections.get(o.id);
       o.validate(); assertAutomation(o); validateReview(); // Last check before submitting creation; no await before create/createTask.
       const family = o.local ? (o.shell.family || shellFamily(o.shell.baseId || o.shell.id)) : '';
       if (o.local && code === undefined) localConsoleSequence.set(family, (localConsoleSequence.get(family) || 0) + 1);
       const name = o.local && code === undefined ? `${family === 'cmd' ? 'Command Prompt' : 'PowerShell'} ${localConsoleSequence.get(family)}` : (code === undefined ? 'Shell-' : 'Task-') + randomUUID().slice(0, 8);
-      // A local cwd is passed only to this synchronous PTY spawn, never written to remote profiles.
-      const oldHome = o.local ? r.remote.home : undefined;
-      const beforeShells = new Set(r.remote.shells?.keys() || []);
+      const launchOptions = { cwd, registerShell, validate() { o.validate(); assertAutomation(o); validateReview(); } };
       let pending;
-      try { if (o.local && cwd !== undefined) r.remote.home = cwd; const guard = { validate: () => { o.validate(); assertAutomation(o); validateReview(); } }; pending = code === undefined ? r.remote.create(name, undefined, guard) : !o.local && r.remote.createTaskFor ? r.remote.createTaskFor(name, code, o.persistent) : r.remote.createTask(name, code, guard); }
-      finally { if (o.local) r.remote.home = oldHome; }
-      const createdShell = [...(r.remote.shells?.keys() || [])].find(key => !beforeShells.has(key));
-      if (createdShell !== undefined) bind?.(r.remote, createdShell);
+      if (code === undefined) pending = r.remote.create(name, undefined, launchOptions);
+      else if (!o.local && r.remote.createTaskFor) pending = r.remote.createTaskFor(name, code, o.persistent, registerShell);
+      else pending = r.remote.createTask(name, code, launchOptions);
       const pane = await pending;
       try { o.validate(); } catch { throw new Error('Destination changed after launch was submitted. The console or task may have started on the original target. It was not retried; inspect that target before trying again.'); }
       record(code === undefined ? 'Local console opened' : 'Reviewed task console opened', o.id);

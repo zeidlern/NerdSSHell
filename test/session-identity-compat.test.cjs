@@ -3,9 +3,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { Remote } = require('../src/remote.cjs');
-const { profile, PANE_FORMAT, parsePanes, paneKey, parseSessionIdentity, SESSION_IDENTITY_OPTION,
-  LEGACY_SESSION_IDENTITY_OPTION, SESSION_IDENTITY_FORMAT } = require('../src/core.cjs');
+const { profile } = require('../src/core.cjs');
+const { parsePanes, paneKey } = require('../src/tmux-sessions.cjs');
 
+const SESSION_IDENTITY_OPTION = '@nerdsshell-id';
+const LEGACY_SESSION_IDENTITY_OPTION = '@betterssh-id';
+const SESSION_IDENTITY_FORMAT = `#{${SESSION_IDENTITY_OPTION}}|#{${LEGACY_SESSION_IDENTITY_OPTION}}`;
 const token = '11111111-2222-4333-8444-555555555555';
 const replacement = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const settings = { id: 'fixture', host: 'server.example', username: 'tester', auth: 'password' };
@@ -18,12 +21,19 @@ test('default upload directory adopts NerdSSHell while saved explicit legacy fol
   assert.equal(profile({ ...settings, uploadDirectory: '~/BetterSSH-Uploads' }).uploadDirectory, '~/BetterSSH-Uploads');
 });
 
-test('13-column discovery distinguishes current, legacy, matching dual and old plain-token identities', () => {
-  assert.doesNotMatch(PANE_FORMAT, /[^\x20-\x7e]/, 'tmux 3.6 normalizes literal control characters in list formats');
-  assert.equal(PANE_FORMAT.split(' | ').length, 13);
+test('13-column discovery distinguishes current, legacy, matching dual and old plain-token identities', async () => {
   for (const [identity, marker] of [[token + '|', SESSION_IDENTITY_OPTION], ['|' + token, LEGACY_SESSION_IDENTITY_OPTION],
     [token + '|' + token, SESSION_IDENTITY_OPTION], [token, LEGACY_SESSION_IDENTITY_OPTION]]) {
-    const p = pane(identity);
+    const r = remote();
+    r.exec = async command => {
+      const [, format] = / list-panes -a -F '(.*)'$/.exec(command);
+      assert.doesNotMatch(format, /[^\x20-\x7e]/, 'tmux 3.6 normalizes literal control characters in list formats');
+      assert.equal(format.split(' | ').length, 13);
+      assert.equal(format.split(' | ')[10], SESSION_IDENTITY_FORMAT);
+      return { code: 0, stdout: row(identity), stderr: '' };
+    };
+    r.checked = async () => assert.fail('A known session identity needs no metadata write.');
+    const [p] = await r.discover();
     assert.equal(p.sessionToken, token); assert.equal(p.sessionIdentityOption, marker);
     assert.equal(p.key, 'fixture/' + token + '/%0');
   }
@@ -31,7 +41,6 @@ test('13-column discovery distinguishes current, legacy, matching dual and old p
 
 test('conflicting or malformed markers fail closed before metadata assignment or view reconciliation', async () => {
   for (const identity of [token + '|' + replacement, token + '|bad', token + '||']) {
-    assert.throws(() => parseSessionIdentity(identity), /identit/);
     const r = remote(), p = pane('|' + token), view = { pane: p, active: true };
     r.panes = [p]; r.views.set(p.key, view);
     r.exec = async () => ({ code: 0, stdout: row(identity), stderr: '' });
@@ -115,6 +124,27 @@ test('stale connection discovery cannot assign identities or publish old panes i
   r.checked = async () => assert.fail('Stale discovery must not assign an identity.');
   const pending = r.discover(); r.client = {}; finish({ code: 0, stdout: row('|'), stderr: '' });
   await assert.rejects(pending, /Connection changed/); assert.equal(r.panes[0], p);
+});
+
+test('connection replacement during identity assignment prevents readback and publication', async () => {
+  const r = remote(), previous = pane('|' + token);
+  r.panes = [previous];
+  let finishAssignment;
+  const assigning = new Promise(started => {
+    r.checked = command => {
+      assert.match(command, /if-shell -F/);
+      assert.equal(finishAssignment, undefined, 'Readback must not reach the replacement connection.');
+      return new Promise(resolve => { finishAssignment = resolve; started(); });
+    };
+  });
+  r.exec = async () => ({ code: 0, stdout: row('|'), stderr: '' });
+  r.on('panes', () => assert.fail('Stale discovery must not publish panes.'));
+  const pending = r.discover();
+  await assigning;
+  r.client = {};
+  finishAssignment('');
+  await assert.rejects(pending, /Connection changed/);
+  assert.deepEqual(r.panes, [previous]);
 });
 
 for (const marker of [SESSION_IDENTITY_OPTION, LEGACY_SESSION_IDENTITY_OPTION]) {

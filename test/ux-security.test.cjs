@@ -72,7 +72,7 @@ test('the upload picker binds the local file before asking for transfer consent'
 });
 
 test('oversized hostile discovery stops automatic reconnect and clears retry credentials in actual main', async t => {
-  const { parsePanes } = require('../src/core.cjs'), { MAX_DISCOVERED_PANES } = require('../src/session-limits.cjs');
+  const { parsePanes } = require('../src/tmux-sessions.cjs'), { MAX_DISCOVERED_PANES } = require('../src/session-limits.cjs');
   class HostileDiscovery extends EventEmitter {
     constructor(profile) { super(); this.profile = profile; this.panes = []; }
     async connect() {

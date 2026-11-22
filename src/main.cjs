@@ -15,11 +15,9 @@ const { cancelOnRight } = require('./dialog-policy.cjs');
 const dialog = cancelOnRight(nativeDialog, presentMessageBox);
 const { MixedRemote } = require('./mixed-remote.cjs');
 const { installSessionActions, isStandardSession } = require('./session-actions.cjs');
-const { listDirectory, download, remotePath, downloadName } = require('./sftp-browser.cjs');
-const { FileListings } = require('./file-listings.cjs');
+const { createFileOperations } = require('./file-operations.cjs');
 const { installWorkbench } = require('./workbench.cjs');
 const { installDesktopTools } = require('./desktop-tools.cjs');
-const { installLocalFiles } = require('./local-files.cjs');
 const { installPublicLinks } = require('./public-links.cjs');
 const { StartupUpdater, eligibleStartup } = require('./release-updater.cjs');
 const { createReleaseFetch } = require('./release-transport.cjs');
@@ -28,14 +26,14 @@ const { installSessionCommands } = require('./session-commands.cjs');
 const { createSessionNotifications } = require('./session-notifications.cjs');
 const { configureScratchpadSpelling, installScratchpadSpelling } = require('./scratchpad-spelling.cjs');
 let workbench, sessionCommands, sessionNotifications, startupUpdater;
-const { upload, captureUploadSource } = require('./transfer.cjs');
 const { profile, integer, pasteText } = require('./core.cjs');
 const { parseAddress } = require('./quick-connect.cjs');
 const { MAX_OPEN_VIEWS, ViewBudget, resourceLimitError } = require('./session-limits.cjs');
 let window, store, passwords, quitting = false, quitPending = false, promptChain = Promise.resolve(), queuedPrompts = 0, promptGeneration = 0, rendererHasLoaded = false, rendererReloading = false, rendererLoadGeneration = 0;
 const credentialVersions = new Map();
 const quickEntries = new Map(), quickViewReservations = new Set(), genericOpenWaits = new Map(), genericWaitTransports = new Map(); let pendingQuick = 0;
-const connections = new Map(), archives = new Map(), prompts = new Map(), transfers = new Map(), fileListings = new FileListings();
+const connections = new Map(), archives = new Map(), prompts = new Map();
+const fileOperations = createFileOperations({ forKey, getRemote: id => connections.get(id)?.remote, dialog, getWindow: () => window, confirm, emit });
 const viewBudget = new ViewBudget(connections);
 const output = new OutputBuffer({ emit: (type, data) => { emit(type, data); if (type === 'output') standardBackpressure(data.key); }, recover: key => forKey(key).remote.snapshot(key) });
 const uiURL = UI_URL;
@@ -192,47 +190,6 @@ function disconnectConsent(id) {
     })) throw new Error('Connections or nonpersistent consoles changed during confirmation. Try again to review the current work.');
   } };
 }
-function assertRemote(id, remote) {
-  if (connections.get(id)?.remote !== remote || !remote.connected || remote.closing) throw new Error('Server connection changed. Refresh and try again.');
-}
-function cancelRemoteFiles(id) {
-  fileListings.cancelProfile(id);
-  for (const controller of transfers.values()) if (controller.profileId === id) controller.abort();
-}
-function fileOwner(key) {
-  const r = forKey(key), remote = r.remote, view = remote.views.get(key);
-  if (r.profile.local) throw new Error('Use Windows Explorer for local files.');
-  const valid = () => connections.get(r.profile.id)?.remote === remote && remote.connected && !remote.closing && remote.views.get(key) === view && !!view?.active;
-  const validate = () => { if (!valid()) throw new Error('File-browser session changed. Refresh and try again.'); };
-  validate(); return { key, profileId: r.profile.id, remote, view, valid, validate };
-}
-function beginTransfer(id) {
-  if (transfers.size >= 4) throw new Error('Wait for a file transfer to finish (limit four at once).');
-  const controller = new AbortController(); controller.profileId = id;
-  const transferId = randomUUID(); transfers.set(transferId, controller);
-  return { controller, transferId };
-}
-async function sendFiles(id, remote, directory, files, key = '', validateOwner = () => {}, validateSelection = async () => {}) {
-  remotePath(directory);
-  if (files === null) {
-    const selected = await dialog.showOpenDialog(window, { title: 'Upload files', properties: ['openFile', 'multiSelections'] });
-    if (selected.canceled) return []; files = selected.filePaths;
-  }
-  assertRemote(id, remote); validateOwner();
-  if (!Array.isArray(files) || files.length < 1 || files.length > 50 || files.some(f => typeof f !== 'string' || !path.isAbsolute(f) || f.length > 4096)) throw new Error('Invalid file selection.');
-  const sources = await Promise.all(files.map(captureUploadSource));
-  assertRemote(id, remote); validateOwner();
-  if (!await confirm('Upload files', `Upload ${files.length} file(s) to ${remote.profile.name}?`, `${remote.profile.username}@${remote.profile.host}\nDestination: ${directory}\n\n${files.join('\n')}\n\nFiles will not be executed.`)) return [];
-  assertRemote(id, remote); validateOwner(); await validateSelection(sources); assertRemote(id, remote); validateOwner();
-  const { controller, transferId } = beginTransfer(id);
-  emit('transfer', { id: transferId, profileId: id, key, status: 'starting', name: path.basename(files[0]) });
-  try {
-    return await upload(remote, sources, { directory, signal: controller.signal,
-      confirmOverwrite: async target => { const accepted = await confirm('Replace existing remote file?', target, `Server: ${remote.profile.name}. The previous file will be replaced only after this upload completes.`); assertRemote(id, remote); validateOwner(); if (accepted) await validateSelection(sources); assertRemote(id, remote); validateOwner(); return accepted; },
-      progress: data => emit('transfer', { id: transferId, profileId: id, key, status: 'running', ...data }) });
-  } finally { transfers.delete(transferId); emit('transfer', { id: transferId, profileId: id, key, status: 'finished' }); }
-}
-
 function reserveQuickView() {
   const retained = [...quickEntries.values()].reduce((count, entry) => count + entry.panes.size, 0);
   if (retained + quickViewReservations.size >= MAX_OPEN_VIEWS) throw resourceLimitError('Close an unused Quick Connect tab before opening more (limit 64 including ended transcripts).');
@@ -304,7 +261,7 @@ function prepareGenericRendererReload() {
       // A new identity invalidates old queued input and file-browser ownership.
       // The next open resumes this shell with an honest empty Standard snapshot.
       remote.views.set(key, { ...view, initialized: false });
-      fileListings.cancelView(key); sessionCommands?.forget(key); sessionNotifications?.forget(key); discardOutput(key);
+      fileOperations.cancelView(key); sessionCommands?.forget(key); sessionNotifications?.forget(key); discardOutput(key);
     }
   }
 }
@@ -320,7 +277,7 @@ function quickMetadata(p) {
 }
 function releaseQuickTransport(entry, discard = false) {
   const id = entry.id, r = connections.get(id);
-  entry.controller?.abort(); cancelProfilePrompts(id); cancelRemoteFiles(id);
+  entry.controller?.abort(); cancelProfilePrompts(id); fileOperations.cancelProfile(id);
   workbench?.disconnect(id); sessionCommands?.disconnect(id); sessionNotifications?.clearProfile(id);
   if (r) {
     r.wanted = false; r.promptToken = randomUUID(); clearTimeout(r.timer); r.timer = undefined;
@@ -446,12 +403,12 @@ async function connect(id, secrets, quickSlot) {
   remote.on('snapshot', (key, snapshot) => { if (!active()) return; discardOutput(key); emit('snapshot', { key, ...snapshot }); });
   remote.on('output', (key, bytes) => { if (!active()) return; if (p.record) { const a = archive(p); a.append(key, bytes); if (a.error && !a.reported) { a.reported = true; emit('notice', { message: 'History recording stopped: ' + a.error.message }); } } queueOutput(key, bytes); });
   remote.on('notice', message => { if (active()) emit('notice', { message }); });
-  remote.on('ended', key => { if (!active()) return; fileListings.cancelView(key); if (isStandardSession(remote, key)) { output.flush(key); emit('standard-ended', { key }); if (temporary) retainQuick(temporary, key); } else { discardOutput(key); emit('ended', { key }); } });
-  remote.on('detached', key => { if (!active()) return; fileListings.cancelView(key); discardOutput(key); emit('detached', { key }); });
+  remote.on('ended', key => { if (!active()) return; fileOperations.cancelView(key); if (isStandardSession(remote, key)) { output.flush(key); emit('standard-ended', { key }); if (temporary) retainQuick(temporary, key); } else { discardOutput(key); emit('ended', { key }); } });
+  remote.on('detached', key => { if (!active()) return; fileOperations.cancelView(key); discardOutput(key); emit('detached', { key }); });
   remote.on('disconnected', error => {
     if (!active() || quitting) return;
     if (!temporary) rejectRememberedPassword(p, error, passwordVersion, remote);
-    cancelRemoteFiles(id); cancelProfilePrompts(id);
+    fileOperations.cancelProfile(id); cancelProfilePrompts(id);
     workbench?.disconnect(id); sessionCommands?.disconnect(id);
     for (const key of output.keys()) if (key.startsWith(id + '/')) discardOutput(key);
     remote.disconnect();
@@ -469,8 +426,8 @@ async function connect(id, secrets, quickSlot) {
     if (!r.wanted || r.remote !== remote) { remote.disconnect(); return []; }
     if (!temporary && remote.passwordRejected === true) rejectRememberedPassword(p, { level: 'client-authentication' }, passwordVersion, remote, true);
     if (p.sessionMode === 'standard') {
-      if (quickSlot) { const task = remote.createSession('Shell', false); const key = [...(remote.shells?.keys() || [])][0]; if (key) quickSlot(remote, key); await task; }
-      else await viewBudget.run(remote, undefined, () => remote.createSession('Shell', false));
+      if (quickSlot) await remote.createSession('Shell', false, undefined, quickSlot);
+      else await viewBudget.run(remote, undefined, registerShell => remote.createSession('Shell', false, undefined, registerShell));
       panes = remote.panes;
     }
     if (!active()) { remote.disconnect(); return []; }
@@ -489,7 +446,7 @@ async function connect(id, secrets, quickSlot) {
 function disconnect(id) {
   const quick = quickEntries.get(id);
   if (quick) { quick.cancelled = true; const r = connections.get(id); if (!r && !quick.pending) { removeQuick(quick); return; } if (r) publishStatus(r, 'disconnected', 'Temporary SSH connection closed. Enter the address again to start a new connection.'); for (const key of quick.panes.keys()) quick.panes.set(key, { ...quick.panes.get(key), dead: true }); releaseQuickTransport(quick, true); if (quick.pending || !quick.panes.size) removeQuick(quick); return; }
-  workbench?.disconnect(id); sessionCommands?.disconnect(id); sessionNotifications?.clearProfile(id); cancelRemoteFiles(id); const r = connections.get(id); if (!r) return; r.promptToken = randomUUID(); cancelProfilePrompts(id); r.wanted = false; clearTimeout(r.timer); r.timer = undefined; for (const key of output.keys()) if (key.startsWith(`${id}/`)) discardOutput(key); r.remote?.disconnect(); r.secrets = {}; publishStatus(r, 'disconnected', r.profile.sessionMode === 'standard' ? 'Disconnected. Standard shells are not restorable; connect to start a new shell.' : 'Disconnected. Persistent work was left running; Standard shells are not restorable.'); }
+  workbench?.disconnect(id); sessionCommands?.disconnect(id); sessionNotifications?.clearProfile(id); fileOperations.cancelProfile(id); const r = connections.get(id); if (!r) return; r.promptToken = randomUUID(); cancelProfilePrompts(id); r.wanted = false; clearTimeout(r.timer); r.timer = undefined; for (const key of output.keys()) if (key.startsWith(`${id}/`)) discardOutput(key); r.remote?.disconnect(); r.secrets = {}; publishStatus(r, 'disconnected', r.profile.sessionMode === 'standard' ? 'Disconnected. Standard shells are not restorable; connect to start a new shell.' : 'Disconnected. Persistent work was left running; Standard shells are not restorable.'); }
 function handle(name, fn) {
   ipcMain.handle(`nerdsshell:${name}`, async (event, ...args) => {
     if (event.sender !== window?.webContents || event.senderFrame !== window.webContents.mainFrame || event.senderFrame.url !== uiURL) throw new Error('Untrusted request.');
@@ -500,7 +457,7 @@ function handle(name, fn) {
 function registerIPC() {
   passwords ||= new PasswordStore(app.getPath('userData'), safeStorage, { platform: process.platform });
   installDesktopTools({ handle, app, dialog, getWindow: () => window, confirm, adminLaunch: id => workbench.openAdministrator(id) });
-  const localFiles = installLocalFiles({ handle, fileOwner, dialog, getWindow: () => window, confirm, sendFiles, beginTransfer, transfers, emit });
+  fileOperations.register(handle);
   handle('state', () => ({ profiles: [...store.data.profiles.map(rendererProfile), ...[...quickEntries.values()].map(quickPublic)], quickConnect: store.data.quickConnect, workspace: store.data.workspace, appearance: store.data.appearance, notifications: store.data.notifications, sessionDefaults: store.data.sessionDefaults, sessionLimits: { maxOpenViews: MAX_OPEN_VIEWS }, version: app.getVersion(), dataDirectory: app.getPath('userData') }));
   handle('saveAppearance', value => store.setAppearance(value));
   handle('savePreferences', value => { const saved = store.setPreferences(value); sessionNotifications?.refreshPreferences(); return saved; });
@@ -519,7 +476,7 @@ function registerIPC() {
   handle('discover', id => runtime(id).remote.discover());
   handle('open', key => { const { remote } = forKey(key); if (remote.profile.terminalType === 'generic' && (rendererReloading || genericOpenWaits.has(key))) return deferredGenericOpen(key, connections.get(remote.profile.id), remote); return viewBudget.run(remote, key, () => remote.open(key)); });
   installSessionActions({ handle, runtime, connections, forKey, dialog, getWindow: () => window, withViewSlot, afterClose: closeQuickView,
-    forget: key => { workbench?.forget(key); sessionCommands?.forget(key); sessionNotifications?.forget(key); fileListings.cancelView(key); discardOutput(key); } });
+    forget: key => { workbench?.forget(key); sessionCommands?.forget(key); sessionNotifications?.forget(key); fileOperations.cancelView(key); discardOutput(key); } });
   handle('input', (key, data) => { workbench?.assertInput(key); return forKey(key).remote.input(key, data); });
   handle('resize', (key, cols, rows) => { integer(cols, 20, 1000, 'columns'); integer(rows, 5, 500, 'rows'); return forKey(key).remote.resize(key, cols, rows); });
   handle('rename', (key, name) => forKey(key).remote.rename(key, name));
@@ -544,30 +501,6 @@ function registerIPC() {
     try { await archive(p).exportTo(key, temp); publishExport(temp, r.filePath); } finally { try { fs.unlinkSync(temp); } catch {} }
     return r.filePath;
   });
-  handle('upload', (key, dropped) => { const r = forKey(key); return sendFiles(r.profile.id, r.remote, r.profile.uploadDirectory, dropped, key); });
-  handle('listFiles', async (key, browserId, directory) => {
-    remotePath(directory); const owner = fileOwner(key);
-    localFiles.clearRemote(key, browserId);
-    const result = await fileListings.run({ ...owner, browserId }, signal => listDirectory(owner.remote, directory, { signal }));
-    owner.validate(); localFiles.rememberRemote(key, browserId, result); return result;
-  });
-  handle('cancelFileList', (key, browserId) => fileListings.cancel(key, browserId));
-  handle('browserUpload', (key, directory, dropped) => {
-    const owner = fileOwner(key);
-    return sendFiles(owner.profileId, owner.remote, directory, dropped, key, owner.validate);
-  });
-  handle('downloadFile', async (key, source) => {
-    remotePath(source); const owner = fileOwner(key), { profileId: id, remote } = owner;
-    const result = await dialog.showSaveDialog(window, { title: `Download from ${remote.profile.name} (choose a new filename)`, defaultPath: downloadName(source) });
-    if (result.canceled || !result.filePath) return null;
-    owner.validate();
-    const { controller, transferId } = beginTransfer(id);
-    emit('transfer', { id: transferId, profileId: id, key, status: 'starting', name: downloadName(source) });
-    try { return await download(remote, source, result.filePath, { signal: controller.signal,
-      progress: data => emit('transfer', { id: transferId, profileId: id, key, status: 'running', ...data }) }); }
-    finally { transfers.delete(transferId); emit('transfer', { id: transferId, profileId: id, key, status: 'finished' }); }
-  });
-  handle('cancelTransfer', id => transfers.get(id)?.abort());
   handle('dataFolder', () => shell.openPath(app.getPath('userData')));
   installPublicLinks({ handle, shell });
   workbench = installWorkbench({ handle, connections, getStore: () => store, app, dialog, getWindow: () => window, emit, queueOutput, discardOutput, output, forKey, actionTarget: key => sessionCommands.context(key), withViewSlot, pendingPromptCount: () => prompts.size });
@@ -647,7 +580,7 @@ else {
       cancelPendingQuick();
       for (const id of connections.keys()) disconnect(id);
       for (const done of prompts.values()) done(null);
-      for (const t of transfers.values()) t.abort();
+      fileOperations.abortTransfers();
       await Promise.allSettled([...archives.values()].map(a => a.close()));
       if (startupUpdater?.handoff) await startupUpdater.release();
       app.quit();

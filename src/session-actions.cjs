@@ -29,7 +29,9 @@ function installSessionActions({ handle, runtime, connections, forKey, dialog, g
     if (baud !== undefined) terminalBaud(baud);
     const remote = runtime(id).remote;
     if (baud !== undefined && (remote.profile.local || persistent)) throw new Error('Terminal baud overrides apply only to new Standard SSH shells.');
-    return withViewSlot(remote, undefined, () => remote.profile.local ? remote.create(name) : remote.createSession(name, persistent, baud));
+    return withViewSlot(remote, undefined, registerShell => remote.profile.local
+      ? remote.create(name, undefined, { registerShell })
+      : remote.createSession(name, persistent, baud, registerShell));
   });
   handle('close', async key => {
     if (typeof key !== 'string' || key.length > 240) throw new Error('Invalid session.');

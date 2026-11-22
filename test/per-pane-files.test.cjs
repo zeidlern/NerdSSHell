@@ -200,11 +200,13 @@ function harness(t) {
   const window = { webContents, isDestroyed: () => false }, req = createRequire(path.resolve(__dirname, '../src/main.cjs')), mod = { exports: {} };
   const electron = { app, BrowserWindow() {}, ipcMain: { handle: (n, fn) => handlers.set(n, fn) }, protocol: { registerSchemesAsPrivileged() {} },
     dialog: { showMessageBox: async () => ({ response: 1 }), showSaveDialog: () => { const d = deferred(); dialogs.push(d); return d.promise; } } };
-  const context = { require: name => name === 'electron' ? electron : name === './sftp-browser.cjs' ? {
-    ...req(name), listDirectory: (remote, dir, options) => { const wait = deferred(); requests.push({ remote, dir, ...options, wait }); return wait.promise; },
-    download: async (remote, source, target) => { transfers.push({ remote, source, target }); return target; }
+  const context = { require: name => name === 'electron' ? electron : name === './file-operations.cjs' ? {
+    createFileOperations: options => req(name).createFileOperations(options, {
+      listDirectory: (remote, dir, options) => { const wait = deferred(); requests.push({ remote, dir, ...options, wait }); return wait.promise; },
+      download: async (remote, source, target) => { transfers.push({ remote, source, target }); return target; }
+    })
   } : req(name), module: mod, __dirname: path.resolve(__dirname, '../src'), process, Buffer, console, setTimeout, clearTimeout, AbortController, Response, URL };
-  vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../src/main.cjs'), 'utf8') + '\nmodule.exports={ setup(s,w){store=s;window=w;registerIPC();},connections,fileListings };', context);
+  vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../src/main.cjs'), 'utf8') + '\nmodule.exports={ setup(s,w){store=s;window=w;registerIPC();},connections };', context);
   const main = mod.exports; const p = { id: 'host', name: 'Host', username: 'test', host: 'host.example', sessionMode: 'persistent' };
   const views = new Map([['host/a', { active: true }], ['host/b', { active: true }]]);
   const remote = { profile: p, connected: true, views, pane: key => { if (!views.has(key)) throw new Error('missing pane'); return {}; }, closeView: key => views.delete(key) };

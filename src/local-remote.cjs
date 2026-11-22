@@ -137,7 +137,7 @@ class LocalRemote extends StandardRemote {
       let pty, channel;
       try {
         if (!this.connected || this.closing) throw new Error('Local console is disconnected.');
-        const launch = this.launchContext.getStore(), cwd = this.home;
+        const launch = this.launchContext.getStore(), cwd = launch?.cwd ?? this.home;
         const args = launchArguments(command, baseId); // Validate before spawn or UAC.
         if (this.shell.administrator) {
           // CMD expands percent/exclamation content even inside quoted paths.
@@ -195,7 +195,7 @@ class LocalRemote extends StandardRemote {
   }
   async connect() { if (this.closing) throw new Error('Local console was closed.'); this.connected = true; return this.discover(); }
   async create(name, command, launch = {}) {
-    const pane = await this.launchContext.run(launch, () => super.create(name, command)); pane.local = true; pane.administrator = !!this.shell.administrator; pane.command = this.shell.name; return pane;
+    const pane = await this.launchContext.run(launch, () => super.create(name, command, undefined, launch?.registerShell)); pane.local = true; pane.administrator = !!this.shell.administrator; pane.command = this.shell.name; return pane;
   }
   async createTask(name, code, launch) { return this.create(name, scriptText(code), launch); }
   async input(key, data) {

@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { Control } = require('../src/control.cjs');
 const { Remote } = require('../src/remote.cjs');
-const { parsePanes } = require('../src/core.cjs');
+const { parsePanes } = require('../src/tmux-sessions.cjs');
 const { PlainText } = require('../src/storage.cjs');
 const { MAX_OPEN_VIEWS, MAX_DISCOVERED_PANES, ViewBudget } = require('../src/session-limits.cjs');
 const base = { id: 'security-test', name: 'Disposable test', host: 'server.example', username: 'tester', auth: 'password' };
@@ -168,16 +168,25 @@ test('actual transport closure releases abandoned-open capacity without waiting 
   finish(); await pending; assert.equal(remote.client.listenerCount('close'), 0);
 });
 
-test('real pending Standard creation occupies one slot so the last two legitimate shells remain available', async () => {
-  const { StandardRemote } = require('../src/standard-remote.cjs');
-  const r = new StandardRemote(base); r.connected = true;
+test('a delayed provider and its registered Standard shell share one slot while another shell opens', async () => {
+  const { MixedRemote } = require('../src/mixed-remote.cjs');
+  const r = new MixedRemote(base); r.connected = true;
   const callbacks = [], client = r.client = new EventEmitter(); client.shell = (_geometry, callback) => callbacks.push(callback);
   const sibling = { views: new Map(Array.from({ length: MAX_OPEN_VIEWS - 2 }, (_, i) => ['prior-' + i, { active: true }])), shells: new Map() };
   const budget = new ViewBudget(new Map([['fixture', { remote: r }], ['sibling', { remote: sibling }]]));
-  const first = budget.run(r, undefined, () => r.create('First')); first.catch(() => {});
-  const second = budget.run(r, undefined, () => r.create('Second')); second.catch(() => {});
+  let provide;
+  const provider = new Promise(resolve => { provide = resolve; });
+  const first = budget.run(null, undefined, async registerShell => {
+    const remote = await provider;
+    return remote.createSession('First', false, undefined, registerShell);
+  }); first.catch(() => {});
+  await r.ensureSupport();
+  provide(r);
+  await Promise.resolve();
+  const second = budget.run(r, undefined, registerShell => r.createSession('Second', false, undefined, registerShell)); second.catch(() => {});
   assert.equal(callbacks.length, 2); assert.equal(r.shells.size, 2);
-  await assert.rejects(budget.run(r, undefined, () => r.create('Overflow')), /limit 64/);
+  await assert.rejects(budget.run(r, undefined, () => assert.fail('An extra shell must not start')), /limit 64/);
+  assert.equal(await budget.run(sibling, 'prior-0', () => 'same view'), 'same view');
   for (const callback of callbacks) callback(Error('synthetic cancellation'));
   assert.ok((await Promise.allSettled([first, second])).every(result => result.status === 'rejected'));
   assert.equal(budget.pending.size, 0); assert.equal(r.shells.size, 0);

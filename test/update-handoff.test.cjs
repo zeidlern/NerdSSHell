@@ -4,6 +4,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const { createHash } = require('node:crypto'), { EventEmitter } = require('node:events'), { PassThrough, Writable } = require('node:stream');
 const { spawnSync } = require('node:child_process');
 const { armUpdate, validatePlan, bootstrap, cleanupOwned } = require('../src/update-handoff.cjs');
+const { verifyRecoveryLayout } = require('../scripts/Verify-Packaged.cjs');
 function fixture(t) {
   const stage = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), 'nerdsshell-update-'));
   const home = fs.mkdtempSync(path.join(fs.realpathSync.native(os.tmpdir()), 'nerdsshell-handoff-test-'));
@@ -170,6 +171,13 @@ test('Windows recovery validates legacy and Electron 45 payloads, including abse
   const result = spawnSync(shell, ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(code, 'utf16le').toString('base64')],
     { windowsHide: true, shell: false, encoding: 'utf8', timeout: 20000 });
   assert.equal(result.status, 0, result.stderr); assert.equal(result.stdout.trim(), 'PASS');
+
+  const runner = fs.readFileSync(path.join(__dirname, '../src/update-runner.ps1'));
+  fs.writeFileSync(path.join(install, 'dxil.dll'), 'legacy fixture file');
+  assert.throws(() => verifyRecoveryLayout(install, '1.2.12', runner), /do not satisfy the update recovery layout/);
+  fs.unlinkSync(path.join(install, 'dxil.dll'));
+  fs.writeFileSync(path.join(install, 'NerdSSHell_wer.dll'), 'current fixture file');
+  verifyRecoveryLayout(install, '1.2.12', runner);
 });
 
 test('Windows Toolhelp snapshot proves actual parent lineage and rejects independent IDs and ancestry cycles', {skip:process.platform!=='win32'}, () => {

@@ -234,7 +234,7 @@ function dependencies(context, mutation) {
     const manifestValue = JSON.parse(fs.readFileSync(manifest, 'utf8')); context.nonce = manifestValue.nonce;
     const fixtureFunctions = [
       'function Get-UpdateRegistrations { return @(ConvertFrom-Json ([IO.File]::ReadAllText(' + psquote(context.registrationPath) + '))) }',
-      'function Get-UpdateRecoveryFiles([string]$Directory) { if(-not (Same-UpdatePath $Directory ' + psquote(context.installDirectory) + ')){throw "Wrong fixture directory"}; return @(' + psquote(context.executable) + ',' + psquote(context.payload) + ') }',
+      'function Get-UpdateRecoveryLayout([string]$Directory,[version]$InstalledVersion) { if(-not (Same-UpdatePath $Directory ' + psquote(context.installDirectory) + ')){throw "Wrong fixture directory"}; return @(@{path=' + psquote(context.executable) + ';optional=$false},@{path=' + psquote(context.payload) + ';optional=$false}) }',
       'function Assert-NoUpdateInstances { foreach($entry in (ConvertFrom-Json ([IO.File]::ReadAllText(' + psquote(context.processPath) + ')))) {$p=$null;try{$p=[Diagnostics.Process]::GetProcessById([int]$entry.pid)}catch [ArgumentException]{continue};try{if(-not $p.HasExited){if(-not (Same-UpdatePath $p.MainModule.FileName $entry.executable)){throw "Fixture process identity changed"};throw "Application still running"}}finally{if($null -ne $p){$p.Dispose()}}} }'
     ].join(';');
     const marker='$result=Invoke-UpdateBroker';
